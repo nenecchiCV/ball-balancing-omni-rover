@@ -168,7 +168,7 @@ $$
 $$
 
 $$
-q_{k+1}=\operatorname{normalize}\left(q_k+rac{T_s}{2}\Omega(\omega_c^B)q_k\right)
+q_{k+1}=\operatorname{normalize}\left(q_k+\frac{T_s}{2}\Omega(\omega_c^B)q_k\right)
 $$
 
 | パラメーター | 値 |
@@ -200,8 +200,7 @@ $$
 球–床無すべり近似:
 
 $$
-{}^Wv_K=G_R{}^W\omega_K,qquad
-G_R=
+{}^Wv_K=G_R{}^W\omega_K,\qquad G_R=
 \begin{bmatrix}
 0&R_b&0\\
 -R_b&0&0\\
