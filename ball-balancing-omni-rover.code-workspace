@@ -1,0 +1,19 @@
+{
+  "folders": [
+    {
+      "name": "matlab_ws",
+      "path": "matlab_ws"
+    },
+    {
+      "name": "firmware_ws",
+      "path": "firmware_ws"
+    },
+    {
+      "name": "root",
+      "path": "./"
+    }
+  ],
+  "settings": {
+
+  }
+}
