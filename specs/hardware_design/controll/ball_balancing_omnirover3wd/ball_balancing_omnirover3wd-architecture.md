@@ -5,7 +5,7 @@
 | 項目 | 値 |
 |---|---|
 | ステータス | 実装中 |
-| 最終更新日 | 2026-08-31 |
+| 最終更新日 | 2026-09-01 |
 | 親仕様 | [システム仕様](ball_balancing_omnirover3wd-system.md) |
 
 ## 1. 機能分解
@@ -17,6 +17,8 @@ flowchart LR
   ENC[IdealEncoders<br/>theta_w]
   DIFF[WheelRateDerivative<br/>backward difference]
   EST[StateEstimator<br/>ballbotEstimatorStep]
+  BIAS[LowMotionBiasObserver<br/>b_gz, t_qual]
+  DLOG[EstimatorDiagnostics]
   MODE[ModeManager<br/>BALANCE/RECOVERY/FALLEN]
   OUTER[VelocityToLean<br/>PI + lean limit]
   INNER[BalanceAndYaw<br/>PD + yaw-rate P]
@@ -31,6 +33,8 @@ flowchart LR
   CMD --> OUTER
   IMU --> EST
   ENC --> DIFF --> EST
+  EST --> BIAS --> EST
+  BIAS --> DLOG
   EST --> MODE
   EST --> OUTER
   EST --> INNER
@@ -55,6 +59,9 @@ ball_balancing_omni3_multibody.slx
 │   │   ├── ballbotClosedLoopStep
 │   │   ├── ballbotWheelRateFromDisplacement
 │   │   ├── ballbotEstimatorStep
+│   │   ├── YawBiasDiagnostics
+│   │   ├── ballbotYawBiasStartupGuard
+│   │   ├── YawBiasReadyMemory
 │   │   ├── ballbotControlStep
 │   │   ├── ballbotTorqueAllocator
 │   │   └── ballbotServoTorqueEnvelope
@@ -84,7 +91,7 @@ ball_balancing_omni3_multibody.slx
 | コンポーネント | 実装 | 入力→出力 | レート | DFT | 状態 |
 |---|---|---|---:|---|---|
 | CommandSource | Simulink Subsystem | 定数/テスト信号→$v_d^W,r_d,enable$ | 5 ms | Yes | なし |
-| EstimatorAndController | MATLAB Function | IMU,車輪回転変位,指令→$\hat z,\tau_w,mode$ | 5 ms | Partial | persistent推定12状態・積分2状態・前回車輪回転変位3状態 |
+| EstimatorAndController | MATLAB Function | IMU,車輪回転変位,指令→$\hat z,\tau_w,mode$、診断3信号 | 5 ms | Partial | 推定14状態・積分2状態・前回車輪回転変位3状態・ヨーバイアス準備完了1状態 |
 | WheelRateDerivative | `ballbotWheelRateFromDisplacement.m` | $\theta_w[k],\theta_w[k-1]\rightarrow\omega_w[k]$ | 5 ms | Yes | 前回値は呼出元で保持 |
 | ControlCycleDelay | Unit Delay | 18要素制御出力→1サンプル前の出力 | 5 ms | No | 代数ループ分離 |
 | TorqueAllocator | `ballbotTorqueAllocator.m` | $\tau_b^B\rightarrow\tau_w$ | 5 ms | Yes | なし |
@@ -147,10 +154,13 @@ $\lambda=45$ deg、$\beta_i=[0,120,240]$ degで $\operatorname{rank}(A_\tau)=3$�
 | ${}^Wv_B$ | 3 | 比力のワールド変換と積分、平面拘束 |
 | ${}^W\omega_K$ | 3 | 車輪回転変位の微分値・機体速度・球転がり拘束の正則化最小二乗 |
 | ${}^Bp_{B/K,xy}$ | 2 | 機体速度–球中心速度の積分 |
+| $\hat b_{g,z}$ | 1 | 認定済み低運動区間だけ一次遅れ更新、飽和・更新量制限 |
+| $t_{qual}$ | 1 | 低運動候補の連続成立時間、候補不成立で0 |
 
 ```mermaid
 flowchart LR
-  GYRO[gyro] --> QP[Quaternion prediction]
+  GYRO[raw gyro] --> SUB[Subtract previous yaw bias]
+  SUB --> QP[Quaternion prediction]
   ACC[accelerometer] --> GRAV[Gravity-direction correction]
   GRAV --> QP
   QP --> ATT[roll pitch yaw]
@@ -159,12 +169,21 @@ flowchart LR
   ENC[wheel displacement] --> DIFF[Backward difference]
   DIFF --> KIN[Rolling constrained LS]
   VEL --> KIN
-  GYRO --> KIN
+  SUB --> KIN
   KIN --> BALL[Ball angular rate]
   VEL --> REL[Relative position integration]
   BALL --> REL
   KIN --> RES[Contact residual/confidence]
+  DIFF --> QUAL[Low-motion qualification]
+  ACC --> QUAL
+  SUB --> QUAL
+  RES --> QUAL
+  QUAL --> BIAS[Yaw-bias first-order update]
+  BIAS --> SUB
+  BIAS --> DLOG[Bias / enable / dwell logging]
 ```
+
+同一サンプル内の順序は、前回バイアスによるジャイロ補正、姿勢・運動学・接触信頼度の計算、低運動判定、次回用バイアス更新とする。`BIAS --> SUB`は1サンプル状態を介するため、代数ループを形成しない。
 
 ## 6. 制御
 
@@ -179,6 +198,7 @@ flowchart LR
   ATT[phi theta p q] --> PD
   RD[r_d] --> YAW[Yaw-rate P]
   RATE[r] --> YAW
+  READY[Yaw-bias ready latch] --> YAW
   PD --> TAU[tau_b]
   YAW --> TAU
   TAU --> ALLOC[A_tau pseudo-inverse]
@@ -187,6 +207,8 @@ flowchart LR
   SAT --> AW[Conditional integration]
   AW --> PI
 ```
+
+起動直後は`YawBiasReadyMemory=0`とし、$\gamma=1$かつ$|\hat r|\le0.002$ rad/sで1へラッチする。ラッチ前はヨートルクだけを0とし、ロール・ピッチPDは動作を継続する。明示的な非ゼロヨー指令は起動抑止をバイパスするが、車輪運動によりバイアス学習条件は不成立となる。
 
 ### 6.1 フィードバック極性
 
@@ -214,6 +236,10 @@ flowchart LR
 | 推定最小二乗の特異性 | $H^TH+10^{-8}I$ |
 | クォータニオンノルム | 毎ステップ正規化 |
 | 加速中の重力方向誤補正 | $\lvert\|f\|-g\rvert\le0.25g$ のときのみ補正 |
+| 一時停止によるバイアス誤学習 | 5条件の連続0.50 s成立後だけ更新 |
+| 閾値近傍のチャタリング | 認定後に1.25倍の退出側閾値と接触信頼度0.70を使用 |
+| 旋回・すべり中の誤学習 | 車輪角速度と接触信頼度で即時停止し、バイアスを保持 |
+| バイアス外れ値 | ±0.10 rad/s飽和と$1.0\times10^{-4}$ rad/s/サンプル更新制限 |
 
 ## 8. パラメーター管理
 
@@ -221,7 +247,7 @@ flowchart LR
 |---|---|
 | 格納 | `ballbotParameters.m` が構造体 `p` を生成 |
 | モデル変数 | `ballbotParams` |
-| チューニング可能 | 接触摩擦、推定ゲイン、速度PI、姿勢PD、ヨーP、制限値 |
+| チューニング可能 | 接触摩擦、推定ゲイン、低運動閾値、バイアス時定数・上限・準備完了閾値、速度PI、姿勢PD、ヨーP、制限値 |
 | 固定 | 座標系、3輪番号、行列の符号規約 |
 
 ## 9. 既知の制約
@@ -229,6 +255,8 @@ flowchart LR
 | 制約 | 影響 |
 |---|---|
 | 絶対位置と絶対ヨーは外部基準なし | 長時間ドリフトを閉ループで除去できない |
+| エンコーダーは絶対ヨーを観測しない | バイアス補正後もヨー角は初期値からの積分値 |
+| 走行中の機体ヨーとボール回転は常時分離不能 | 走行中はバイアスを学習せず前回値を保持 |
 | 接触信頼度は残差由来 | 4接触の個別分離を一意に識別しない |
 | ボール質量・摩擦は仮値 | 実測後に再同定・再調整が必要 |
 | オムニローラーを等価摩擦化 | 8ローラー切替による振動を再現しない |
@@ -249,3 +277,4 @@ flowchart LR
 | `Simulink.SimulationInput` | StopTime等をモデル非破壊で上書き | 既存`matlab_ws/3wd_omnirover/run_demo.m` |
 | `ballbotWheelGeometry` | $A_\tau$のランク3 | MATLAB R2026aで実行確認 |
 | `ballbotEstimatorStep` | 静止入力で状態変化0、接触信頼度1 | MATLAB R2026aで実行確認 |
+| `ballbotEstimatorStepTest` | バイアス学習・抑止・上限・再開・起動ガード・インターフェース回帰 | MATLAB R2026aで16件合格 |

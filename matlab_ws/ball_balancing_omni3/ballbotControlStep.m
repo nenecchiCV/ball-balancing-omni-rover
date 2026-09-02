@@ -1,15 +1,20 @@
 function [wheelTorque, nextVelocityIntegral, mode, diagnostics] = ...
     ballbotControlStep(estimate, command, previousVelocityIntegral, ...
-    enable, p)
+    enable, p, yawControlEnabled)
 %BALLBOTCONTROLSTEP Cascaded planar-velocity, balance, and yaw controller.
 % Command is [vx_W; vy_W; yawRate_W]. Mode: 0=disabled/fallen,
 % 1=balance, 2=recovery.
+
+if nargin < 6
+    yawControlEnabled = true;
+end
 
 roll = estimate(1);
 pitch = estimate(2);
 yaw = estimate(3);
 bodyRate = estimate(4:6);
 velocityWorld = estimate(7:8);
+relativePositionBody = estimate(12:13);
 contactConfidence = estimate(14);
 
 tiltMagnitude = hypot(roll, pitch);
@@ -49,8 +54,10 @@ else
     velocityError = -velocityBody;
 end
 
-accelerationCommand = p.controller.velocityKp.*velocityError + ...
+velocityAccelerationCommand = p.controller.velocityKp.*velocityError + ...
     p.controller.velocityKi.*candidateIntegral;
+positionAccelerationCommand = -p.controller.relativePositionKp.* ...
+    relativePositionBody;
 
 % The velocity loop yields authority as tilt grows. This keeps the inner
 % balance loop in charge near the recovery boundary instead of continuing
@@ -62,15 +69,20 @@ else
         (p.controller.recoveryTilt - tiltMagnitude)/ ...
         (p.controller.recoveryTilt - p.controller.tiltPriorityStart));
 end
-accelerationCommand = velocityAuthority*accelerationCommand;
+velocityAccelerationCommand = velocityAuthority* ...
+    velocityAccelerationCommand;
+positionAccelerationCommand = velocityAuthority* ...
+    positionAccelerationCommand;
 
 % Once velocity has converged, command an upright attitude explicitly and
 % bleed the integral state so that residual bias cannot hold a lean angle.
 if norm(velocityError) <= p.controller.velocityConvergenceBand
-    accelerationCommand = zeros(2, 1);
+    velocityAccelerationCommand = zeros(2, 1);
     candidateIntegral = p.controller.velocityIntegralLeak* ...
         candidateIntegral;
 end
+accelerationCommand = velocityAccelerationCommand + ...
+    positionAccelerationCommand;
 accelerationMagnitude = norm(accelerationCommand);
 if accelerationMagnitude > p.controller.maxPlanarAcceleration
     accelerationCommand = accelerationCommand* ...
@@ -90,6 +102,9 @@ if mode == 2
     pitchReference = 0;
     commandYawRate = 0;
     gainScale = p.controller.recoveryGainScale;
+end
+if ~yawControlEnabled
+    commandYawRate = bodyRate(3);
 end
 
 ballTorqueCommand = [-gainScale*(p.controller.balanceKp(1)* ...

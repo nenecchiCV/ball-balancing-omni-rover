@@ -7,6 +7,8 @@ quaternion = quaternion/max(norm(quaternion), eps);
 rotationWorldFromBody = quaternionToRotation(quaternion);
 accelerationWorld = jointMeasurement(5:7);
 angularVelocityBody = jointMeasurement(8:10);
+angularVelocityBody(3) = angularVelocityBody(3) + ...
+    p.simulation.imuYawBias;
 imu = ballbotIdealImu(rotationWorldFromBody, accelerationWorld, ...
     angularVelocityBody, p);
 end

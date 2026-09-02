@@ -5,7 +5,7 @@
 | 項目 | 値 |
 |---|---|
 | ステータス | 実装一致版 |
-| 最終更新日 | 2026-08-31 |
+| 最終更新日 | 2026-09-01 |
 | 実装 | `matlab_ws/ball_balancing_omni3/*.m` |
 
 ## 1. 座標・姿勢
@@ -65,7 +65,7 @@ $$
 $$
 
 $$
-\tau_b^B=A_\tau\tau_w,qquad
+\tau_b^B=A_\tau\tau_w,\qquad
 A_\tau=\frac{R_b}{R_w}
 \begin{bmatrix}a_1^B&a_2^B&a_3^B\end{bmatrix}
 $$
@@ -136,8 +136,9 @@ $$
 $$
 x_e=
 \begin{bmatrix}
-q_{WB}^T&({}^Wv_B)^T&({}^W\omega_K)^T&({}^Bp_{B/K,xy})^T
-\end{bmatrix}^T\in\mathbb{R}^{12}
+q_{WB}^T&({}^Wv_B)^T&({}^W\omega_K)^T&({}^Bp_{B/K,xy})^T&
+\hat b_{g,z}&t_{qual}
+\end{bmatrix}^T\in\mathbb{R}^{14}
 $$
 
 $$
@@ -150,6 +151,14 @@ $$
 \end{bmatrix}^T
 $$
 
+外部推定出力$\hat z\in\mathbb{R}^{14}$の幅と順序は維持する。角速度$[\hat p,\hat q,\hat r]^T$は生ジャイロ値ではなく、前回サンプルまでの$\hat b_{g,z}$を差し引いた値とする。接触信頼度は引き続き14番目とする。
+
+診断出力は次の3要素を別信号で公開する。
+
+$$
+d_b=\begin{bmatrix}\hat b_{g,z,k+1}&\gamma_k&t_{qual,k+1}\end{bmatrix}^T
+$$
+
 ### 5.2 姿勢更新
 
 $$
@@ -158,7 +167,12 @@ u_a^B=\frac{f^B}{\|f^B\|}
 $$
 
 $$
-\omega_c^B=\omega_{IMU}^B+K_a(u_a^B\times u_g^B)
+\bar\omega_{B,k}^B=\omega_{IMU,k}^B-
+\begin{bmatrix}0&0&\hat b_{g,z,k}\end{bmatrix}^T
+$$
+
+$$
+\omega_c^B=\bar\omega_B^B+K_a(u_a^B\times u_g^B)
 $$
 
 補正のゲート:
@@ -183,7 +197,7 @@ $$
 $$
 
 $$
-{}^Wv_{B,k+1}=\alpha_v{}^Wv_{B,k}+T_s{}^Wa_B,qquad
+{}^Wv_{B,k+1}=\alpha_v{}^Wv_{B,k}+T_s{}^Wa_B,\qquad
 \alpha_v=0.9995
 $$
 
@@ -248,8 +262,89 @@ $$
 
 $$
 \epsilon_{RMS}=\sqrt{\frac{1}{3}\sum_{i=1}^3\epsilon_i^2},\qquad
-c_{contact}=\exp\left[-(\epsilon_{RMS}/0.025)^2\right]
+c_{contact}=\exp\left[-(\epsilon_{RMS}/0.25)^2\right]
 $$
+
+### 5.7 低運動認定とヨー軸ジャイロバイアス
+
+エンコーダーは絶対ヨー角の観測ではなく、バイアスを学習してよい低運動区間の認定に使用する。走行中に車輪回転だけから機体ヨー角速度とボール角速度を常時分離できるとは仮定しない。
+
+未認定時の候補条件は次の論理積とする。
+
+$$
+\max_i|\omega_{w,i}|\le\omega_{w,th}
+$$
+
+$$
+|\|f^B\|-g|\le a_{th}
+$$
+
+$$
+\sqrt{\bar p^2+\bar q^2}\le\omega_{rp,th}
+$$
+
+$$
+|r_{IMU}-\hat b_{g,z}|\le\omega_{z,th}
+$$
+
+$$
+c_{contact}\ge c_{th}
+$$
+
+全条件の論理積を$Q_k$とし、継続時間を明示状態として更新する。
+
+$$
+t_{qual,k+1}=
+\begin{cases}
+\min(t_{qual,k}+T_s,t_{min}) & Q_k=1\\
+0 & Q_k=0
+\end{cases}
+$$
+
+$$
+\gamma_k=Q_k\land(t_{qual,k}\ge t_{min})
+$$
+
+認定後は、角速度・比力閾値を1.25倍、接触信頼度閾値を0.70とする退出側ヒステリシスを適用する。これにより微小な量子化・振動で学習がチャタリングしにくくなる。退出条件を超えたサンプルでは$\gamma_k=0$としてバイアスを保持し、$t_{qual,k+1}=0$とする。
+
+$$
+\alpha_b=\frac{T_s}{\tau_b+T_s}
+$$
+
+$$
+\Delta b_k=\operatorname{sat}\left(
+\gamma_k\alpha_b(r_{IMU,k}-\hat b_{g,z,k}),
+\pm\Delta b_{max}\right)
+$$
+
+$$
+\hat b_{g,z,k+1}=\operatorname{sat}\left(
+\hat b_{g,z,k}+\Delta b_k,\pm b_{max}\right)
+$$
+
+| パラメーター | 暫定値 | 根拠 |
+|---|---:|---|
+| $\omega_{w,th}$ | 0.10 rad/s | 輪周速度2.4 mm/s相当の低運動ゲート |
+| $a_{th}$ | $0.03g$ | 静止時の小振動を許容する初期値 |
+| $\omega_{rp,th}$ | 0.02 rad/s | 約1.15 deg/s以下を低運動とみなす初期値 |
+| $\omega_{z,th}$ | 0.05 rad/s | 0.02 rad/s注入バイアスを学習範囲に含める初期値 |
+| $c_{th}$ | 0.80 | 公称接触に限定する初期値 |
+| $t_{min}$ | 0.50 s | 一時停止・単発振動を除外する滞留時間 |
+| $\tau_b$ | 1.0 s | 0.5 s認定後、モデルが低運動域を保つ間に0.02 rad/s注入を90%以上低減 |
+| $b_{max}$ | 0.10 rad/s | 未確定IMUに対する保守的な異常上限 |
+| $\Delta b_{max}$ | $1.0\times10^{-4}$ rad/s/sample | 単発外れ値による急変を制限 |
+
+実機IMUのゼロレート出力、ノイズ密度、温度ドリフト、振動スペクトルは未確定であるため、全値を`ballbotParameters.m`の調整可能パラメーターとする。
+
+### 5.8 サンプル内の計算順序
+
+1. $\hat b_{g,z,k}$でIMU角速度を補正する。
+2. 補正後角速度と加速度由来補正でクォータニオンを更新する。
+3. 補正後角速度で車輪接触運動学と接触信頼度を計算する。
+4. 低運動候補、$t_{qual,k+1}$、$\gamma_k$を計算する。
+5. $\hat b_{g,z,k+1}$を更新し、次サンプルから使用する。
+
+この順序によりバイアス更新から当該サンプルの姿勢・接触信頼度への直達を設けず、代数ループを作らない。
 
 対応実装: `ballbotWheelRateFromDisplacement.m`、`ballbotEstimatorStep.m`。
 
@@ -269,11 +364,11 @@ e_v^B=R_z(\hat\psi)^T(v_d^W-\hat v_B^W)
 $$
 
 $$
-I_{v,k+1}=\operatorname{sat}(I_{v,k}+T_se_v^B,\pm0.50)
+I_{v,k+1}=\operatorname{sat}(I_{v,k}+T_se_v^B,\pm0.20)
 $$
 
 $$
-a_d^B=K_{pv}e_v^B+K_{iv}I_v,\qquad\|a_d^B\|\le2.0\ \mathrm{m/s^2}
+a_d^B=K_{pv}e_v^B+K_{iv}I_v,\qquad\|a_d^B\|\le0.60\ \mathrm{m/s^2}
 $$
 
 $$
@@ -282,13 +377,13 @@ $$
 $$
 
 $$
-|\phi_d|,|\theta_d|\le10\ \mathrm{deg}
+|\phi_d|,|\theta_d|\le4\ \mathrm{deg}
 $$
 
 | ゲイン | 値 |
 |---|---:|
-| $K_{pv}$ | $\operatorname{diag}(2.0,2.0)$ s$^{-1}$ |
-| $K_{iv}$ | $\operatorname{diag}(0.35,0.35)$ s$^{-2}$ |
+| $K_{pv}$ | $\operatorname{diag}(0.35,0.35)$ s$^{-1}$ |
+| $K_{iv}$ | $\operatorname{diag}(0.04,0.04)$ s$^{-2}$ |
 
 ### 6.3 姿勢内側ループ
 
@@ -301,7 +396,7 @@ $$
 $$
 
 $$
-\tau_{b,z}=0.08(r_d-\hat r)
+\tau_{b,z}=s_{yaw}\,0.08(r_d-\hat r)
 $$
 
 | モード | $s_m$ | $(\phi_d,\theta_d,r_d)$ |
@@ -310,7 +405,16 @@ $$
 | RECOVERY | 1.35 | $(0,0,0)$ |
 | FALLEN/DISABLED | - | $\tau_b=0$ |
 
-### 6.4 飽和・アンチワインドアップ
+### 6.4 起動時ヨー制御ガード
+
+$$
+s_{ready,k+1}=s_{ready,k}\lor
+\left(\gamma_k=1\land|\hat r_k|\le0.002\ \mathrm{rad/s}\right)
+$$
+
+明示的なヨー指令がない場合は$s_{yaw}=s_{ready}$とし、未補正バイアスにヨー制御器が反応して車輪を回し、低運動認定を自ら解除する競合を防ぐ。ロール・ピッチ制御は常時有効である。一度成立した$s_{ready}$は推定器・制御器リセットまで保持する。$|r_d|>1.0\times10^{-6}$ rad/sの明示指令では$s_{yaw}=1$として指令を優先するが、運動中のバイアス更新は低運動ゲートにより停止する。
+
+### 6.5 飽和・アンチワインドアップ
 
 $$
 \tau_w=\operatorname{sat}(A_\tau^\dagger\tau_b,\pm0.0384\ \mathrm{N\,m})
@@ -325,18 +429,18 @@ $$
 16007サーボの加速方向トルクには、最高回転速度
 $\omega_{max}=62\times2\pi/60$ rad/sで0となる線形包絡線を適用する。減速方向トルクは接触トルク上限まで許容する。
 
-対応実装: `ballbotControlStep.m`、`ballbotTorqueAllocator.m`、`ballbotServoTorqueEnvelope.m`。
+対応実装: `ballbotYawBiasStartupGuard.m`、`ballbotControllerUpdate.m`、`ballbotControlStep.m`、`ballbotTorqueAllocator.m`、`ballbotServoTorqueEnvelope.m`。
 
 ## 7. 可観測性・推定誤差
 
 | モード | 観測される量 | 非可観測/弱可観測量 |
 |---|---|---|
-| 理想静止 | ロール、ピッチ、角速度 | 絶対ヨー、絶対XY位置 |
+| 認定済み静止 | ロール、ピッチ、角速度、ヨー軸ジャイロバイアス | 絶対ヨー、絶対XY位置 |
 | 理想転動・3輪接触 | 上記+球角速度、相対速度 | 一様な位置オフセット |
 | すべり | IMU姿勢・角速度 | 球角速度と接触状態が弱可観測 |
 | 分離 | IMU自由運動 | 球状態・相対接触位置 |
 
-実機化時の最小追加観測は、絶対方位1量と平面速度または位置2量である。
+バイアス補正はヨードリフトを低減するが、絶対ヨーの観測を追加しない。実機化時に絶対ヨーを長期保持するための最小追加観測は絶対方位1量であり、絶対平面運動には速度または位置2量も必要である。
 
 ## 8. 実装対応表
 
@@ -347,7 +451,7 @@ $\omega_{max}=62\times2\pi/60$ rad/sで0となる線形包絡線を適用する�
 | §3 | `ballbotCustomFriction.m` | MultibodyPlant/WheelBallContact_1..3 |
 | §4 | `ballbotIdealImu.m` | MultibodyPlant/Sensors/Ideal6AxisIMU |
 | §5.4 | `ballbotWheelRateFromDisplacement.m` | Controller/WheelRateDerivative |
-| §5 | `ballbotEstimatorStep.m` | Controller/StateEstimator |
+| §5 | `ballbotEstimatorStep.m` | Controller/StateEstimator、YawBiasDiagnostics |
 | §6 | `ballbotControlStep.m` | Controller/ModeAndControl |
 | 全パラメーター | `ballbotParameters.m` | Model workspace `ballbotParams` |
 

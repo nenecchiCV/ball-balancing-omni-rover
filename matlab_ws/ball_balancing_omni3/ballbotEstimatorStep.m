@@ -1,18 +1,25 @@
 function [nextState, estimate, diagnostics] = ballbotEstimatorStep( ...
     previousState, imu, wheelRate, p)
-%BALLBOTESTIMATORSTEP Ideal-IMU/derived-wheel-rate observer update.
-% State: [q_WB(4); v_WB(3); omegaBall_W(3); roverMinusBall_B_xy(2)].
+%BALLBOTESTIMATORSTEP IMU/derived-wheel-rate observer update.
+% State: [q_WB(4); v_WB(3); omegaBall_W(3); roverMinusBall_B_xy(2);
+%         gyroBiasZ; qualificationTime].
 % Estimate: [roll; pitch; yaw; p; q; r; vx_W; vy_W; omegaBall_W(3);
 %            roverMinusBall_B_xy(2); contactConfidence].
+% Diagnostics: [acceleration_W(3); contactResidual(3); residualRms;
+%               updatedGyroBiasZ; biasLearningEnabled;
+%               updatedQualificationTime].
 
 dt = p.estimator.sampleTime;
 quaternion = previousState(1:4);
 velocityWorld = previousState(5:7);
 ballRateWorldPrevious = previousState(8:10);
 relativePositionBodyPrevious = previousState(11:12);
+gyroBiasZPrevious = previousState(13);
+qualificationTimePrevious = previousState(14);
 
 specificForceBody = imu(1:3);
-gyroBody = imu(4:6);
+gyroBodyRaw = imu(4:6);
+gyroBody = gyroBodyRaw - [0; 0; gyroBiasZPrevious];
 rotationWorldFromBody = quaternionToRotation(quaternion);
 
 accelerationNorm = norm(specificForceBody);
@@ -81,11 +88,53 @@ residualRootMeanSquare = sqrt(mean(residual.^2));
 contactConfidence = exp(-(residualRootMeanSquare/ ...
     p.estimator.contactResidualScale)^2);
 
+qualifiedPreviously = qualificationTimePrevious >= ...
+    p.estimator.biasQualificationTime;
+if qualifiedPreviously
+    thresholdScale = p.estimator.biasQualificationHysteresis;
+    contactConfidenceThreshold = ...
+        p.estimator.biasContactConfidenceRelease;
+else
+    thresholdScale = 1;
+    contactConfidenceThreshold = ...
+        p.estimator.biasContactConfidenceThreshold;
+end
+
+wheelRateLow = max(abs(wheelRate)) <= thresholdScale* ...
+    p.estimator.biasWheelRateThreshold;
+accelerationNormNominal = abs(accelerationNorm - p.gravity) <= ...
+    thresholdScale*p.estimator.biasAccelNormThreshold;
+rollPitchRateLow = hypot(gyroBody(1), gyroBody(2)) <= ...
+    thresholdScale*p.estimator.biasRollPitchRateThreshold;
+yawRateLow = abs(gyroBody(3)) <= thresholdScale* ...
+    p.estimator.biasYawRateThreshold;
+contactReliable = contactConfidence >= contactConfidenceThreshold;
+qualificationCandidate = wheelRateLow && accelerationNormNominal && ...
+    rollPitchRateLow && yawRateLow && contactReliable;
+
+if qualificationCandidate
+    qualificationTime = min(qualificationTimePrevious + dt, ...
+        p.estimator.biasQualificationTime);
+else
+    qualificationTime = 0;
+end
+
+biasLearningEnabled = qualificationCandidate && qualifiedPreviously;
+biasFilterWeight = dt/(p.estimator.biasTimeConstant + dt);
+biasUpdate = double(biasLearningEnabled)*biasFilterWeight* ...
+    (gyroBodyRaw(3) - gyroBiasZPrevious);
+biasUpdateLimit = p.estimator.biasMaximumUpdatePerSample;
+biasUpdate = min(max(biasUpdate, -biasUpdateLimit), biasUpdateLimit);
+gyroBiasZ = gyroBiasZPrevious + biasUpdate;
+gyroBiasZ = min(max(gyroBiasZ, -p.estimator.biasMaximum), ...
+    p.estimator.biasMaximum);
+
 nextState = [quaternion; velocityWorld; ballRateWorld; ...
-    relativePositionBody];
+    relativePositionBody; gyroBiasZ; qualificationTime];
 estimate = [yaw; gyroBody; velocityWorld(1:2); ballRateWorld; ...
     relativePositionBody; contactConfidence];
-diagnostics = [accelerationWorld; residual; residualRootMeanSquare];
+diagnostics = [accelerationWorld; residual; residualRootMeanSquare; ...
+    gyroBiasZ; double(biasLearningEnabled); qualificationTime];
 end
 
 function matrix = skewMatrix(vector)

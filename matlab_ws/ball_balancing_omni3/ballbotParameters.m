@@ -61,8 +61,8 @@ p.wheel.commandTorqueLimit = min(p.servo.maxTorque, ...
     p.wheel.contactTorqueLimit);
 p.wheel.geometry = geometry;
 
-% Ideal-IMU estimator. State is [q_WB(4); v_WB(3); omegaBall_W(3);
-% roverMinusBall_B_xy(2)].
+% IMU/wheel estimator. State is [q_WB(4); v_WB(3); omegaBall_W(3);
+% roverMinusBall_B_xy(2); gyroBiasZ; qualificationTime].
 p.estimator.sampleTime = 0.005;
 p.estimator.attitudeCorrectionGain = 2.5;
 p.estimator.accelNormGate = 0.25*p.gravity;
@@ -72,10 +72,26 @@ p.estimator.relativePositionLeak = 0.9998;
 p.estimator.kinematicRegularization = 1.0e-8;
 p.estimator.contactResidualScale = 0.25;
 
+% Provisional yaw-gyro bias observer settings. These values must be tuned
+% against the selected IMU noise, in-run bias stability, vibration, and
+% encoder quantization before deployment on hardware.
+p.estimator.biasWheelRateThreshold = 0.10;
+p.estimator.biasAccelNormThreshold = 0.03*p.gravity;
+p.estimator.biasRollPitchRateThreshold = 0.02;
+p.estimator.biasYawRateThreshold = 0.05;
+p.estimator.biasContactConfidenceThreshold = 0.80;
+p.estimator.biasContactConfidenceRelease = 0.70;
+p.estimator.biasQualificationTime = 0.50;
+p.estimator.biasQualificationHysteresis = 1.25;
+p.estimator.biasTimeConstant = 1.0;
+p.estimator.biasMaximum = 0.10;
+p.estimator.biasMaximumUpdatePerSample = 1.0e-4;
+
 % Cascaded velocity/balance/yaw controller.
 p.controller.sampleTime = p.estimator.sampleTime;
 p.controller.velocityKp = [0.35; 0.35];
 p.controller.velocityKi = [0.04; 0.04];
+p.controller.relativePositionKp = [0; 0];
 p.controller.velocityIntegralLimit = [0.20; 0.20];
 p.controller.velocityIntegralLeak = 0.995;
 p.controller.velocityConvergenceBand = 0.005;
@@ -84,6 +100,12 @@ p.controller.maxLean = deg2rad(4);
 p.controller.balanceKp = [0.95; 0.95];
 p.controller.balanceKd = [0.12; 0.12];
 p.controller.yawRateKp = 0.08;
+% Keep yaw actuation inhibited during startup calibration until the
+% corrected yaw rate is within the provisional acceptance tolerance.
+p.controller.yawBiasReadyRateThreshold = 0.002;
+% A deliberate yaw command bypasses startup inhibition; low-motion bias
+% learning remains disabled naturally once the wheels move.
+p.controller.yawBiasCommandBypassThreshold = 1.0e-6;
 p.controller.maxPlanarAcceleration = 0.60;
 p.controller.maxSpeed = 0.12;
 p.controller.maxYawRate = 0.80;
@@ -99,4 +121,5 @@ p.command.enable = true;
 p.simulation.stopTime = 4.0;
 p.simulation.maxStep = 1.0e-4;
 p.simulation.relativeTolerance = 1.0e-4;
+p.simulation.imuYawBias = 0;
 end

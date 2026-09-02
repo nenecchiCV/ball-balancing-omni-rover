@@ -5,7 +5,7 @@
 | 項目 | 値 |
 |---|---|
 | ステータス | ドラフト |
-| 最終更新日 | 2026-08-31 |
+| 最終更新日 | 2026-09-01 |
 | アーキテクチャ | [アーキテクチャ仕様](ball_balancing_omnirover3wd-architecture.md) |
 
 ## 1. 検証段階
@@ -39,6 +39,20 @@ flowchart LR
 | U-08 | Controller | 静止推定、指令0 | BALANCE、$\tau_w=0$ | mode=1、誤差$<10^{-12}$ |
 | U-09 | Controller | $\theta=+1$ deg | 復元球トルク | $\tau_{b,y}<0$ |
 | U-10 | Controller | 傾斜40 deg | FALLEN | mode=0、$\tau_w=0$ |
+| B-01 | BiasObserver | 静止、バイアス0 | 0付近を保持 | $|\hat b_{g,z}|<10^{-12}$ rad/s |
+| B-02 | BiasObserver | 静止、ヨーバイアス0.02 rad/s | 一次遅れ収束 | 15 s以内に誤差0.002 rad/s未満 |
+| B-03 | Qualification | 全条件成立、$t<t_{min}$ | 学習待機 | $\gamma=0$、$\hat b_{g,z}$不変 |
+| B-04 | Qualification | 車輪回転が閾値超過 | 学習停止 | $t_{qual}=0$、$\hat b_{g,z}$不変 |
+| B-05 | Qualification | 比力ノルム偏差が閾値超過 | 学習停止 | $t_{qual}=0$、$\hat b_{g,z}$不変 |
+| B-06 | Qualification | 接触信頼度が閾値未満 | 学習停止 | $\gamma=0$、$\hat b_{g,z}$不変 |
+| B-07 | BiasObserver | 長時間の上限超過相当入力 | 飽和 | $|\hat b_{g,z}|\le b_{max}$ |
+| B-08 | BiasObserver | 静止→車輪回転→再静止 | 再認定後に学習再開 | 運動中保持、再静止後に推定値増加 |
+| B-09 | Interface | 静止推定と制御器呼出し | 既存互換 | 状態14、`estimate` 14、`estimate(14)>0.99`、BALANCE、トルク0 |
+| B-10 | YawDrift | B-02学習後に静止10 s | ドリフト低減 | ヨードリフト0.5 deg未満 |
+| B-11 | BiasHold | 学習後に車輪回転5 s | 運動中保持 | 推定値変化0.002 rad/s未満 |
+| B-12 | StartupGuard | 学習未完了／完了／完了後運動 | ヨー抑止・解除ラッチ | 未完了時ヨートルク0、完了後と明示指令時は有効 |
+
+B-01～B-12は`matlab_ws/ball_balancing_omni3/tests/ballbotEstimatorStepTest.m`のクラスベース試験として実装する。試験は公開関数を呼び出し、各テストメソッドをArrange–Act–Assertで独立させる。
 
 ## 3. プラント開ループ
 
@@ -78,6 +92,12 @@ flowchart LR
 | C-06 | 初期$\phi=10$ deg | 4 s | 復帰 | 2 s以内に±2 deg |
 | C-07 | 初期$\theta=20$ deg | 4 s | モード | RECOVERYを経てBALANCE |
 | C-08 | 初期$\theta=40$ deg | 1 s | 安全 | FALLEN、トルク0 |
+| C-09 | 静止、ヨーバイアス0.02 rad/s | 20 s | バイアス収束 | 15 s以内に誤差0.002 rad/s未満 |
+| C-10 | C-09学習後、静止継続 | 10 s | ヨードリフト | 0.5 deg未満 |
+| C-11 | C-09学習後、走行指令 | 5 s | 誤学習防止 | バイアス変化0.002 rad/s未満 |
+| C-12 | 静止、IMU白色ノイズ・振動重畳 | 20 s | 認定ロバストネス | 発散なし、誤学習なし、退出後に再認定 |
+| C-13 | 走行、輪–球すべり増加 | 5 s | 接触ゲート | 低信頼区間で$\gamma=0$ |
+| C-14 | 3輪接触低下 | 3 s | 接触ゲート | 低信頼区間で$\gamma=0$、バイアス保持 |
 
 ### 共通接触判定
 
@@ -98,6 +118,8 @@ flowchart LR
 | E-03 | C-04 | ヨー角速度 | RMS誤差<0.02 rad/s |
 | E-04 | C-02 | ボール角速度 | RMS誤差<0.2 rad/s |
 | E-05 | 摩擦-20% | 接触信頼度 | すべり増加時に公称より低下 |
+| E-06 | C-09 | ヨーバイアス | 15 s以内に誤差0.002 rad/s未満 |
+| E-07 | C-10 | ヨー角 | 10 sドリフト0.5 deg未満 |
 
 ## 6. 飽和・アンチワインドアップ
 
@@ -139,6 +161,9 @@ flowchart LR
 | `wheelTorqueCommand` | 3輪トルク |
 | `estimatedState` | 14要素推定出力 |
 | `controllerMode` | 0/1/2 |
+| `estimatedYawGyroBias` | $\hat b_{g,z}$ [rad/s] |
+| `yawBiasLearningEnabled` | $\gamma$ [0/1] |
+| `lowMotionQualificationTime` | $t_{qual}$ [s] |
 | `contactStatus` | 球–床+3輪–球 |
 | `contactNormalForce` | 4接触法線力 |
 | `contactSlip` | 4接触接線速度 |
@@ -147,8 +172,23 @@ flowchart LR
 
 ```matlab
 p = ballbotParameters;
+assignin("base", "ballbotParams", p);
 in = Simulink.SimulationInput("ball_balancing_omni3_multibody");
 in = in.setVariable("ballbotParams", p);
 in = in.setModelParameter("StopTime", "4");
 out = sim(in);
 ```
+
+ヨーバイアスMILでは`Simulink.SimulationInput`で注入振幅、ノイズ、振動、摩擦、接触条件を非破壊に上書きし、`Simulink.SimulationOutput`から上記3診断と`estimatedState`を取得する。マスク内部から参照する`ballbotParams`との互換性のため、実行前に同じ値をベースワークスペースへも設定する。エンコーダーは低運動認定だけに使用し、絶対ヨー角の正解信号として扱わない。
+
+## 11. 今回の実行状態
+
+| 項目 | 状態 | 理由 |
+|---|---|---|
+| 更新則の離散計算 | 合格 | 0.02 rad/s注入時の15 s誤差$1.046\times10^{-8}$ rad/s、続く静止10 sドリフト$6.022\times10^{-7}$ deg |
+| B-01～B-12 | 合格 | MATLAB R2026aで16件中16件合格 |
+| StateEstimator構造チェック | 合格 | 14状態、14要素`estimate`、診断3信号、起動ガードの接続をToolkitで確認 |
+| C-09短時間ゲート | 合格 | 0.02 rad/s注入時、4 s誤差0.001916 rad/s、3～4 sドリフト0.005293 deg |
+| C-09～C-14長時間 | 未完 | 全機体モデルがバイアス試験で4.760 s、公称指令で2.195 sにFALLENへ遷移するため |
+| 既存C-01～C-08回帰 | 一部合格 | 0.5 s複合指令は平均ヨー速度0.197879 rad/s、最終mode=1。長時間ゲートは未完 |
+| ノイズ・振動・すべり・接触低下 | 未実行 | 注入モデルと長時間安定化の整備後にC-12～C-14を実施 |

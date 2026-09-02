@@ -4,8 +4,8 @@
 
 | 項目 | 値 |
 |---|---|
-| ステータス | 公称モデル実装・短時間MIL確認完了 |
-| 最終更新日 | 2026-08-31 |
+| ステータス | ヨー軸バイアスMATLAB実装・Simulink統合・基本検証完了 |
+| 最終更新日 | 2026-09-01 |
 | アーキテクチャ | [アーキテクチャ仕様](ball_balancing_omnirover3wd-architecture.md) |
 | 検証 | [検証計画](ball_balancing_omnirover3wd-test-plan.md) |
 
@@ -14,11 +14,12 @@
 | フェーズ | 状態 | 成果物 |
 |---|---|---|
 | 0. インターフェース固定 | 完了 | 座標系、信号、単位、符号、パラメーター |
-| 1. MATLAB関数 | 完了 | 幾何、摩擦、IMU、推定、制御、配分 |
+| 1. MATLAB関数 | 実装・単体試験完了 | 幾何、摩擦、IMU、推定、制御、配分、単体試験 |
 | 2. Multibodyプラント | 完了 | 球、床、3輪機構、4接触、異方性摩擦 |
-| 3. 制御器統合 | 完了 | 状態推定・モード制御、5 ms制御遅延、サーボ包絡線 |
+| 3. 制御器統合 | バイアス診断・起動ガード統合完了 | 状態推定・モード制御、5 ms制御遅延、サーボ包絡線 |
 | 4. 閉ループ検証 | 短時間公称完了 | 静止、複合速度・ヨー指令 |
 | 5. ロバストネス | 未完了 | 摩擦、球質量、ソルバー感度 |
+| 6. 実機向けヨーバイアス補正 | 基本実装・構造検証完了 | 14状態推定器、低運動認定、診断、起動ガード、単体試験、短時間MIL |
 
 ## 2. 依存製品
 
@@ -78,9 +79,11 @@ flowchart TD
 | 1.3 | `ballbotTorqueAllocator` | 往復誤差、飽和 | 完了 |
 | 1.4 | `ballbotCustomFriction` | 摩擦がすべりと逆向き | 完了・3接触へ統合済み |
 | 1.5 | `ballbotWheelRateFromDisplacement` | 車輪回転変位の後退差分 | 完了 |
-| 1.6 | `ballbotEstimatorStep` | 静止不変、有限出力 | 完了 |
+| 1.6 | `ballbotEstimatorStep` | 14状態、補正角速度、静止不変、有限出力 | 完了・実行確認済み |
 | 1.7 | `ballbotControlStep` | モード・符号・飽和 | 完了 |
 | 1.8 | `ballbotServoTorqueEnvelope` | 最高輪速で加速トルク0 | 完了 |
+| 1.9 | `ballbotEstimatorStepTest` | バイアス収束、学習抑止、上限、再開、回帰 | 16件合格 |
+| 1.10 | `ballbotYawBiasStartupGuard` | ヨー抑止、解除、運動中ラッチ保持 | 完了・実行確認済み |
 
 ### Phase 2: Multibodyプラント
 
@@ -100,11 +103,15 @@ flowchart TD
 
 | ID | 操作 | 完了条件 |
 |---|---|---|
-| 3.1 | StateEstimatorをMATLAB Function+Unit Delayで構成 | 12状態、14出力 |
+| 3.1 | StateEstimatorをMATLAB Function+Unit Delayで構成 | 14状態、14要素`estimate` |
 | 3.2 | ModeAndControlをMATLAB Function+Unit Delayで構成 | 2積分状態、3輪出力 |
 | 3.3 | 輪トルクをRevolute Jointへ接続 | 正方向一致 |
 | 3.4 | 速度・ヨー指令をCommandSourceへ接続 | 範囲制限一致 |
 | 3.5 | truth信号を制御器から隔離 | 制御入力線なし |
+| 3.6 | ヨーバイアス診断をLoggingへ接続 | $\hat b_{g,z}$、$\gamma$、$t_{qual}$を個別ログ |
+| 3.7 | 起動時ヨー制御ガードを追加 | 準備完了までヨートルクだけを抑止し、状態をUnit Delayで保持 |
+
+Phase 3.1、3.6、3.7はSimulink Agentic Toolkitの`model_read`、`model_edit`、`model_check`を使用して実施し、`Controller`と`Logging`の構造チェックが正常であることを確認した。
 
 ### Phase 4: 閉ループ検証
 
@@ -115,6 +122,9 @@ flowchart TD
 | 4.3 | $v_y=0.08$ m/s | 速度誤差±0.01 m/s |
 | 4.4 | $r=0.5$ rad/s | ヨー速度誤差±0.05 rad/s |
 | 4.5 | 初期傾斜10 deg | 2 s以内に±2 deg |
+| 4.6 | 静止、ヨーバイアス0.02 rad/s | 15 s以内に推定誤差0.002 rad/s未満 |
+| 4.7 | 学習後の静止10 s | ヨードリフト0.5 deg未満 |
+| 4.8 | 走行・振動・すべり・接触低下 | バイアス変化0.002 rad/s未満 |
 
 ## 5. パラメーター表
 
@@ -129,10 +139,21 @@ flowchart TD
 | $\tau_{servo,max}$ | 1.275 | N·m | 16007仕様書 | `p.servo.maxTorque` |
 | $\tau_{contact,max}$ | 0.0384 | N·m | 公称法線荷重・摩擦 | `p.wheel.commandTorqueLimit` |
 | $T_s$ | 0.005 | s | 制御設計 | estimator/controller |
-| $K_{pv}$ | [2,2] | s$^{-1}$ | 初期調整値 | `p.controller.velocityKp` |
-| $K_{iv}$ | [0.35,0.35] | s$^{-2}$ | 初期調整値 | `p.controller.velocityKi` |
+| $K_{pv}$ | [0.35,0.35] | s$^{-1}$ | 初期調整値 | `p.controller.velocityKp` |
+| $K_{iv}$ | [0.04,0.04] | s$^{-2}$ | 初期調整値 | `p.controller.velocityKi` |
 | $K_{p,att}$ | [0.95,0.95] | N·m/rad | 初期調整値 | `p.controller.balanceKp` |
 | $K_{d,att}$ | [0.12,0.12] | N·m/(rad/s) | 初期調整値 | `p.controller.balanceKd` |
+| $\omega_{w,th}$ | 0.10 | rad/s | 低運動の暫定輪周速度ゲート | `p.estimator.biasWheelRateThreshold` |
+| $a_{th}$ | $0.03g$ | m/s² | 静止振動の暫定許容値 | `p.estimator.biasAccelNormThreshold` |
+| $\omega_{rp,th}$ | 0.02 | rad/s | ロール・ピッチ低運動の暫定値 | `p.estimator.biasRollPitchRateThreshold` |
+| $\omega_{z,th}$ | 0.05 | rad/s | 0.02 rad/sバイアスを含む暫定値 | `p.estimator.biasYawRateThreshold` |
+| $c_{th}$ | 0.80 | 1 | 公称接触に限定する暫定値 | `p.estimator.biasContactConfidenceThreshold` |
+| $t_{min}$ | 0.50 | s | 一時停止を除外する滞留時間 | `p.estimator.biasQualificationTime` |
+| $\tau_b$ | 1.0 | s | 低運動維持時間内の収束と15 s基準を両立する暫定値 | `p.estimator.biasTimeConstant` |
+| $b_{max}$ | 0.10 | rad/s | 未確定IMU向け保守上限 | `p.estimator.biasMaximum` |
+| $\Delta b_{max}$ | $1.0\times10^{-4}$ | rad/s/sample | 外れ値急変防止 | `p.estimator.biasMaximumUpdatePerSample` |
+| $\epsilon_{scale}$ | 0.25 | m/s | 既存接触信頼度スケールを維持 | `p.estimator.contactResidualScale` |
+| $\omega_{ready}$ | 0.002 | rad/s | 収束合格誤差と一致する起動ガード解除値 | `p.controller.yawBiasReadyRateThreshold` |
 
 ## 6. 完了定義
 
@@ -147,6 +168,11 @@ flowchart TD
 - [ ] 規定速度での定常追従ゲート合格
 - [ ] 接触分離シナリオと法線力・すべりログを保存
 - [ ] ソルバー・摩擦・球質量の感度試験完了
+- [x] 14状態推定器とヨー軸バイアス更新則をMATLAB関数へ実装
+- [x] 9項目以上のクラスベース単体試験を作成
+- [x] MATLAB接続下でヨーバイアス単体試験を実行
+- [x] StateEstimatorの状態幅と診断ログをSimulinkモデルへ統合
+- [ ] バイアス・ノイズ・振動・すべり・接触低下MILを実行
 
 ### 6.1 実行済みMIL
 
@@ -155,6 +181,12 @@ flowchart TD
 | 静止、0.1 s | 4接触、最大傾斜0.00001 deg未満、有限値 | 合格 |
 | $[v_x,v_y,r]=[0.03,0.02,0.20]$、0.5 s | 4接触、最大傾斜0.787 deg、平均ヨー速度0.183 rad/s、最大輪速1.403 rad/s | 短時間ゲート合格 |
 | モデル更新 | `ANISOTROPIC_COMPILE_OK` | 合格 |
+| MATLAB単体試験 | 16件中16件合格 | 合格 |
+| モデル構造 | `Controller`、`Logging`とも`model_check`正常、ルートにerrorなし | 合格 |
+| 静止、ヨーバイアス0.02 rad/s、4 s | 4 s時点誤差0.001916 rad/s、3～4 sヨードリフト0.005293 deg | 短時間ゲート合格 |
+| $[v_x,v_y,r]=[0.03,0.02,0.20]$、0.5 s再試験 | 平均ヨー速度0.197879 rad/s、最大傾斜0.005681 deg、最終mode=1 | 合格 |
+
+25 sの全機体バイアスMILでは15 s時点の推定誤差0.001916 rad/sを確認したが、モデルは4.760 sでFALLENへ遷移したため、その後の10 sヨードリフトは判定対象外とした。バイアスなし公称指令でも2.195 sでFALLENへ遷移するため、長時間姿勢・速度回帰は既存プラント／制御調整の未解決事項として分離する。ノイズ、振動、すべり、接触低下を含む長時間MILは未実施である。
 
 ## 7. リスク
 
@@ -165,3 +197,5 @@ flowchart TD
 | 反力符号が逆 | 1 deg姿勢偏差試験 | joint actuation signを1か所で反転 |
 | 公称摩擦でトルク不足 | 飽和率 | 接触緯度・重心・指令範囲を再設計 |
 | IMU速度積分ドリフト | truth誤差 | 実機版で外部速度補正を追加 |
+| 実機IMU仕様未確定 | 静止ログ、温度試験、Allan分散 | 低運動閾値、時定数、上限を実測調整 |
+| 走行中にエンコーダーからヨーを誤推定 | バイアスの運動中変化 | エンコーダーは低運動認定だけに使い、走行中は学習停止 |
