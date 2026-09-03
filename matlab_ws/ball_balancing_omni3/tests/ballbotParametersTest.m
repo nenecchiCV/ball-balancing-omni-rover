@@ -26,7 +26,9 @@ classdef ballbotParametersTest < matlab.unittest.TestCase
             testCase.verifyEqual(p.wheel.contactTorqueLimit, ...
                 0.033185577683073, RelTol=1.0e-12);
             testCase.verifyEqual(p.wheel.commandTorqueLimit, ...
-                p.wheel.contactTorqueLimit, AbsTol=1.0e-12);
+                p.servo.maxTorque, AbsTol=1.0e-12);
+            testCase.verifyGreaterThan(p.wheel.commandTorqueLimit, ...
+                p.wheel.contactTorqueLimit);
         end
 
         function testWheelGeometryIsSymmetricAndFinite(testCase)

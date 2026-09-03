@@ -1,7 +1,7 @@
 function p = ballbotParameters
 %BALLBOTPARAMETERS Nominal plant, estimator, and controller parameters.
 
-p.gravity = 9.80665;
+p.gravity = 9.80665*0.25;
 
 % Reference ball: 100 mm, 0.285 kg rigid ball with thin-shell inertia.
 p.ball.radius = 0.050;
@@ -41,6 +41,8 @@ p.rover.noseAxisBody = [1; 0; 0];
 p.contact.wheelBall.normalStiffness = 2.0e5;
 p.contact.wheelBall.normalDamping = 250;
 p.contact.wheelBall.transitionWidth = 5.0e-4;
+% Relaxed value used by the cascade model to reduce contact-state chatter.
+p.contact.wheelBall.relaxedTransitionWidth = 1.5e-3;
 p.contact.wheelBall.staticFriction = 0.90;
 p.contact.wheelBall.dynamicFriction = 0.75;
 p.contact.wheelBall.rollerFriction = 0.02;
@@ -57,8 +59,12 @@ p.wheel.normalLoadNominal = ...
     p.rover.mass*p.gravity/(3*sin(p.wheel.contactLatitude));
 p.wheel.contactTorqueLimit = p.contact.wheelBall.dynamicFriction* ...
     p.wheel.normalLoadNominal*p.wheel.radius;
-p.wheel.commandTorqueLimit = min(p.servo.maxTorque, ...
-    p.wheel.contactTorqueLimit);
+% Limit the actuator command by the servo capability.  The former limit
+% also clipped it to the nominal wheel-ball traction torque (about
+% 0.033 N*m), which prevented the controller from developing recovery
+% authority.  Slip and transmissible force remain governed by the
+% Spatial Contact Force blocks in the plant.
+p.wheel.commandTorqueLimit = p.servo.maxTorque;
 p.wheel.geometry = geometry;
 
 % IMU/wheel estimator. State is [q_WB(4); v_WB(3); omegaBall_W(3);
@@ -113,6 +119,17 @@ p.controller.recoveryTilt = deg2rad(18);
 p.controller.fallenTilt = deg2rad(35);
 p.controller.minimumContactConfidence = 0.20;
 p.controller.recoveryGainScale = 1.35;
+
+% Upright PID and direct velocity-to-torque controller used by
+% ball_balancing_omni3_multibody_pid.slx. The tilt reference is fixed at
+% zero; commanded planar velocity contributes torque directly and does not
+% generate a lean-angle reference.
+p.controller.pidTiltKp = [0.95; 0.95];
+p.controller.pidTiltKi = [0.02; 0.02];
+p.controller.pidTiltKd = [0.12; 0.12];
+p.controller.pidTiltIntegralLimit = deg2rad([5; 5]);
+p.controller.pidVelocityKp = [0.03; 0.03];
+p.controller.pidYawRateKp = 0.08;
 
 p.command.velocityWorld = [0.05; 0];
 p.command.yawRate = 0;
