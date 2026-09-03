@@ -1,0 +1,40 @@
+{
+  "valid": true,
+  "solid_count": 1,
+  "volume_mm3": 145044.96384592593,
+  "bounding_box_mm": [
+    140.0,
+    140.0,
+    41.63184817529498
+  ],
+  "disc_diameter_mm": 140.0,
+  "ramp_angle_deg": 55.0,
+  "ramp_size_mm": [
+    26.0,
+    58.0
+  ],
+  "mount_holes": 12,
+  "wiring_holes": 3,
+  "m4_holes": 6,
+  "wheel_contact_radius_error_mm": 0.0,
+  "wheel_axis_normal_dot": 0.0,
+  "ramp_normal_wheel_axis_alignment_abs": 1.0,
+  "chassis_wheel_interference_mm3_each": 0.0,
+  "chassis_servo_interference_mm3_each": 0.0,
+  "chassis_mount_overlap_mm3_each": 591.328,
+  "azimuth_spacing_deg": [
+    120.0,
+    120.0,
+    120.0
+  ],
+  "estimated_wheel_envelope_diameter_mm": 133.0,
+  "assembly_chassis_base_z_mm": 72.1820916939846,
+  "servo_large_face_to_ramp_plane_offset_mm": 0.0,
+  "assembly_m25_mount_screws": 12,
+  "notes": [
+    "Rotramaシャシー固定穴ピッチは未公開のため18 x 50 mmを仮定。現物実測後に更新する。",
+    "Rotramaマウントは公開外形に基づく包絡形状であり実部品STEPではない。",
+    "傾斜面は中心から外周へ高くなり、法線をサーボ出力軸およびホイール軸へ一致させた。",
+    "接触・同軸は解析配置で厳密に定義。実部品形状同士のクリアランスは現物マウント寸法確定後に再検査する。"
+  ]
+}

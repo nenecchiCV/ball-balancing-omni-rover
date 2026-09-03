@@ -41,3 +41,5 @@ slprj/
 ## else
 
 tmp/
+
+.tools/

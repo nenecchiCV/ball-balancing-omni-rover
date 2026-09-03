@@ -77,7 +77,7 @@ $$
 $$
 
 $$
-\tau_w=\operatorname{sat}(\tau_{w,raw},\pm0.0384\ \mathrm{N\,m})
+\tau_w=\operatorname{sat}(\tau_{w,raw},\pm p.\mathrm{wheel.commandTorqueLimit})
 $$
 
 対応実装: `ballbotWheelGeometry.m`、`ballbotTorqueAllocator.m`。
@@ -417,7 +417,7 @@ $$
 ### 6.5 飽和・アンチワインドアップ
 
 $$
-\tau_w=\operatorname{sat}(A_\tau^\dagger\tau_b,\pm0.0384\ \mathrm{N\,m})
+\tau_w=\operatorname{sat}(A_\tau^\dagger\tau_b,\pm p.\mathrm{wheel.commandTorqueLimit})
 $$
 
 | 条件 | $I_v$更新 |

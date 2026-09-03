@@ -76,7 +76,7 @@
 
 | 名前 | 記号 | 次元 | 単位 | サンプル時間 | 範囲 |
 |---|---:|---:|---:|---:|---:|
-| 車輪軸トルク指令 | $\tau_w$ | 3 | N·m | 5 ms | ±0.0384 |
+| 車輪軸トルク指令 | $\tau_w$ | 3 | N·m | 5 ms | ±`p.wheel.commandTorqueLimit`（公称±0.03319） |
 | 推定状態 | $\hat z$ | 14 | 混合 | 5 ms | [理論仕様](ball_balancing_omnirover3wd-control-estimation-theory.md) |
 | 制御モード | mode | 1 | uint8 | 5 ms | 0,1,2 |
 

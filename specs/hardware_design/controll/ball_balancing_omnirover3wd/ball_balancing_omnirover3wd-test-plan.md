@@ -32,7 +32,7 @@ flowchart LR
 | U-01 | WheelGeometry | 公称$p$ | $n_i,t_i,a_i$相互直交 | 内積$<10^{-12}$ |
 | U-02 | WheelGeometry | 公称$p$ | $A_\tau$フルランク | rank=3 |
 | U-03 | TorqueAllocator | $\tau_b=[0.01,-0.02,0.005]^T$ | 往復一致 | 非飽和時誤差$<10^{-9}$ N·m |
-| U-04 | TorqueAllocator | 大トルク | 全輪飽和 | $|\tau_i|\le0.0384$ N·m |
+| U-04 | TorqueAllocator | 大トルク | 全輪飽和 | $|\tau_i|\le p.wheel.commandTorqueLimit$（公称0.03319 N·m） |
 | U-05 | CustomFriction | $v_t\ne0,F_n>0$ | $F_t^Tv_t\le0$ | 常に非正 |
 | U-06 | WheelRateDerivative | 変位増分$[0.01,-0.02,0.03]^T$ rad、$T_s=5$ ms | 後退差分 | $[2,-4,6]^T$ rad/s、誤差$<10^{-12}$ rad/s |
 | U-07 | Estimator | 静止IMU、車輪回転変位一定 | 状態不変・接触信頼度 | ノルム誤差$<10^{-10}$、信頼度$>0.99$ |
@@ -60,7 +60,7 @@ B-01～B-12は`matlab_ws/ball_balancing_omni3/tests/ballbotEstimatorStepTest.m`�
 
 | ID | 初期条件 | 入力 | 観測 | 合格条件 |
 |---|---|---|---|---|
-| P-01 | 公称直立 | 全輪0 N·m | 3輪法線力 | 各輪$2.14$ Nの±20% |
+| P-01 | 公称直立 | 全輪0 N·m | 3輪法線力 | 各輪`p.wheel.normalLoadNominal`の±20%（公称約1.844 N） |
 | P-02 | 公称直立 | 全輪0 N·m | 球–床法線力 | $(m_R+m_b)g$の±10% |
 | P-03 | 公称直立 | 全輪0 N·m | 貫通量 | 各接触1 mm未満 |
 | P-04 | 公称直立 | 全輪0 N·m | 接触信号 | 4接触すべて1 |
@@ -106,7 +106,7 @@ B-01～B-12は`matlab_ws/ball_balancing_omni3/tests/ballbotEstimatorStepTest.m`�
 | 3輪接触率 | 各輪99%以上 |
 | 球–床分離時間 | 0 s |
 | 輪–球すべりRMS | 0.03 m/s未満 |
-| 車輪トルク | 全サンプルで±0.0384 N·m以内 |
+| 車輪トルク | 全サンプルで±`p.wheel.commandTorqueLimit`以内（公称±0.03319 N·m） |
 | 車輪速度 | 連続定常で±5.55 rad/s以内 |
 
 ## 5. 推定精度
@@ -134,11 +134,11 @@ B-01～B-12は`matlab_ws/ball_balancing_omni3/tests/ballbotEstimatorStepTest.m`�
 
 | パラメーター | 公称 | 変動 | 再実行 | 合格条件 |
 |---|---:|---:|---|---|
-| ボール質量 | 0.300 kg | 0.20, 0.40 kg | C-01,C-02 | 転倒なし、誤差2倍以内 |
+| ボール質量 | 0.285 kg | 0.228, 0.342 kg | C-01,C-02 | 転倒なし、誤差2倍以内 |
 | 輪–球$\mu_d$ | 0.75 | 0.60, 0.90 | C-02,C-05 | 接触維持 |
 | 球–床$\mu_d$ | 0.80 | 0.64, 0.96 | C-02 | 転倒なし |
 | 機体質量 | 0.462 kg | ±10% | C-01,C-02 | 転倒なし |
-| 接触緯度 | 45 deg | 40, 50 deg | C-01 | $A_\tau$ rank=3、接触維持 |
+| 接触緯度 | 55 deg | 50, 60 deg | C-01 | $A_\tau$ rank=3、接触維持 |
 | IMU補正ゲイン | 2.5 | 1.25, 5.0 | E-01 | 有限、発散なし |
 
 ## 8. 数値ロバストネス

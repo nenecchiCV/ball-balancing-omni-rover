@@ -91,9 +91,9 @@ flowchart TD
 |---|---|---|
 | 2.1 | 既存`omnirover3wd_multibody.slx`を新規フォルダーへ複製 | ファイル存在 |
 | 2.2 | ルートをCommandSource/Controller/MultibodyPlant/Loggingへ分割 | `model_overview` |
-| 2.3 | Infinite Planeと直径150 mm Spherical Solidを配置 | `model_read` |
+| 2.3 | Infinite Planeと直径100 mm Spherical Solidを配置 | `model_read` |
 | 2.4 | 球–床Spatial Contact Forceを接続 | `model_read`, `model_check` |
-| 2.5 | 3輪中心を球面$\lambda=45$ degへ再配置 | Transform確認 |
+| 2.5 | 3輪中心を球面$\lambda=55$ degへ再配置 | Transform確認 |
 | 2.6 | 3組のRevolute Jointを$+a_i$へ整列 | Joint軸確認 |
 | 2.7 | 3組の輪–球Spatial Contact Forceを接続 | 物理ポート確認 |
 | 2.8 | Provided by Input摩擦と`ballbotCustomFriction`を接続 | すべり/力ログ |
@@ -130,14 +130,14 @@ Phase 3.1、3.6、3.7はSimulink Agentic Toolkitの`model_read`、`model_edit`�
 
 | パラメーター | 値 | 単位 | 出典 | 実装 |
 |---|---:|---:|---|---|
-| $R_b$ | 0.075 | m | 要求 | `p.ball.radius` |
-| $m_b$ | 0.300 | kg | 仮定・実測更新 | `p.ball.mass` |
+| $R_b$ | 0.050 | m | 要求 | `p.ball.radius` |
+| $m_b$ | 0.285 | kg | 基準質量・実測更新 | `p.ball.mass` |
 | $R_w$ | 0.024 | m | 14108仕様書 | `p.wheel.radius` |
 | $m_w$ | 0.039 | kg | 14108仕様書/既存モデル | `p.wheel.mass` |
 | $m_R$ | 0.462 | kg | 既存3WDモデル | `p.rover.mass` |
-| $\lambda$ | 45 | deg | 機構設計 | `p.wheel.contactLatitude` |
+| $\lambda$ | 55 | deg | 機構設計 | `p.wheel.contactLatitude` |
 | $\tau_{servo,max}$ | 1.275 | N·m | 16007仕様書 | `p.servo.maxTorque` |
-| $\tau_{contact,max}$ | 0.0384 | N·m | 公称法線荷重・摩擦 | `p.wheel.commandTorqueLimit` |
+| $\tau_{contact,max}$ | 0.03319 | N·m | 公称法線荷重・摩擦 | `p.wheel.commandTorqueLimit` |
 | $T_s$ | 0.005 | s | 制御設計 | estimator/controller |
 | $K_{pv}$ | [0.35,0.35] | s$^{-1}$ | 初期調整値 | `p.controller.velocityKp` |
 | $K_{iv}$ | [0.04,0.04] | s$^{-2}$ | 初期調整値 | `p.controller.velocityKi` |

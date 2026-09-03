@@ -3,9 +3,9 @@ function p = ballbotParameters
 
 p.gravity = 9.80665;
 
-% Ball candidate: 150 mm junior rhythmic-gymnastics rubber ball.
-p.ball.radius = 0.075;
-p.ball.mass = 0.300;
+% Reference ball: 100 mm, 0.285 kg rigid ball with thin-shell inertia.
+p.ball.radius = 0.050;
+p.ball.mass = 0.285;
 p.ball.inertia = (2/3)*p.ball.mass*p.ball.radius^2*eye(3);
 
 % Nexus Robot 14108 omniwheel.
@@ -14,7 +14,7 @@ p.wheel.width = 0.0251;
 p.wheel.mass = 0.039;
 p.wheel.rollerCount = 8;
 p.wheel.azimuth = deg2rad([0; 120; 240]);
-p.wheel.contactLatitude = deg2rad(45);
+p.wheel.contactLatitude = deg2rad(55);
 
 % Nexus Robot 16007 continuous-rotation servo.
 p.servo.dimensions = [0.0417, 0.0197, 0.0429];
