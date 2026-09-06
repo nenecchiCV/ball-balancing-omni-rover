@@ -259,7 +259,7 @@ $$
 \omega_{w,max}=62\frac{2\pi}{60}\approx6.49\ \mathrm{rad/s}
 $$
 
-である。ストールトルク1.275 N mと公称電圧5 Vは初期制約として利用できるが、$R_a,L_a,K_t,K_e,N,J_m,b_m$は未同定である。
+である。FIT0521のストールトルク0.981 N m、公称電圧6 V、ストール電流3.2 A、無負荷速度210 rpm、無負荷電流0.13 Aを初期制約として利用する。$R_a=1.875\ \Omega$、出力軸等価$K_t=0.306\ \mathrm{N\,m/A}$を公称値から推定し、$L_a,J_m,b_m$は実機試験で同定する。
 
 ストール試験から得る一次近似は、
 
@@ -659,10 +659,11 @@ $$
 | $m_w$ | 0.039 | kg/輪 | `p.wheel.mass` |
 | $m_R$ | 0.462 | kg | `p.rover.mass` |
 | $h$ | 0.125 | m | `p.rover.centerAboveBall` |
-| $V_{dc}$ | 5.0 | V | `p.servo.nominalVoltage` |
-| $\tau_{stall}$ | 約1.275 | N m | `p.servo.maxTorque` |
-| $\omega_{w,max}$ | 約6.49 | rad/s | `p.servo.maxSpeed` |
-| $\tau_s$ | 0.030 | s | `p.servo.timeConstant`、暫定 |
+| $V_{dc}$ | 6.0 | V | `p.driver.supplyVoltage` |
+| $\tau_{stall}$ | 約0.981 | N m | `p.motor.stallTorque` |
+| $\tau_{continuous}$ | 約0.919 | N m | `p.driver.continuousTorqueLimit` |
+| $\omega_{w,max}$ | 約21.99 | rad/s | `p.motor.noLoadSpeed` |
+| $\tau_s$ | 0.030 | s | `p.motor.timeConstant`、暫定 |
 
 ### 13.2 追加または同定が必要なパラメーター
 

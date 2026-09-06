@@ -19,42 +19,74 @@ p.wheel.contactLatitude = deg2rad(55);
 % active despite contact-detection and floating-point tolerances.
 p.wheel.contactPreload = 5.0e-5;
 
-% Nexus Robot 16007 continuous-rotation servo.
-p.servo.dimensions = [0.0417, 0.0197, 0.0429];
-p.servo.mass = 0.055;
-p.servo.maxTorque = 13*9.80665/100;
-p.servo.minSpeed = 53*2*pi/60;
-p.servo.maxSpeed = 62*2*pi/60;
-p.servo.nominalVoltage = 5.0;
-p.servo.operatingCurrent = 0.100;
-p.servo.timeConstant = 0.030;
-% Output-shaft-equivalent electrical servo model.  The DC Motor block is
-% parameterized from the available 5 V stall-torque/no-load-speed data.
-% Equivalent inertia is selected so the unloaded torque-speed model has
-% the specified 30 ms mechanical time constant; replace after testing.
-p.servo.equivalentInertia = p.servo.timeConstant* ...
-    p.servo.maxTorque/p.servo.maxSpeed;
-p.servo.speedControllerNaturalFrequency = 30;
-p.servo.speedControllerDamping = 0.90;
-p.servo.speedPlantDcGain = p.servo.maxSpeed/p.servo.nominalVoltage;
-p.servo.speedControllerKp = ...
-    (2*p.servo.speedControllerDamping* ...
-    p.servo.speedControllerNaturalFrequency*p.servo.timeConstant - 1)/ ...
-    p.servo.speedPlantDcGain;
-p.servo.speedControllerKi = ...
-    p.servo.timeConstant*p.servo.speedControllerNaturalFrequency^2/ ...
-    p.servo.speedPlantDcGain;
-p.servo.speedControllerAntiWindup = 1/max(p.servo.speedControllerKp, eps);
-p.servo.speedControllerIntegralLimit = ...
-    p.servo.nominalVoltage/p.servo.speedControllerKi;
-p.servo.speedCommandLimit = 0.95*p.servo.maxSpeed;
-p.servo.torquePerSpeedError = ...
-    (p.servo.maxTorque/p.servo.nominalVoltage)* ...
-    p.servo.speedControllerKp;
+% DFRobot FIT0521 6 V geared DC motor with quadrature Hall encoder.
+p.motor.dimensions = [0.0520, 0.0244, 0.0244];
+p.motor.mass = 0.096;
+p.motor.nominalVoltage = 6.0;
+p.motor.gearRatio = 34.02;
+p.motor.noLoadSpeed = 210*2*pi/60;
+p.motor.noLoadCurrent = 0.13;
+p.motor.stallTorque = 10*9.80665/100;
+p.motor.stallCurrent = 3.2;
+p.motor.armatureResistance = ...
+    p.motor.nominalVoltage/p.motor.stallCurrent;
+p.motor.torqueConstant = p.motor.stallTorque/p.motor.stallCurrent;
+p.motor.backEmfConstant = ...
+    (p.motor.nominalVoltage - ...
+    p.motor.noLoadCurrent*p.motor.armatureResistance)/ ...
+    p.motor.noLoadSpeed;
+p.motor.viscousFriction = ...
+    p.motor.torqueConstant*p.motor.noLoadCurrent/p.motor.noLoadSpeed;
+p.motor.timeConstant = 0.030;
+p.motor.equivalentInertia = p.motor.timeConstant* ...
+    p.motor.stallTorque/p.motor.noLoadSpeed;
+
+% Two Cytron MDD3A boards provide the three required PWM/DIR channels.
+p.driver.boardCount = 2;
+p.driver.channelCountPerBoard = 2;
+p.driver.supplyVoltage = p.motor.nominalVoltage;
+p.driver.continuousCurrent = 3.0;
+p.driver.peakCurrent = 5.0;
+p.driver.pwmFrequency = 20e3;
+p.driver.maxDutyCycle = 0.95;
+p.driver.continuousTorqueLimit = p.motor.torqueConstant* ...
+    min(p.driver.continuousCurrent, p.motor.stallCurrent);
+p.driver.peakTorqueLimit = p.motor.stallTorque;
+
+p.encoder.supplyVoltage = 3.3;
+p.encoder.pulsesPerOutputRevolution = 341.2;
+p.encoder.quantization = 2*pi/p.encoder.pulsesPerOutputRevolution;
+
+% Output-shaft-equivalent speed loop.  The 30 ms time constant is
+% provisional until a FIT0521 step response is measured under load.
+p.motor.speedControllerNaturalFrequency = 30;
+p.motor.speedControllerDamping = 0.90;
+p.motor.speedPlantDcGain = ...
+    p.motor.noLoadSpeed/p.driver.supplyVoltage;
+p.motor.speedControllerKp = ...
+    (2*p.motor.speedControllerDamping* ...
+    p.motor.speedControllerNaturalFrequency*p.motor.timeConstant - 1)/ ...
+    p.motor.speedPlantDcGain;
+p.motor.speedControllerKi = ...
+    p.motor.timeConstant*p.motor.speedControllerNaturalFrequency^2/ ...
+    p.motor.speedPlantDcGain;
+p.motor.speedControllerAntiWindup = 1/max(p.motor.speedControllerKp, eps);
+p.motor.speedControllerIntegralLimit = ...
+    p.driver.supplyVoltage/p.motor.speedControllerKi;
+p.motor.speedCommandLimit = ...
+    p.driver.maxDutyCycle*p.motor.noLoadSpeed;
+p.motor.torquePerSpeedError = ...
+    (p.driver.continuousTorqueLimit/p.driver.supplyVoltage)* ...
+    p.motor.speedControllerKp;
+
+% Legacy aliases keep archived model variants loadable during migration.
+p.servo = p.motor;
+p.servo.maxTorque = p.motor.stallTorque;
+p.servo.maxSpeed = p.motor.noLoadSpeed;
 
 % Redesigned triangular body. The body frame origin is the IMU location.
-p.rover.mass = 0.462;
-p.rover.bodyMass = p.rover.mass - 3*(p.servo.mass + p.wheel.mass);
+p.rover.bodyMass = 0.180;
+p.rover.mass = p.rover.bodyMass + 3*(p.motor.mass + p.wheel.mass);
 p.rover.centerAboveBall = 0.125;
 p.rover.chassisRadius = 0.080;
 p.rover.chassisHeight = 0.030;
@@ -87,10 +119,10 @@ p.wheel.contactTorqueLimit = p.contact.wheelBall.dynamicFriction* ...
     p.wheel.normalLoadNominal*p.wheel.radius;
 % Limit the actuator command by the servo capability.  The former limit
 % also clipped it to the nominal wheel-ball traction torque (about
-% 0.033 N*m), which prevented the controller from developing recovery
+% 0.042 N*m), which prevented the controller from developing recovery
 % authority.  Slip and transmissible force remain governed by the
 % Spatial Contact Force blocks in the plant.
-p.wheel.commandTorqueLimit = p.servo.maxTorque;
+p.wheel.commandTorqueLimit = p.driver.continuousTorqueLimit;
 p.wheel.geometry = geometry;
 
 % IMU/wheel estimator. State is [q_WB(4); v_WB(3); omegaBall_W(3);

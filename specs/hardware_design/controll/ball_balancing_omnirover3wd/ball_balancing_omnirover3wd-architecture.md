@@ -23,8 +23,8 @@ flowchart LR
   OUTER[VelocityToLean<br/>PI + lean limit]
   INNER[BalanceAndYaw<br/>PD + yaw-rate P]
   ALLOC[TorqueAllocator<br/>ballbotTorqueAllocator]
-  LIMIT[ServoAndContactLimits]
-  ACT[ServoActuators<br/>3 revolute joints]
+  LIMIT[FIT0521AndMDD3ALimits]
+  ACT[DCMotorActuators<br/>3 revolute joints]
   MB[MultibodyPlant<br/>body + ball + ground]
   CONTACT[Four Spatial Contacts]
   TRUTH[TruthLogging]
@@ -64,7 +64,7 @@ ball_balancing_omni3_multibody.slx
 │   │   ├── YawBiasReadyMemory
 │   │   ├── ballbotControlStep
 │   │   ├── ballbotTorqueAllocator
-│   │   └── ballbotServoTorqueEnvelope
+│   │   └── ballbotDcMotorTorqueEnvelope
 │   └── ControlCycleDelay
 ├── MultibodyPlant
 │   ├── Environment
@@ -95,7 +95,7 @@ ball_balancing_omni3_multibody.slx
 | WheelRateDerivative | `ballbotWheelRateFromDisplacement.m` | $\theta_w[k],\theta_w[k-1]\rightarrow\omega_w[k]$ | 5 ms | Yes | 前回値は呼出元で保持 |
 | ControlCycleDelay | Unit Delay | 18要素制御出力→1サンプル前の出力 | 5 ms | No | 代数ループ分離 |
 | TorqueAllocator | `ballbotTorqueAllocator.m` | $\tau_b^B\rightarrow\tau_w$ | 5 ms | Yes | なし |
-| ServoActuators | トルク―速度包絡線+3組のRevolute Joint | $\tau_w\rightarrow$車輪運動 | 5 ms→連続 | No | 車輪角速度 |
+| DCMotorActuators | FIT0521トルク―速度包絡線+MDD3A連続電流制限+3組のRevolute Joint | $\tau_w\rightarrow$車輪運動 | 5 ms→連続 | No | 車輪角速度 |
 | RoverMechanism | Simscape Multibody | 接触力・反力→機体/車輪6DoF | 連続 | No | 剛体状態 |
 | Ball | Simscape Multibody | 接触力→球6DoF | 連続 | No | 球位置・姿勢・速度 |
 | BallGroundContact | Spatial Contact Force | 球・床幾何→接触力 | 連続 | Yes | ペナルティ接触 |

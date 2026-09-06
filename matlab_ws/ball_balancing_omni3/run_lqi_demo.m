@@ -1,6 +1,5 @@
 % Run the LQI ball-balancing 3WD omnirover demonstration.
 p = ballbotParameters;
-p.command.velocityWorld = [0; 0];
 p.controller.minimumContactConfidence = 0.10;
 assignin("base", "ballbotParams", p);
 

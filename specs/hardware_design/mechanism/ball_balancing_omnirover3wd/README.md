@@ -84,18 +84,19 @@ flowchart TB
 |---|---|---:|---|---|
 | ボール | リジッドボール XL（設計基準） | 1 | 直径100 mm、質量285 g、高グリップ表面 | 公開仕様。直径、質量、慣性、摩擦は入手後に実測 |
 | オムニホイール | Nexus Robot 14108 | 3 | 直径48 mm、幅25.1 mm、8ローラー、約39–40 g、負荷上限2 kg | [14108仕様書](../omnirover3wd_reference/omniwheel_14108/nexus_14108_omniwheel_datasheet.pdf) |
-| サーボ | Nexus Robot 16007 / RB-Nex-40 | 3 | 41.7 × 19.7 × 42.9 mm、55 g、13 kgf·cm、53–62 rpm、3–7.2 V | [16007仕様書](../omnirover3wd_reference/servo_16007/nexus_16007_servo_datasheet.pdf) |
+| DCギヤードモータ | DFRobot FIT0521 | 3 | 6 V、210 rpm、10 kgf·cm、ストール3.2 A、52 × $\phi$24.4 mm、96 g | [DFRobot公式仕様](https://wiki.dfrobot.com/fit0521/) |
+| モータドライバ | Cytron MDD3A | 2 | 2チャネル/枚、4–16 V、3 A連続・5 Aピーク/チャネル、PWM最大20 kHz、PWM/DIR入力 | [Cytron公式仕様](https://my.cytron.io/p-3amp-4v-16v-dc-motor-driver-2-channels) |
 | IMU | 理想6軸IMU | 1 | 3軸比力、3軸角速度、機体中央配置 | シミュレーションセンサー |
-| エンコーダー | 理想車輪軸エンコーダー | 3 | 各輪回転変位（回転速度は制御器内で微分） | シミュレーションセンサー |
+| エンコーダー | FIT0521内蔵2相Hall | 3 | 3.3/5 V、出力軸341.2 PPR、各輪回転変位（回転速度は制御器内で微分） | DFRobot公式仕様。実機のカウント逓倍方式は受入試験で確定 |
 
 ## 質量・慣性予算
 
 | 構成 | 単体質量 | 数量 | 小計 |
 |---|---:|---:|---:|
 | 機体フレーム・電装・支持部 | 0.180 kg | 1 | 0.180 kg |
-| 16007サーボ | 0.055 kg | 3 | 0.165 kg |
+| FIT0521モータ | 0.096 kg | 3 | 0.288 kg |
 | 14108ホイール | 0.039 kg | 3 | 0.117 kg |
-| ローバー合計 |  |  | 0.462 kg |
+| ローバー合計（MDD3A基板質量を除く） |  |  | 0.585 kg |
 | 100 mmリジッドボール（設計基準） | 0.285 kg | 1 | 0.285 kg |
 
 $$
@@ -122,20 +123,24 @@ $$
 ## 駆動制約
 
 $$
-\tau_{servo,max}=13\times\frac{9.80665}{100}=1.275\ \mathrm{N\,m}
+\tau_{motor,stall}=10\times\frac{9.80665}{100}=0.981\ \mathrm{N\,m}
 $$
 
 $$
-N_{i,nom}=\frac{m_Rg}{3\sin\lambda}=1.842\ \mathrm{N},\qquad
-\tau_{contact,max}=\mu_dN_{i,nom}R_w=0.0332\ \mathrm{N\,m}
+\tau_{continuous}=\tau_{motor,stall}\frac{3.0}{3.2}=0.919\ \mathrm{N\,m}
+$$
+
+$$
+N_{i,nom}=\frac{m_Rg}{3\sin\lambda}=2.334\ \mathrm{N},\qquad
+\tau_{contact,max}=\mu_dN_{i,nom}R_w=0.0420\ \mathrm{N\,m}
 $$
 
 | 制約 | 下限 | 上限 | 支配要因 |
 |---|---:|---:|---|
-| 連続輪速 | -5.55 rad/s | 5.55 rad/s | 53 rpmを保守値として採用 |
-| 短時間輪速 | -6.49 rad/s | 6.49 rad/s | 62 rpm |
-| 指令輪トルク | -0.0332 N·m | 0.0332 N·m | 公称接触摩擦 |
-| サーボ軸物理上限 | -1.275 N·m | 1.275 N·m | 16007仕様 |
+| 無負荷輪速 | -21.99 rad/s | 21.99 rad/s | FIT0521、210 rpm @ 6 V |
+| 連続指令輪トルク | -0.919 N·m | 0.919 N·m | MDD3A 3 A連続定格をFIT0521のトルク定数へ換算 |
+| 短時間軸トルク | -0.981 N·m | 0.981 N·m | FIT0521ストールトルク。連続運転には使用しない |
+| PWM周波数 | 0 kHz | 20 kHz | MDD3A入力上限 |
 
 ## センサー・配線インターフェース
 
@@ -145,6 +150,8 @@ $$
 | ENC1 | $F_1$ 車軸 | $\omega_1$ | rad/s | $+a_1$ |
 | ENC2 | $F_2$ 車軸 | $\omega_2$ | rad/s | $+a_2$ |
 | ENC3 | $F_3$ 車軸 | $\omega_3$ | rad/s | $+a_3$ |
+
+MDD3Aは2チャネル品であるため、基板Aのチャネル1/2をM1/M2、基板Bのチャネル1をM3へ割り当て、基板Bのチャネル2は未使用とする。モータ電源は6 V、ロジックGND・エンコーダGND・MDD3A GNDは共通化する。各モータのPWMとDIRは独立信号とし、非常停止では全PWMを0へ設定する。
 
 ## 製作・受入条件
 
@@ -159,11 +166,18 @@ $$
 | M-07 | ボール質量・慣性 | 組込み前に実測しモデル更新 |
 | M-08 | 静止時3輪法線荷重差 | 平均の±10%以内 |
 | M-09 | ホイール、締結部、配線を含む最大外形 | 直径140 mm程度以内 |
+| M-10 | FIT0521出力軸1回転のエンコーダーカウント | 341.2 PPR公称値との誤差を記録し、x1/x2/x4デコード方式を確定 |
+| M-11 | MDD3A連続電流 | 各使用チャネル3.0 A以下 |
+
+## 機構変更の影響
+
+FIT0521は従来サーボと外形、出力軸、取付方法が異なるため、既存のRotramaサーボマウント用CADは製作用として使用しない。FIT0521実機またはメーカー寸法図で軸位置・固定穴・コネクタ逃げを確定後、モータブラケットとシャシーの干渉を再検証する。
 
 ## 参照
 
 | 資料 | 用途 |
 |---|---|
-| [オムニローバー3WD駆動部品資料](../omnirover3wd_reference/README.md) | 採用ホイール・サーボの型番確認 |
+| [DFRobot FIT0521](https://wiki.dfrobot.com/fit0521/) | モータ、エンコーダー、外形の公称仕様 |
+| [Cytron MDD3A](https://my.cytron.io/p-3amp-4v-16v-dc-motor-driver-2-channels) | 電源、チャネル、電流、PWM仕様 |
 | [MathWorks: Spatial Contact Force](https://www.mathworks.com/help/sm/ref/spatialcontactforce.html) | ペナルティ接触、分離、接触量計測 |
 | [Lalほか: Hardware and control design of a ball balancing robot](https://busoniu.net/files/papers/ddecs19.pdf) | 3輪・球・車体の機構構成 |

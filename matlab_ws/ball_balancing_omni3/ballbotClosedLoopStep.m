@@ -30,7 +30,7 @@ yawControlEnabled = yawBiasReady || ...
     abs(command(3)) > p.controller.yawBiasCommandBypassThreshold;
 [wheelTorque, velocityIntegral, mode] = ballbotControlStep( ...
     estimate, command, velocityIntegral, enable, p, yawControlEnabled);
-wheelTorque = ballbotServoTorqueEnvelope(wheelTorque, wheelRate, p);
+wheelTorque = ballbotDcMotorTorqueEnvelope(wheelTorque, wheelRate, p);
 
 output = [wheelTorque; estimate; double(mode)];
 diagnostics = estimatorDiagnostics(8:10);

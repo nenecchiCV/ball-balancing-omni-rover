@@ -1,6 +1,6 @@
 # 玉乗り3WDオムニローバー
 
-`ball_balancing_omni3_multibody.slx` は、直径100 mm、質量285 gの薄肉球慣性を持つリジッド球、3個のNexus 14108オムニホイール、3個のNexus 16007連続回転サーボで構成する閉ループSimscape Multibodyモデルです。
+`ball_balancing_omni3_multibody.slx` は、直径100 mm、質量285 gの薄肉球慣性を持つリジッド球、3個のNexus 14108オムニホイール、3個のDFRobot FIT0521エンコーダー付きDCモータ、2枚のCytron MDD3Aで構成する閉ループSimscape Multibodyモデルです。
 
 ## モデル階層
 
@@ -29,7 +29,7 @@ flowchart LR
 | `ballbotYawBiasStartupGuard.m` | `Controller` | バイアス収束までヨー制御だけを抑止する準備完了ラッチ |
 | `ballbotControlStep.m` | `Controller` | 速度外側ループ、姿勢内側ループ、ヨー速度制御 |
 | `ballbotTorqueAllocator.m` | `Controller` | 一般化ボールトルクから3輪軸トルクへの配分 |
-| `ballbotServoTorqueEnvelope.m` | `Controller` | Nexus 16007のトルク―速度包絡線 |
+| `ballbotDcMotorTorqueEnvelope.m` | `Controller` | FIT0521のトルク―速度包絡線とMDD3Aの3 A連続電流制限 |
 | `ballbotPoseFromJoint.m` | `TruthLogging` | 位置・クォータニオンからxyz/RPY真値を生成 |
 
 推定器の内部状態は14要素で、末尾にヨー軸ジャイロバイアス推定値と低運動継続時間を保持します。制御器へ渡す`estimate(14)`の幅と順序は維持し、4～6番目をバイアス補正後の機体角速度とします。バイアス推定値、学習許可、継続時間は診断信号として扱います。起動時はバイアス収束までヨートルクだけを抑止し、明示的なヨー指令は抑止をバイパスします。
@@ -48,7 +48,7 @@ run_demo
 | シナリオ | 結果 |
 |---|---|
 | 静止、0.1 s | 全信号が有限。球―床接触は開始時から維持し、球―ホイール3点は約0.10 ms以内に成立して終了時まで維持 |
-| 標準コマンド、4 s | 有限値で完了。最大トルク0.03319 N·m、終了位置$x_W=1.678$ m、$y_W=0.00356$ m |
+| 旧16007構成の標準コマンド、4 s | 有限値で完了。最大トルク0.03319 N·m、終了位置$x_W=1.678$ m、$y_W=0.00356$ m。FIT0521構成では再検証が必要 |
 | パラメーター・幾何 | 100 mm、285 g、慣性対角成分$4.75\times10^{-4}$ kg·m$^2$、幾何行列rank=3を確認 |
 | MATLAB単体試験 | パラメーター2件、ヨーバイアス16件の計18件が合格 |
 

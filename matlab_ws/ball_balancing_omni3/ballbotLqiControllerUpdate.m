@@ -1,7 +1,7 @@
 function output = ballbotLqiControllerUpdate( ...
     estimate, command, previousVelocityIntegral, enable, ...
-    previousYawBiasReady, biasDiagnostics, wheelRate, p)
-%BALLBOTLQICONTROLLERUPDATE Planar LQI with wheel-speed command output.
+    previousYawBiasReady, biasDiagnostics, ~, p)
+%BALLBOTLQICONTROLLERUPDATE Planar LQI with wheel-torque command output.
 
 roll = estimate(1);
 pitch = estimate(2);
@@ -78,25 +78,16 @@ elseif mode == 0
     ballTorque(:) = 0;
 end
 
-[wheelTorqueDemand, ~, torqueSaturation] = ...
+[wheelTorqueCommand, ~, torqueSaturation] = ...
     ballbotTorqueAllocator(ballTorque, p);
-% Convert the LQI torque demand to a speed-reference offset.  Around zero
-% speed, the inner speed PI produces the requested motor voltage and hence
-% the requested output-shaft torque from this offset.
-wheelSpeedRaw = wheelRate + ...
-    wheelTorqueDemand/p.servo.torquePerSpeedError;
-wheelSpeedCommand = min(max(wheelSpeedRaw, ...
-    -p.servo.speedCommandLimit), p.servo.speedCommandLimit);
 if mode == 0
-    wheelSpeedCommand(:) = 0;
+    wheelTorqueCommand(:) = 0;
 end
-speedSaturation = wheelSpeedRaw - wheelSpeedCommand;
-if any(abs(torqueSaturation) > 1.0e-12) || ...
-        any(abs(speedSaturation) > 1.0e-12)
+if any(abs(torqueSaturation) > 1.0e-12)
     nextVelocityIntegral = previousVelocityIntegral;
 else
     nextVelocityIntegral = candidateIntegral;
 end
-output = [wheelSpeedCommand; nextVelocityIntegral; double(mode); ...
+output = [wheelTorqueCommand; nextVelocityIntegral; double(mode); ...
     double(yawBiasReady)];
 end

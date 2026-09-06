@@ -136,8 +136,9 @@ Phase 3.1、3.6、3.7はSimulink Agentic Toolkitの`model_read`、`model_edit`�
 | $m_w$ | 0.039 | kg | 14108仕様書/既存モデル | `p.wheel.mass` |
 | $m_R$ | 0.462 | kg | 既存3WDモデル | `p.rover.mass` |
 | $\lambda$ | 55 | deg | 機構設計 | `p.wheel.contactLatitude` |
-| $\tau_{servo,max}$ | 1.275 | N·m | 16007仕様書 | `p.servo.maxTorque` |
-| $\tau_{contact,max}$ | 0.03319 | N·m | 公称法線荷重・摩擦 | `p.wheel.commandTorqueLimit` |
+| $\tau_{motor,stall}$ | 0.981 | N·m | FIT0521公式仕様 | `p.motor.stallTorque` |
+| $\tau_{driver,continuous}$ | 0.919 | N·m | MDD3A 3 A連続定格とFIT0521トルク定数 | `p.driver.continuousTorqueLimit` |
+| $\tau_{contact,max}$ | 0.04202 | N·m | 公称法線荷重・摩擦 | `p.wheel.contactTorqueLimit` |
 | $T_s$ | 0.005 | s | 制御設計 | estimator/controller |
 | $K_{pv}$ | [0.35,0.35] | s$^{-1}$ | 初期調整値 | `p.controller.velocityKp` |
 | $K_{iv}$ | [0.04,0.04] | s$^{-2}$ | 初期調整値 | `p.controller.velocityKi` |

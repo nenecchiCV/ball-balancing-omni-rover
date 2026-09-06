@@ -24,13 +24,28 @@ classdef ballbotParametersTest < matlab.unittest.TestCase
             testCase.verifyEqual(p.rover.initialPositionWorld(3), ...
                 0.175, AbsTol=1.0e-12);
             testCase.verifyEqual(p.wheel.normalLoadNominal, ...
-                1.843643204615140, RelTol=1.0e-12);
+                2.334483278571119, RelTol=1.0e-12);
             testCase.verifyEqual(p.wheel.contactTorqueLimit, ...
-                0.033185577683073, RelTol=1.0e-12);
+                0.042020699014280, RelTol=1.0e-12);
             testCase.verifyEqual(p.wheel.commandTorqueLimit, ...
-                p.servo.maxTorque, AbsTol=1.0e-12);
+                p.driver.continuousTorqueLimit, AbsTol=1.0e-12);
             testCase.verifyGreaterThan(p.wheel.commandTorqueLimit, ...
                 p.wheel.contactTorqueLimit);
+        end
+
+        function testFit0521AndMdd3aParameters(testCase)
+            p = ballbotParameters;
+
+            testCase.verifyEqual(p.motor.nominalVoltage, 6.0);
+            testCase.verifyEqual(p.motor.noLoadSpeed, ...
+                210*2*pi/60, AbsTol=1.0e-12);
+            testCase.verifyEqual(p.motor.stallCurrent, 3.2);
+            testCase.verifyEqual(p.driver.boardCount, 2);
+            testCase.verifyEqual(p.driver.continuousCurrent, 3.0);
+            testCase.verifyEqual(p.driver.pwmFrequency, 20e3);
+            testCase.verifyEqual(p.encoder.pulsesPerOutputRevolution, 341.2);
+            testCase.verifyLessThan(p.driver.continuousTorqueLimit, ...
+                p.motor.stallTorque);
         end
 
         function testWheelGeometryIsSymmetricAndFinite(testCase)

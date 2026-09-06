@@ -32,7 +32,7 @@ flowchart LR
 | U-01 | WheelGeometry | 公称$p$ | $n_i,t_i,a_i$相互直交 | 内積$<10^{-12}$ |
 | U-02 | WheelGeometry | 公称$p$ | $A_\tau$フルランク | rank=3 |
 | U-03 | TorqueAllocator | $\tau_b=[0.01,-0.02,0.005]^T$ | 往復一致 | 非飽和時誤差$<10^{-9}$ N·m |
-| U-04 | TorqueAllocator | 大トルク | 全輪飽和 | $|\tau_i|\le p.wheel.commandTorqueLimit$（公称0.03319 N·m） |
+| U-04 | TorqueAllocator | 大トルク | 全輪飽和 | $|\tau_i|\le p.wheel.commandTorqueLimit$（公称0.919 N·m） |
 | U-05 | CustomFriction | $v_t\ne0,F_n>0$ | $F_t^Tv_t\le0$ | 常に非正 |
 | U-06 | WheelRateDerivative | 変位増分$[0.01,-0.02,0.03]^T$ rad、$T_s=5$ ms | 後退差分 | $[2,-4,6]^T$ rad/s、誤差$<10^{-12}$ rad/s |
 | U-07 | Estimator | 静止IMU、車輪回転変位一定 | 状態不変・接触信頼度 | ノルム誤差$<10^{-10}$、信頼度$>0.99$ |
@@ -106,7 +106,7 @@ B-01～B-12は`matlab_ws/ball_balancing_omni3/tests/ballbotEstimatorStepTest.m`�
 | 3輪接触率 | 各輪99%以上 |
 | 球–床分離時間 | 0 s |
 | 輪–球すべりRMS | 0.03 m/s未満 |
-| 車輪トルク | 全サンプルで±`p.wheel.commandTorqueLimit`以内（公称±0.03319 N·m） |
+| 車輪トルク | 全サンプルで±`p.wheel.commandTorqueLimit`以内（公称±0.919 N·m） |
 | 車輪速度 | 連続定常で±5.55 rad/s以内 |
 
 ## 5. 推定精度

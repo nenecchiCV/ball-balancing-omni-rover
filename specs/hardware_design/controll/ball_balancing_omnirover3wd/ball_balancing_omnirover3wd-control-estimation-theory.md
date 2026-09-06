@@ -205,7 +205,7 @@ $$
 
 ### 5.4 ボール角速度
 
-エンコーダーの直接観測量は車輪回転変位$\theta_{w,i}$とし、推定器とサーボ速度包絡線で用いる車輪角速度は5 ms周期の後退差分で算出する。初回サンプルでは前回変位を現在変位で初期化し、$\omega_{w,i}[0]=0$とする。
+エンコーダーの直接観測量は車輪回転変位$\theta_{w,i}$とし、FIT0521の公称分解能341.2 PPRに対応する量子化幅$2\pi/341.2$ radをパラメーター化する。推定器とDCモータ速度包絡線で用いる車輪角速度は5 ms周期の後退差分で算出する。初回サンプルでは前回変位を現在変位で初期化し、$\omega_{w,i}[0]=0$とする。
 
 $$
 \omega_{w,i}[k]=\frac{\theta_{w,i}[k]-\theta_{w,i}[k-1]}{T_s},\qquad T_s=0.005\ \mathrm{s}
@@ -426,10 +426,10 @@ $$
 | $\tau_{w,raw}\ne\tau_w$ | 前回値を保持 |
 | mode≠BALANCE | 0 |
 
-16007サーボの加速方向トルクには、最高回転速度
+FIT0521の加速方向トルクには、6 V無負荷回転速度210 rpmとMDD3Aの3 A連続電流定格から求めた上限
 $\omega_{max}=62\times2\pi/60$ rad/sで0となる線形包絡線を適用する。減速方向トルクは接触トルク上限まで許容する。
 
-対応実装: `ballbotYawBiasStartupGuard.m`、`ballbotControllerUpdate.m`、`ballbotControlStep.m`、`ballbotTorqueAllocator.m`、`ballbotServoTorqueEnvelope.m`。
+対応実装: `ballbotYawBiasStartupGuard.m`、`ballbotControllerUpdate.m`、`ballbotControlStep.m`、`ballbotTorqueAllocator.m`、`ballbotDcMotorTorqueEnvelope.m`。
 
 ## 7. 可観測性・推定誤差
 
