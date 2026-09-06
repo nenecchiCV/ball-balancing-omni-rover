@@ -1,7 +1,7 @@
 function p = ballbotParameters
 %BALLBOTPARAMETERS Nominal plant, estimator, and controller parameters.
 
-p.gravity = 9.80665*0.25;
+p.gravity = 9.80665;
 
 % Reference ball: 100 mm, 0.285 kg rigid ball with thin-shell inertia.
 p.ball.radius = 0.050;
@@ -15,6 +15,9 @@ p.wheel.mass = 0.039;
 p.wheel.rollerCount = 8;
 p.wheel.azimuth = deg2rad([0; 120; 240]);
 p.wheel.contactLatitude = deg2rad(55);
+% Small geometric preload keeps all three nominally tangent contacts
+% active despite contact-detection and floating-point tolerances.
+p.wheel.contactPreload = 5.0e-5;
 
 % Nexus Robot 16007 continuous-rotation servo.
 p.servo.dimensions = [0.0417, 0.0197, 0.0429];
@@ -25,6 +28,29 @@ p.servo.maxSpeed = 62*2*pi/60;
 p.servo.nominalVoltage = 5.0;
 p.servo.operatingCurrent = 0.100;
 p.servo.timeConstant = 0.030;
+% Output-shaft-equivalent electrical servo model.  The DC Motor block is
+% parameterized from the available 5 V stall-torque/no-load-speed data.
+% Equivalent inertia is selected so the unloaded torque-speed model has
+% the specified 30 ms mechanical time constant; replace after testing.
+p.servo.equivalentInertia = p.servo.timeConstant* ...
+    p.servo.maxTorque/p.servo.maxSpeed;
+p.servo.speedControllerNaturalFrequency = 30;
+p.servo.speedControllerDamping = 0.90;
+p.servo.speedPlantDcGain = p.servo.maxSpeed/p.servo.nominalVoltage;
+p.servo.speedControllerKp = ...
+    (2*p.servo.speedControllerDamping* ...
+    p.servo.speedControllerNaturalFrequency*p.servo.timeConstant - 1)/ ...
+    p.servo.speedPlantDcGain;
+p.servo.speedControllerKi = ...
+    p.servo.timeConstant*p.servo.speedControllerNaturalFrequency^2/ ...
+    p.servo.speedPlantDcGain;
+p.servo.speedControllerAntiWindup = 1/max(p.servo.speedControllerKp, eps);
+p.servo.speedControllerIntegralLimit = ...
+    p.servo.nominalVoltage/p.servo.speedControllerKi;
+p.servo.speedCommandLimit = 0.95*p.servo.maxSpeed;
+p.servo.torquePerSpeedError = ...
+    (p.servo.maxTorque/p.servo.nominalVoltage)* ...
+    p.servo.speedControllerKp;
 
 % Redesigned triangular body. The body frame origin is the IMU location.
 p.rover.mass = 0.462;
@@ -119,6 +145,15 @@ p.controller.recoveryTilt = deg2rad(18);
 p.controller.fallenTilt = deg2rad(35);
 p.controller.minimumContactConfidence = 0.20;
 p.controller.recoveryGainScale = 1.35;
+
+% Reduced-order LQI design used by the LQI controller variant. The
+% linearized planar state for each axis is [velocity; tilt; tiltRate], and
+% the integral state is integral(commandVelocity - velocity). The gains are
+% calculated with Control System Toolbox by ballbotDesignLqi.
+p.controller.lqi.stateWeight = diag([8, 300, 20]);
+p.controller.lqi.integralWeight = 120;
+p.controller.lqi.inputWeight = 1600;
+p.controller.lqi = ballbotDesignLqi(p, p.controller.lqi);
 
 % Upright PID and direct velocity-to-torque controller used by
 % ball_balancing_omni3_multibody_pid.slx. The tilt reference is fixed at

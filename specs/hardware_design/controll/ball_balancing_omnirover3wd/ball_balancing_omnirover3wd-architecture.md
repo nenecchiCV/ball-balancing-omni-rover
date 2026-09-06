@@ -264,6 +264,8 @@ flowchart LR
 ## 付録A. 関連文書
 
 - [システム仕様](ball_balancing_omnirover3wd-system.md)
+- [状態方程式](ball_balancing_omnirover3wd-state-equations.md)
+- [LQI制御理論](ball_balancing_omnirover3wd_lqi_theory.md)
 - [制御・状態推定理論](ball_balancing_omnirover3wd-control-estimation-theory.md)
 - [実装計画](ball_balancing_omnirover3wd-implementation-plan.md)
 - [検証計画](ball_balancing_omnirover3wd-test-plan.md)

@@ -11,7 +11,9 @@ normalBody = [cos(lambda)*cos(beta); ...
 rollingBody = [-sin(beta); cos(beta); zeros(1, 3)];
 axleBody = cross(normalBody, rollingBody, 1);
 
-centerFromBall = (p.ball.radius + p.wheel.radius)*normalBody;
+contactCenterDistance = p.ball.radius + p.wheel.radius - ...
+    p.wheel.contactPreload;
+centerFromBall = contactCenterDistance*normalBody;
 bodyFromBall = [0; 0; p.rover.centerAboveBall];
 centerFromBody = centerFromBall - bodyFromBall;
 

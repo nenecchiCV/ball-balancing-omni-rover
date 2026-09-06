@@ -7,8 +7,6 @@ function output = ballbotPidControllerUpdate( ...
 
 rollPitch = estimate(1:2);
 bodyRate = estimate(4:6);
-yaw = estimate(3);
-velocityWorld = estimate(7:8);
 tiltMagnitude = norm(rollPitch);
 active = enable ~= 0 && tiltMagnitude < p.controller.fallenTilt;
 if active
@@ -29,9 +27,8 @@ if commandSpeed > p.controller.maxSpeed
     commandVelocityWorld = commandVelocityWorld* ...
         (p.controller.maxSpeed/commandSpeed);
 end
-rotationBodyFromWorld = [cos(yaw), sin(yaw); -sin(yaw), cos(yaw)];
-velocityErrorBody = rotationBodyFromWorld* ...
-    (commandVelocityWorld - velocityWorld);
+velocityErrorBody = ballbotVelocityErrorBody(estimate, ...
+    [commandVelocityWorld; command(3)]);
 
 tiltTorque = p.controller.pidTiltKp.*(-rollPitch) + ...
     p.controller.pidTiltKi.*candidateIntegral + ...
