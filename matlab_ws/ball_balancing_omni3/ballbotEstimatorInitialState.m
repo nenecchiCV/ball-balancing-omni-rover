@@ -1,5 +1,10 @@
-function state = ballbotEstimatorInitialState
-%BALLBOTESTIMATORINITIALSTATE Upright, stationary estimator state.
+function state = ballbotEstimatorInitialState(p)
+%BALLBOTESTIMATORINITIALSTATE Stationary estimator state at initial pose.
 
-state = [1; 0; 0; 0; zeros(10, 1)];
+if nargin == 0
+    quaternion = [1; 0; 0; 0];
+else
+    quaternion = ballbotEulerToQuaternion(p.rover.initialEulerWorld).';
+end
+state = [quaternion; zeros(10, 1)];
 end

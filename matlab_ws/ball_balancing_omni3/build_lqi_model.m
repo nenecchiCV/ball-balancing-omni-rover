@@ -12,6 +12,7 @@ save_system(sourceModel, targetModel + ".slx");
 open_system(targetModel);
 
 controller = targetModel + "/Controller";
+set_param(controller + "/ControlInputs", "Inputs", "7");
 oldBlock = controller + "/CascadeController";
 oldPosition = get_param(oldBlock, "Position");
 lineHandles = get_param(oldBlock, "LineHandles");
@@ -28,6 +29,8 @@ add_block(sourceBlock, newBlock, "Position", oldPosition, ...
     "OutputDimensions", "7");
 add_line(controller, "ControlInputs/1", "LqiController/1", ...
     "autorouting", "on");
+add_line(controller, "WheelRateCalculation/1", "ControlInputs/7", ...
+    "autorouting", "on");
 for destination = ["SelectNextVelocityIntegral", "SelectYawBiasReady", ...
         "SelectMode", "SelectRequestedTorque"]
     add_line(controller, "LqiController/1", destination + "/1", ...
@@ -36,9 +39,9 @@ end
 
 set_param(targetModel, "PreLoadFcn", ...
     ["ballbotParams = ballbotParameters; " ...
-    "ballbotParams.controller.minimumContactConfidence = 0.10;"]);
+    "ballbotParams.controller.minimumContactConfidence = 0;"]);
 ballbotParams = ballbotParameters;
-ballbotParams.controller.minimumContactConfidence = 0.10;
+ballbotParams.controller.minimumContactConfidence = 0;
 assignin("base", "ballbotParams", ballbotParams);
 save_system(targetModel);
 set_param(targetModel, "SimulationCommand", "update");

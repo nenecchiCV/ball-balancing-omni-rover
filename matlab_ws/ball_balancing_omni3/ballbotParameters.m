@@ -171,20 +171,52 @@ p.controller.yawBiasReadyRateThreshold = 0.002;
 % learning remains disabled naturally once the wheels move.
 p.controller.yawBiasCommandBypassThreshold = 1.0e-6;
 p.controller.maxPlanarAcceleration = 0.60;
-p.controller.maxSpeed = 0.12;
 p.controller.maxYawRate = 0.80;
 p.controller.recoveryTilt = deg2rad(18);
 p.controller.fallenTilt = deg2rad(35);
 p.controller.minimumContactConfidence = 0.20;
 p.controller.recoveryGainScale = 1.35;
 
-% Reduced-order LQI design used by the LQI controller variant. The
-% linearized planar state for each axis is [velocity; tilt; tiltRate], and
-% the integral state is integral(commandVelocity - velocity). The gains are
-% calculated with Control System Toolbox by ballbotDesignLqi.
-p.controller.lqi.stateWeight = diag([8, 300, 20]);
-p.controller.lqi.integralWeight = 120;
-p.controller.lqi.inputWeight = 1600;
+% Upright, centered, no-slip command limits. For pure translation the
+% worst-case wheel rate is sin(lambda)*v/Rw. At half the resulting
+% no-load-speed limit the FIT0521 torque-speed envelope still exceeds the
+% wheel-ball traction limit, so traction limits acceleration, not speed.
+p.controller.theoreticalMaxSpeed = p.wheel.radius* ...
+    p.motor.speedCommandLimit/sin(p.wheel.contactLatitude);
+p.controller.commandSpeedFraction = 0.50;
+p.controller.targetCommandSpeed = p.controller.commandSpeedFraction* ...
+    p.controller.theoreticalMaxSpeed;
+p.controller.maxSpeed = p.controller.targetCommandSpeed;
+p.controller.tractionLimitedWheelTorque = min( ...
+    p.driver.continuousTorqueLimit, p.wheel.contactTorqueLimit);
+p.controller.theoreticalTractionAcceleration = sqrt(3)* ...
+    p.controller.tractionLimitedWheelTorque/(p.wheel.radius* ...
+    (p.rover.mass + p.ball.mass));
+p.controller.theoreticalLeanAcceleration = ...
+    p.gravity*tan(p.controller.maxLean);
+p.controller.theoreticalCommandAcceleration = min([ ...
+    p.controller.maxPlanarAcceleration, ...
+    p.controller.theoreticalTractionAcceleration, ...
+    p.controller.theoreticalLeanAcceleration]);
+
+% Ten-state MIMO LQI with the physical 55-degree three-wheel geometry.
+rollingXY = p.wheel.geometry.rollingBody(1:2, :).';
+p.controller.lqi.wheelSpeedFromPlanarVelocity = [ ...
+    -(sin(p.wheel.contactLatitude)/p.wheel.radius)*rollingXY, ...
+    (p.rover.chassisRadius/p.wheel.radius)*ones(3, 1)];
+p.controller.lqi.maximumState = [p.controller.maxSpeed; ...
+    p.controller.maxSpeed; p.controller.maxLean; p.controller.maxLean; ...
+    1.5; 1.5; p.controller.maxYawRate; ...
+    p.motor.speedCommandLimit*ones(3, 1)];
+p.controller.lqi.maximumVelocityIntegral = [0.12; 0.12];
+p.controller.lqi.maximumWheelSpeedCommand = ...
+    0.70*p.motor.speedCommandLimit*ones(3, 1);
+p.controller.lqi.linearizationStateStep = [1.0e-5; 1.0e-5; ...
+    1.0e-6; 1.0e-6; 1.0e-5; 1.0e-5; 1.0e-5; ...
+    1.0e-4; 1.0e-4; 1.0e-4];
+p.controller.lqi.linearizationInputStep = 1.0e-4*ones(3, 1);
+p.controller.lqi.antiWindupGain = 8.0;
+p.controller.lqi.trackingGainScale = 1.0e-4;
 p.controller.lqi = ballbotDesignLqi(p, p.controller.lqi);
 
 % Upright PID and direct velocity-to-torque controller used by
@@ -198,7 +230,7 @@ p.controller.pidTiltIntegralLimit = deg2rad([5; 5]);
 p.controller.pidVelocityKp = [0.03; 0.03];
 p.controller.pidYawRateKp = 0.08;
 
-p.command.velocityWorld = [0.05; 0];
+p.command.velocityWorld = [p.controller.targetCommandSpeed; 0];
 p.command.yawRate = 0;
 p.command.enable = true;
 

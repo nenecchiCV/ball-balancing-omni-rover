@@ -1,0 +1,19 @@
+function output = ballbotSpeedPiMotorStep( ...
+    speedCommand, wheelSpeed, previousIntegral, mode, p)
+%BALLBOTSPEEDPIMOTORSTEP Speed PI, MDD3A voltage limit, and DC motor.
+
+controllerOutput = ballbotMdd3aVoltageController( ...
+    speedCommand, wheelSpeed, previousIntegral, mode, p);
+voltage = controllerOutput(1:3);
+nextIntegral = controllerOutput(4:6);
+
+current = (voltage - p.motor.backEmfConstant*wheelSpeed)/ ...
+    p.motor.armatureResistance;
+current = min(max(current, -p.driver.continuousCurrent), ...
+    p.driver.continuousCurrent);
+motorTorque = p.motor.torqueConstant*current - ...
+    p.motor.viscousFriction*wheelSpeed;
+motorTorque = min(max(motorTorque, -p.driver.continuousTorqueLimit), ...
+    p.driver.continuousTorqueLimit);
+output = [motorTorque; nextIntegral];
+end
