@@ -134,11 +134,14 @@ Phase 3.1、3.6、3.7はSimulink Agentic Toolkitの`model_read`、`model_edit`�
 | $m_b$ | 0.285 | kg | 基準質量・実測更新 | `p.ball.mass` |
 | $R_w$ | 0.024 | m | 14108仕様書 | `p.wheel.radius` |
 | $m_w$ | 0.039 | kg | 14108仕様書/既存モデル | `p.wheel.mass` |
-| $m_R$ | 0.462 | kg | 既存3WDモデル | `p.rover.mass` |
+| $m_R$ | 1.085 | kg | 基礎ローバー0.585 kg＋上部ロッド0.500 kg | `p.rover.mass` |
+| $m_p$ | 0.500 | kg | 正式上部ロッド仕様 | `p.fullplant.payload.mass` |
+| $L_p$ | 0.300 | m | 正式上部ロッド仕様 | `p.fullplant.payload.length` |
+| $h_{COM}$ | 0.2010 | m | 上部ロッド込み合成重心 | `p.rover.comAboveBall` |
 | $\lambda$ | 55 | deg | 機構設計 | `p.wheel.contactLatitude` |
 | $\tau_{motor,stall}$ | 0.981 | N·m | FIT0521公式仕様 | `p.motor.stallTorque` |
 | $\tau_{driver,continuous}$ | 0.919 | N·m | MDD3A 3 A連続定格とFIT0521トルク定数 | `p.driver.continuousTorqueLimit` |
-| $\tau_{contact,max}$ | 0.04202 | N·m | 公称法線荷重・摩擦 | `p.wheel.contactTorqueLimit` |
+| $\tau_{contact,max}$ | 0.0779 | N·m | 上部ロッド込み公称法線荷重・摩擦 | `p.wheel.contactTorqueLimit` |
 | $T_s$ | 0.005 | s | 制御設計 | estimator/controller |
 | $K_{pv}$ | [0.35,0.35] | s$^{-1}$ | 初期調整値 | `p.controller.velocityKp` |
 | $K_{iv}$ | [0.04,0.04] | s$^{-2}$ | 初期調整値 | `p.controller.velocityKi` |

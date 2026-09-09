@@ -193,7 +193,7 @@ $$
 F_t=-\mu_dF_n\tanh(v_d/v_c)t-\mu_rF_n\tanh(v_r/v_c)r
 $$
 
-この形は分離とすべりを扱え、`ball_balancing_omni3_multibody.slx`の物理モデルに対応する。
+この形は分離とすべりを扱え、`ball_balancing_omni3_multibody_lqi_custom_contact.slx`へ次工程で実装するcustom contact物理モデルに対応する。
 
 ## 7. 出力方程式
 
@@ -234,8 +234,9 @@ $$
 | $\beta_i$ | $[0,120,240]$ | deg | `p.wheel.azimuth` |
 | $\lambda$ | 55 | deg | `p.wheel.contactLatitude` |
 | $\delta_p$ | $5.0\times10^{-5}$ | m | `p.wheel.contactPreload` |
-| $m_R$ | 0.462 | kg | `p.rover.mass` |
-| $h_{BK}$ | 0.125 | m | `p.rover.centerAboveBall` |
+| $m_R$ | 1.085 | kg | `p.rover.mass` |
+| $h_{BK}$ | 0.125 | m | 機体原点の幾何高さ、`p.rover.centerAboveBall` |
+| $h_{COM}$ | 0.2010 | m | 上部ロッド込み合成重心高、`p.rover.comAboveBall` |
 | $k_{n,w},c_{n,w}$ | $2.0\times10^5,250$ | N/m, N/(m/s) | `p.contact.wheelBall.*` |
 | $k_{n,g},c_{n,g}$ | $3.0\times10^5,180$ | N/m, N/(m/s) | `p.contact.ballGround.*` |
 | $\mu_d,\mu_r$ | 0.75, 0.02 | - | `p.contact.wheelBall.*Friction` |

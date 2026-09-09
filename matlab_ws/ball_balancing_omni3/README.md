@@ -1,6 +1,14 @@
 # 玉乗り3WDオムニローバー
 
-`ball_balancing_omni3_multibody.slx` は、直径100 mm、質量285 gの薄肉球慣性を持つリジッド球、3個のNexus 14108オムニホイール、3個のDFRobot FIT0521エンコーダー付きDCモータ、2枚のCytron MDD3Aで構成する閉ループSimscape Multibodyモデルです。
+`ball_balancing_omni3_multibody_lqi_custom_contact.slx` は、直径100 mm、質量285 gの薄肉球慣性を持つリジッド球、3個のNexus 14108オムニホイール、3個のDFRobot FIT0521エンコーダー付きDCモータ、2枚のCytron MDD3A、上部ロッドで構成する閉ループSimscape Multibodyモデルです。
+
+## LQIモデル
+
+`ball_balancing_omni3_multibody_lqi_custom_contact.slx` を現行の正式開発モデルとします。機体上部には質量0.50 kg、長さ300 mm、断面20 mm角のロッドを備え、ローバー総質量1.085 kg、球中心からの合成重心高約201 mmとしてLQIを設計します。
+
+ボール―地面の `Spatial Contact Force` は維持し、ボール―3輪の接触力は次工程のcustom contact実装箇所として未接続にしています。各剛体、ホイール回転自由度、アクチュエータ、センサー、LQI制御系は維持しています。
+
+旧モデルと `.original` バックアップは `old/` に保管しています。
 
 ## モデル階層
 

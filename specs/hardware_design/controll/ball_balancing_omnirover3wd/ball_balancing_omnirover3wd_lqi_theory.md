@@ -657,8 +657,10 @@ $$
 | $I_b$ | $4.75\times10^{-4}I_3$ | kg m$^2$ | `p.ball.inertia` |
 | $R_w$ | 0.024 | m | `p.wheel.radius` |
 | $m_w$ | 0.039 | kg/輪 | `p.wheel.mass` |
-| $m_R$ | 0.462 | kg | `p.rover.mass` |
-| $h$ | 0.125 | m | `p.rover.centerAboveBall` |
+| $m_R$ | 1.085 | kg | 基礎ローバーと上部ロッドの合計、`p.rover.mass` |
+| $m_p$ | 0.500 | kg | 上部ロッド、`p.fullplant.payload.mass` |
+| $h_B$ | 0.125 | m | 機体原点の幾何高さ、`p.rover.centerAboveBall` |
+| $h_{COM}$ | 0.2010 | m | 上部ロッド込み合成重心高、`p.rover.comAboveBall` |
 | $V_{dc}$ | 6.0 | V | `p.driver.supplyVoltage` |
 | $\tau_{stall}$ | 約0.981 | N m | `p.motor.stallTorque` |
 | $\tau_{continuous}$ | 約0.919 | N m | `p.driver.continuousTorqueLimit` |

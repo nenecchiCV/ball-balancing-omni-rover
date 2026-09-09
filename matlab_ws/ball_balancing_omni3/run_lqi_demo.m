@@ -1,12 +1,12 @@
 % Run the LQI ball-balancing 3WD omnirover demonstration.
-p = ballbotParameters;
+p = ballbotFullPlantParameters;
 % The LQI design assumes all four contacts remain closed. Do not switch
 % out of BALANCE solely because the finite-contact estimator chatters.
 p.controller.minimumContactConfidence = 0;
 assignin("base", "ballbotParams", p);
 
 
-modelName = "ball_balancing_omni3_multibody_lqi";
+modelName = "ball_balancing_omni3_multibody_lqi_custom_contact";
 in = Simulink.SimulationInput(modelName);
 in = in.setModelParameter("StopTime", num2str(p.simulation.stopTime));
 out = sim(in);

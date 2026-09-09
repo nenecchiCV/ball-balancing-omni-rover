@@ -12,7 +12,11 @@ innerBandwidth = 1/p.motor.timeConstant;
 driveAcceleration = innerBandwidth*(planarVelocity(1:2) - velocity);
 yawAcceleration = innerBandwidth*(planarVelocity(3) - yawRate);
 mass = p.rover.mass;
-height = p.rover.centerAboveBall;
+if isfield(p.rover, "comAboveBall")
+    height = p.rover.comAboveBall;
+else
+    height = p.rover.centerAboveBall;
+end
 bodyRadius = p.rover.chassisRadius;
 effectiveInertia = mass*(height^2 + bodyRadius^2/4);
 gravityGain = mass*p.gravity*height/effectiveInertia;

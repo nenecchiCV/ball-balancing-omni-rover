@@ -2,6 +2,8 @@
 
 ## 結論
 
+> **現行構成:** 上部ロッド仕様は `ball_balancing_omni3_multibody_lqi_custom_contact.slx` に正式採用した。調査モデル `ball_balancing_omni3_multibody_lqi_fullplant.slx` は `old/` に退避した。現行LQIはローバー総質量1.085 kg、球中心からの合成重心高約0.201 mを用いる低次モデルで再設計している。3輪custom contact実装前のため、非線形閉ループ安定性は未検証である。
+
 `ball_balancing_omni3_multibody_lqi_fullplant.slx` を基準モデルから派生させ、LQI出力後に速度PIとDCモータを明示的に接続した。さらに、実Full Multibodyプラントの整合した直立Operating Pointとfiniteな解析線形モデルを取得できた。
 
 > **モデル更新注意:** 保存済みOperating Point・線形化・FRFは保持拘束を削除する前に生成した結果である。現在の拘束なしモデルに対しては再取得が必要であり、そのまま制御設計へ使用してはならない。
@@ -71,7 +73,7 @@
 - `fullplant_operating_point.mat`: trim済みOperating Point、仕様、残差
 - `fullplant_linearization.mat`: 同一I/Oの38状態解析線形化
 - `review_fullplant_design.m`: 保存結果のfinite性、極、ランク、trim残差を表示
-- `tests/fullplantDesignArtifactsTest.m`: 派生モデルと保存証拠の回帰検査
+- `tests/fullplantDesignArtifactsTest.m`: 現行モデル、正式上部ロッドパラメータ、保存証拠の回帰検査
 
 ## 参考文献
 
