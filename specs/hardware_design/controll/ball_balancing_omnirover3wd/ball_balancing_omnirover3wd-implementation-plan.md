@@ -4,8 +4,8 @@
 
 | 項目 | 値 |
 |---|---|
-| ステータス | ヨー軸バイアスMATLAB実装・Simulink統合・基本検証完了 |
-| 最終更新日 | 2026-09-01 |
+| ステータス | 正本モデルのモジュール化完了・階層制御へ移行済み |
+| 最終更新日 | 2026-09-09 |
 | アーキテクチャ | [アーキテクチャ仕様](ball_balancing_omnirover3wd-architecture.md) |
 | 検証 | [検証計画](ball_balancing_omnirover3wd-test-plan.md) |
 
@@ -76,14 +76,17 @@ flowchart TD
 |---|---|---|---|
 | 1.1 | `ballbotParameters` | 全パラメーター有限、質量整合 | 完了 |
 | 1.2 | `ballbotWheelGeometry` | 直交性、$\operatorname{rank}(A_\tau)=3$ | 完了 |
-| 1.3 | `ballbotTorqueAllocator` | 往復誤差、飽和 | 完了 |
+| 1.3 | `ballbotTorqueAllocator` | 往復誤差、飽和 | 完了・現行構成では輪速変換$W_\omega$（`p.controller.lqi.wheelSpeedFromPlanarVelocity`）へ移行 |
 | 1.4 | `ballbotCustomFriction` | 摩擦がすべりと逆向き | 完了・3接触へ統合済み |
 | 1.5 | `ballbotWheelRateFromDisplacement` | 車輪回転変位の後退差分 | 完了 |
 | 1.6 | `ballbotEstimatorStep` | 14状態、補正角速度、静止不変、有限出力 | 完了・実行確認済み |
-| 1.7 | `ballbotControlStep` | モード・符号・飽和 | 完了 |
-| 1.8 | `ballbotServoTorqueEnvelope` | 最高輪速で加速トルク0 | 完了 |
-| 1.9 | `ballbotEstimatorStepTest` | バイアス収束、学習抑止、上限、再開、回帰 | 16件合格 |
+| 1.7 | `ballbotControlStep` | モード・符号・飽和 | 完了・現行構成では`ballbotLqiControllerUpdate`→`ballbotFullPlantHierarchyUpdate`へ移行 |
+| 1.8 | `ballbotServoTorqueEnvelope` | 最高輪速で加速トルク0 | 完了・現行構成では`ballbotSpeedPiMotorStep`→`ballbotMdd3aVoltageController`の輪速PI＋DCモータへ移行 |
+| 1.9 | `ballbotEstimatorStepTest` | バイアス収束、学習抑止、上限、再開、回帰 | 16件合格（現行制御器向けに更新済み） |
 | 1.10 | `ballbotYawBiasStartupGuard` | ヨー抑止、解除、運動中ラッチ保持 | 完了・実行確認済み |
+| 1.11 | `ballbotFullPlantHierarchyUpdate` | 速度外側ループ＋傾斜安定化＋輪速変換 | 完了・正本モデルで使用中 |
+| 1.12 | `ballbotSpeedPiMotorStep` | 輪速PI、MDD3A電圧制限、DCモータトルク | 完了・正本モデルで使用中 |
+| 1.13 | `ballbotDesignLqi` | 10状態縮約プラントのLQIゲイン設計 | 完了・パラメーター初期化で再計算 |
 
 ### Phase 2: Multibodyプラント
 
@@ -143,10 +146,12 @@ Phase 3.1、3.6、3.7はSimulink Agentic Toolkitの`model_read`、`model_edit`�
 | $\tau_{driver,continuous}$ | 0.919 | N·m | MDD3A 3 A連続定格とFIT0521トルク定数 | `p.driver.continuousTorqueLimit` |
 | $\tau_{contact,max}$ | 0.0779 | N·m | 上部ロッド込み公称法線荷重・摩擦 | `p.wheel.contactTorqueLimit` |
 | $T_s$ | 0.005 | s | 制御設計 | estimator/controller |
-| $K_{pv}$ | [0.35,0.35] | s$^{-1}$ | 初期調整値 | `p.controller.velocityKp` |
-| $K_{iv}$ | [0.04,0.04] | s$^{-2}$ | 初期調整値 | `p.controller.velocityKi` |
-| $K_{p,att}$ | [0.95,0.95] | N·m/rad | 初期調整値 | `p.controller.balanceKp` |
-| $K_{d,att}$ | [0.12,0.12] | N·m/(rad/s) | 初期調整値 | `p.controller.balanceKd` |
+| $K_{pv}$ | [2.3,2.3] | s$^{-1}$ | 正本構成の速度外側ループ | `p.controller.fullplant.velocityKp` |
+| $K_{iv}$ | [0,0] | s$^{-2}$ | 正本構成の速度外側ループ | `p.controller.fullplant.velocityKi` |
+| $K_{p,\alpha}$ | [16,16] | - | 傾斜安定化比例 | `p.controller.fullplant.tiltKp` |
+| $K_{d,\alpha}$ | [1.6,1.6] | - | 傾斜安定化微分 | `p.controller.fullplant.tiltKd` |
+| $\tau_{motor,lim}$ | 0.010 | N·m | 正本構成の輪トルク上限 | `p.controller.fullplant.motorTorqueLimit` |
+| $c_{scale}$ | 0.60 | - | 指令スケール | `p.controller.fullplant.commandScale` |
 | $\omega_{w,th}$ | 0.10 | rad/s | 低運動の暫定輪周速度ゲート | `p.estimator.biasWheelRateThreshold` |
 | $a_{th}$ | $0.03g$ | m/s² | 静止振動の暫定許容値 | `p.estimator.biasAccelNormThreshold` |
 | $\omega_{rp,th}$ | 0.02 | rad/s | ロール・ピッチ低運動の暫定値 | `p.estimator.biasRollPitchRateThreshold` |
@@ -189,6 +194,8 @@ Phase 3.1、3.6、3.7はSimulink Agentic Toolkitの`model_read`、`model_edit`�
 | モデル構造 | `Controller`、`Logging`とも`model_check`正常、ルートにerrorなし | 合格 |
 | 静止、ヨーバイアス0.02 rad/s、4 s | 4 s時点誤差0.001916 rad/s、3～4 sヨードリフト0.005293 deg | 短時間ゲート合格 |
 | $[v_x,v_y,r]=[0.03,0.02,0.20]$、0.5 s再試験 | 平均ヨー速度0.197879 rad/s、最大傾斜0.005681 deg、最終mode=1 | 合格 |
+| モジュール化回帰 | サブシステム化後モデルと再構成前ベースラインで全ログ信号が一致（最大相対差は摩擦力で約$4\times10^{-3}$） | 合格 |
+| モデル更新 | モジュール化後モデルで`update`成功 | 合格 |
 
 25 sの全機体バイアスMILでは15 s時点の推定誤差0.001916 rad/sを確認したが、モデルは4.760 sでFALLENへ遷移したため、その後の10 sヨードリフトは判定対象外とした。バイアスなし公称指令でも2.195 sでFALLENへ遷移するため、長時間姿勢・速度回帰は既存プラント／制御調整の未解決事項として分離する。ノイズ、振動、すべり、接触低下を含む長時間MILは未実施である。
 

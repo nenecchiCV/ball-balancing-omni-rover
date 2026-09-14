@@ -5,7 +5,7 @@
 | 項目 | 値 |
 |---|---|
 | ステータス | 実装中 |
-| 最終更新日 | 2026-09-01 |
+| 最終更新日 | 2026-09-09 |
 | 親仕様 | [システム仕様](ball_balancing_omnirover3wd-system.md) |
 
 ## 1. 機能分解
@@ -13,96 +13,111 @@
 ```mermaid
 flowchart LR
   CMD[CommandSource<br/>v_d^W, r_d, enable]
-  IMU[Ideal6AxisIMU<br/>f^B, omega_B^B]
-  ENC[IdealEncoders<br/>theta_w]
-  DIFF[WheelRateDerivative<br/>backward difference]
-  EST[StateEstimator<br/>ballbotEstimatorStep]
-  BIAS[LowMotionBiasObserver<br/>b_gz, t_qual]
-  DLOG[EstimatorDiagnostics]
-  MODE[ModeManager<br/>BALANCE/RECOVERY/FALLEN]
-  OUTER[VelocityToLean<br/>PI + lean limit]
-  INNER[BalanceAndYaw<br/>PD + yaw-rate P]
-  ALLOC[TorqueAllocator<br/>ballbotTorqueAllocator]
-  LIMIT[FIT0521AndMDD3ALimits]
-  ACT[DCMotorActuators<br/>3 revolute joints]
+  IMU[IdealIMU<br/>f^B, omega_B^B]
+  ENC[WheelDisplacement<br/>theta_w]
+  WSS[WheelSpeedSensing<br/>backward difference]
+  EST[StateEstimator<br/>ballbotEstimatorUpdate]
+  DIAG[YawBiasDiagnostics]
+  BC[BalanceController<br/>階層制御<br/>ballbotLqiControllerUpdate]
+  WD[WheelDrive<br/>速度PI+MDD3A+DCモータ<br/>ballbotSpeedPiMotorStep]
   MB[MultibodyPlant<br/>body + ball + ground]
   CONTACT[Four Spatial Contacts]
-  TRUTH[TruthLogging]
+  LOG[Logging]
 
-  CMD --> MODE
-  CMD --> OUTER
+  CMD --> BC
   IMU --> EST
-  ENC --> DIFF --> EST
-  EST --> BIAS --> EST
-  BIAS --> DLOG
-  EST --> MODE
-  EST --> OUTER
-  EST --> INNER
-  MODE --> OUTER
-  MODE --> INNER
-  OUTER --> INNER
-  INNER --> ALLOC --> LIMIT --> ACT --> MB
+  ENC --> WSS
+  WSS --> EST
+  WSS --> BC
+  WSS --> WD
+  EST --> BC
+  EST --> DIAG
+  BC --> WD
+  WD --> MB
   MB --> CONTACT --> MB
   MB --> IMU
   MB --> ENC
-  MB --> TRUTH
-  CONTACT --> TRUTH
+  MB --> LOG
+  CONTACT --> LOG
 ```
 
 ## 2. モデル階層
 
 ```text
-ball_balancing_omni3_multibody.slx
-├── CommandSource
+ball_balancing_omni3_multibody_lqi_custom_contact_fullplant.slx
+├── CommandSource                          % ballbotCommandProfile
 ├── Controller
-│   ├── EstimatorAndController
-│   │   ├── ballbotClosedLoopStep
-│   │   ├── ballbotWheelRateFromDisplacement
-│   │   ├── ballbotEstimatorStep
-│   │   ├── YawBiasDiagnostics
-│   │   ├── ballbotYawBiasStartupGuard
-│   │   ├── YawBiasReadyMemory
-│   │   ├── ballbotControlStep
-│   │   ├── ballbotTorqueAllocator
-│   │   └── ballbotDcMotorTorqueEnvelope
-│   └── ControlCycleDelay
+│   ├── WheelSpeedSensing                  % 輪速検出
+│   │   ├── WheelRateInputs                %   変位・前回値の束ね
+│   │   ├── WheelRateCalculation           %   ballbotWheelRateFromDisplacement
+│   │   └── PreviousWheelDisplacement      %   前回変位メモリ
+│   ├── StateEstimator                     % 14状態推定器
+│   │   ├── EstimatorInputs                %   推定器入力の束ね
+│   │   ├── EstimatorUpdate                %   ballbotEstimatorUpdate
+│   │   ├── EstimatorStateMemory           %   14状態メモリ
+│   │   ├── SelectEstimate                 %   14要素推定出力
+│   │   ├── SelectNextEstimatorState       %   次回状態
+│   │   └── SelectYawBiasDiagnostics       %   診断3信号
+│   ├── BalanceController                  % 輪速指令生成
+│   │   ├── ControlInputs                  %   制御入力の束ね
+│   │   ├── LqiController                  %   ballbotLqiControllerUpdate
+│   │   │                                  %   （内部でballbotFullPlantHierarchyUpdateへ委譲）
+│   │   ├── LqiFeedbackInputs              %   LQIフィードバック入力の束ね
+│   │   ├── LqiFeedbackState               %   ballbotLqiFeedbackState
+│   │   ├── VelocityIntegralMemory         %   速度積分2状態メモリ
+│   │   ├── SelectMode                     %   制御モード取出し
+│   │   ├── SelectNextVelocityIntegral     %   次回速度積分取出し
+│   │   ├── SelectWheelSpeedCommand        %   輪速指令取出し
+│   │   ├── SelectYawBiasReady             %   準備完了取出し
+│   │   └── YawBiasReadyMemory             %   準備完了ラッチ
+│   ├── WheelDrive                         % 輪駆動
+│   │   ├── SpeedPiMotorInputs             %   指令・実輪速・積分・モードの束ね
+│   │   ├── SpeedPiAndDcMotor              %   ballbotSpeedPiMotorStep
+│   │   ├── SelectMotorTorque              %   輪トルク取出し
+│   │   ├── SelectNextSpeedIntegral        %   次回積分取出し
+│   │   └── SpeedIntegralMemory            %   速度PI積分メモリ
+│   ├── ControlCycleDelay                  % 制御出力の1サンプル遅延
+│   └── ControllerOutputMux / ControllerOutputDemux
 ├── MultibodyPlant
-│   ├── Environment
-│   │   ├── WorldFrame
-│   │   ├── MechanismConfiguration
-│   │   └── GroundPlane
-│   ├── Ball
-│   │   ├── SphericalSolid
-│   │   └── BallGroundContact
-│   ├── RoverMechanism
-│   │   ├── ChassisAndIMUFrame
-│   │   └── WheelModule_1..3
-│   ├── WheelBallContact_1..3
-│   │   └── ballbotCustomFriction
-│   └── Sensors
-│       ├── Ideal6AxisIMU
-│       ├── IdealEncoders
-│       └── TruthSensors
-└── Logging
+│   ├── Environment                        % World, SolverConfig,
+│   │                                      % MechanismConfig, GroundFrame, GroundPlane
+│   ├── Ball                               % BallFreeJoint, BallSolid,
+│   │                                      % BallGroundContact, 位置・姿勢計測
+│   ├── RoverChassis                       % RoverFreeJoint, ChassisSolid,
+│   │                                      % PayloadRodMount+PayloadRod500g,
+│   │                                      % Motor1..3Solid, 機体運動計測
+│   ├── WheelAssembly1..3                  % WheelNMount, WheelNJoint, WheelNSolid,
+│   │                                      % WheelNBallContact,
+│   │                                      % 変位・接触状態・法線力・すべり計測
+│   ├── TorqueDemux + Torque1..3ToPS       % 輪トルクの物理信号化
+│   ├── IdealIMU + RoverImuMux             % ballbotImuFromJoint
+│   ├── RoverPoseCalculation               % ballbotPoseFromJoint（機体真値）
+│   ├── BallPoseCalculation                % ballbotPoseFromJoint（球真値）
+│   └── WheelNCustomFriction               % ballbotCustomFriction
+│       + WheelNFrictionInputs             %   ＋摩擦入力束ね
+│       + WheelNRotationVector             %   ＋回転方向成形
+└── Logging                                % Log* To Workspace
 ```
 
 ## 3. コンポーネントカタログ
 
 | コンポーネント | 実装 | 入力→出力 | レート | DFT | 状態 |
 |---|---|---|---:|---|---|
-| CommandSource | Simulink Subsystem | 定数/テスト信号→$v_d^W,r_d,enable$ | 5 ms | Yes | なし |
-| EstimatorAndController | MATLAB Function | IMU,車輪回転変位,指令→$\hat z,\tau_w,mode$、診断3信号 | 5 ms | Partial | 推定14状態・積分2状態・前回車輪回転変位3状態・ヨーバイアス準備完了1状態 |
-| WheelRateDerivative | `ballbotWheelRateFromDisplacement.m` | $\theta_w[k],\theta_w[k-1]\rightarrow\omega_w[k]$ | 5 ms | Yes | 前回値は呼出元で保持 |
-| ControlCycleDelay | Unit Delay | 18要素制御出力→1サンプル前の出力 | 5 ms | No | 代数ループ分離 |
-| TorqueAllocator | `ballbotTorqueAllocator.m` | $\tau_b^B\rightarrow\tau_w$ | 5 ms | Yes | なし |
-| DCMotorActuators | FIT0521トルク―速度包絡線+MDD3A連続電流制限+3組のRevolute Joint | $\tau_w\rightarrow$車輪運動 | 5 ms→連続 | No | 車輪角速度 |
-| RoverMechanism | Simscape Multibody | 接触力・反力→機体/車輪6DoF | 連続 | No | 剛体状態 |
-| Ball | Simscape Multibody | 接触力→球6DoF | 連続 | No | 球位置・姿勢・速度 |
+| CommandSource | Simulink Subsystem＋`ballbotCommandProfile.m` | 定数/プロファイル→$v_d^W,r_d,enable$ | 5 ms | Yes | なし |
+| WheelSpeedSensing | `ballbotWheelRateFromDisplacement.m`＋Memory | $\theta_w[k],\theta_w[k-1]\rightarrow\omega_w[k]$ | 5 ms | Yes | 前回変位3 |
+| StateEstimator | `ballbotEstimatorUpdate.m`→`ballbotEstimatorStep.m`＋Memory＋Selector | IMU,輪速→$\hat z$(14)、診断3信号 | 5 ms | Partial | 推定14状態 |
+| BalanceController | `ballbotLqiControllerUpdate.m`→`ballbotFullPlantHierarchyUpdate.m`＋`ballbotLqiFeedbackState.m`＋Memory＋Selector | $\hat z$,指令,輪速,診断→輪速指令(3),mode,ready | 5 ms | Partial | 速度積分2・準備完了1 |
+| WheelDrive | `ballbotSpeedPiMotorStep.m`→`ballbotMdd3aVoltageController.m`＋DCモータ式＋Memory | 輪速指令,実輪速,mode→$\tau_w$(3) | 5 ms | Partial | 速度PI積分3 |
+| ControlCycleDelay | Unit Delay | 制御出力→1サンプル前の出力 | 5 ms | No | 代数ループ分離 |
+| Environment | World Frame＋Solver Configuration＋Mechanism Configuration＋Infinite Plane | 基準座標・重力・床面 | 連続 | No | なし |
+| Ball | Spherical Solid＋6-DOF Joint＋Spatial Contact Force | 接触力→球6DoF | 連続 | No | 球状態 |
+| RoverChassis | Simscape Multibody剛体＋6-DOF Joint | 接触・輪反力→機体6DoF | 連続 | No | 剛体状態 |
+| WheelAssembly1..3 | Revolute Joint＋Solid＋Spatial Contact Force | 輪トルク→車輪運動 | 連続 | No | 車輪状態 |
 | BallGroundContact | Spatial Contact Force | 球・床幾何→接触力 | 連続 | Yes | ペナルティ接触 |
-| WheelBallContact | Spatial Contact Force + MATLAB Function | 幾何・すべり→異方性接触力 | 連続 | Yes | ペナルティ接触 |
-| Ideal6AxisIMU | 6-DOF Joint sensing + MATLAB Function | 機体運動→比力・角速度 | 連続→5 ms | Yes | なし |
-| IdealEncoders | Revolute Joint position sensing | 車輪運動→$\theta_w$ | 連続→5 ms | Yes | なし |
-| TruthLogging | To Workspace | 真値→timeseries | 連続 | Yes | ログのみ |
+| WheelNBallContact | Spatial Contact Force＋`ballbotCustomFriction.m` | 幾何・すべり→異方性接触力 | 連続 | Yes | ペナルティ接触 |
+| IdealIMU | `ballbotImuFromJoint.m`→`ballbotIdealImu.m` | 機体運動→比力・角速度 | 連続→5 ms | Yes | なし |
+| WheelDisplacement | Revolute Joint position sensing＋PS-Simulink変換 | 車輪運動→$\theta_w$ | 連続→5 ms | Yes | なし |
+| Logging | To Workspace | 真値・制御信号→timeseries | 連続/5 ms | Yes | ログのみ |
 
 ## 4. 物理プラント
 
@@ -187,44 +202,75 @@ flowchart LR
 
 ## 6. 制御
 
+制御器は輪速指令を生成する外側層と、輪速を輪トルクへ変換する内側層の階層構造とする。
+
 ```mermaid
 flowchart LR
-  VD[v_d^W] --> ROT[World to body]
-  VH[v_hat^W] --> ROT
-  ROT --> PI[Velocity PI]
-  PI --> LIM[Acceleration and lean limit]
-  LIM --> REF[phi_d theta_d]
-  REF --> PD[Roll/pitch PD]
-  ATT[phi theta p q] --> PD
-  RD[r_d] --> YAW[Yaw-rate P]
-  RATE[r] --> YAW
+  VD[v_d^W] --> ROT[World to body + commandScale]
+  WW[wheelRate] --> PINV[pinv W_omega:1-2]
+  PINV --> VH[v_hat^B]
+  ROT --> VERR[v error]
+  VH --> VERR
+  VERR --> VPI[Velocity PI<br/>Kp_v=2.3 Ki_v=0]
+  VPI --> LIM[maxPlanarAcceleration]
+  LIM --> REF[tiltReference=atan2 a/g<br/>maxLean 4 deg]
+  REF --> STAB[tiltKp*e_tilt + tiltKd*tiltRate]
+  ATT[roll pitch p q] --> STAB
+  VD --> FF[commandFeedforward]
+  FF --> STAB
+  STAB --> PWV[planarWheelVelocity]
+  RD[r_d] --> YAW[yawRateCommand]
   READY[Yaw-bias ready latch] --> YAW
-  PD --> TAU[tau_b]
-  YAW --> TAU
-  TAU --> ALLOC[A_tau pseudo-inverse]
-  ALLOC --> SAT[Per-wheel saturation]
-  SAT --> MOTOR[tau_w]
-  SAT --> AW[Conditional integration]
-  AW --> PI
+  PWV --> MAP[W_omega wheelSpeedFromPlanarVelocity]
+  YAW --> MAP
+  MAP --> SAT[maximumWheelSpeedCommand]
+  SAT --> WCMD[omega_w,d]
+  WCMD --> SPI[Speed PI]
+  WACT[omega_w] --> SPI
+  SPI --> VLIM[MDD3A supply limit]
+  VLIM --> MOT[DC motor<br/>current + torque limits]
+  MOT --> TAU[tau_w]
+  SAT --> AW[hold integral on saturation]
+  AW --> VPI
 ```
 
-起動直後は`YawBiasReadyMemory=0`とし、$\gamma=1$かつ$|\hat r|\le0.002$ rad/sで1へラッチする。ラッチ前はヨートルクだけを0とし、ロール・ピッチPDは動作を継続する。明示的な非ゼロヨー指令は起動抑止をバイパスするが、車輪運動によりバイアス学習条件は不成立となる。
+起動直後は`YawBiasReadyMemory=0`とし、$\gamma=1$かつ$|\hat r|\le0.002$ rad/sで1へラッチする。ラッチ前はヨー速度指令だけを0とし、速度追従と傾斜安定化は動作を継続する。明示的な非ゼロヨー指令は起動抑止をバイパスするが、車輪運動によりバイアス学習条件は不成立となる。
 
-### 6.1 フィードバック極性
+### 6.1 階層制御の信号流れ
 
-| 偏差 | 正の状態 | 必要な球運動 | 制御式の符号 |
+| 段 | 計算 | 実装 |
+|---|---|---|
+| モード管理 | FALLEN/RECOVERY/BALANCEとヨーバイアス準備完了ラッチ | `ballbotLqiControllerUpdate`→`ballbotYawBiasStartupGuard` |
+| 機体速度再構成 | $\hat v^B=\operatorname{pinv}(W_\omega(:,1{:}2))\,\omega_w$ | `ballbotFullPlantHierarchyUpdate` |
+| 速度外側ループ | $a_d=K_{p,v}e_v+K_{i,v}I_v$、$\|a_d\|\le0.60$ m/s² | 同上 |
+| 傾斜指令 | $\alpha_d=\operatorname{atan2}(a_d,g)$、$\|\alpha_d\|\le4$ deg | 同上 |
+| 傾斜安定化 | $u_{planar}=K_{p,\alpha}e_\alpha+K_{d,\alpha}\dot\alpha-K_{ff}v_d^B$ | 同上 |
+| 輪速変換 | $\omega_{w,d}=W_\omega[u_{planar};r_d]$、飽和 | 同上 |
+| 輪速制御 | 輪速PI→電圧→電流・トルク制限 | `ballbotSpeedPiMotorStep` |
+
+### 6.2 フィードバック極性
+
+| 偏差 | 正の状態 | 必要な球運動 | 制御式の向き |
 |---|---|---|---|
-| $\phi-\phi_d>0$ | 機体上端が$-Y_B$へ傾斜 | 球を$-Y_B$へ加速 | $\tau_{b,x}>0$ |
-| $\theta-\theta_d>0$ | 機体上端が$+X_B$へ傾斜 | 球を$+X_B$へ加速 | $\tau_{b,y}>0$ |
-| $r_d-r>0$ | 正ヨー速度不足 | 機体へ$+Z_B$反力 | $\tau_{b,z}<0$ |
+| $\theta-\theta_d>0$ | 機体上端が$+X_B$へ傾斜 | 球を$+X_B$側へ転がす | `tiltKp`正、`stabilizationSign=+1` |
+| $\phi-\phi_d>0$ | 機体上端が$-Y_B$へ傾斜 | 球を$-Y_B$側へ転がす | 状態は$[-roll]$で統一 |
+| $r_d-r>0$ | 正ヨー速度不足 | 3輪を同相に回す | $W_\omega$第3列の正ヨー項 |
 
-### 6.2 アンチワインドアップ
+### 6.3 アンチワインドアップ
 
 | 条件 | 速度積分器 |
 |---|---|
-| 全輪非飽和かつBALANCE | $I_v^+=\operatorname{sat}(I_v+T_se_v)$ |
-| いずれかの輪が飽和 | 前回値を保持 |
+| 非飽和かつBALANCE | $I_v^+=\operatorname{sat}(I_v+T_se_v)$、±0.20 |
+| 輪速指令が飽和 | 前回値を保持 |
 | RECOVERY/FALLEN/DISABLED | 0へリセット |
+
+RECOVERYでは傾斜指令を0へ強制し、FALLEN/DISABLEDでは輪速指令を0へ強制する。
+
+### 6.4 代替パス（10状態LQI）
+
+`p.controller.fullplant.enabled=false` の構成では、`ballbotLqiControllerUpdate` 内部の10状態MIMO LQIを直接適用する。状態は$[v_x,v_y,\theta,-\phi,q,-p,r,\omega_{w,1..3}]^T$で、輪速指令は
+$\omega_{w,d}=u_{ff}-Kx-\lambda_K K_i I_v$
+とし、飽和差分を$\operatorname{pinv}(W_\omega)$で積分器へ戻すアンチワインドアップを備える。ゲインは`ballbotDesignLqi.m`が縮約プラントの線形化から設計する。
 
 ## 7. 数値設計
 
@@ -245,10 +291,11 @@ flowchart LR
 
 | 項目 | 方針 |
 |---|---|
-| 格納 | `ballbotParameters.m` が構造体 `p` を生成 |
+| 格納 | `ballbotFullPlantParameters.m` が構造体 `p` を生成（基礎値は `ballbotParameters.m`） |
 | モデル変数 | `ballbotParams` |
-| チューニング可能 | 接触摩擦、推定ゲイン、低運動閾値、バイアス時定数・上限・準備完了閾値、速度PI、姿勢PD、ヨーP、制限値 |
+| チューニング可能 | 接触摩擦、推定ゲイン、低運動閾値、バイアス時定数・上限・準備完了閾値、速度外側ループ（`fullplant.velocityKp/Ki`）、傾斜安定化（`fullplant.tiltKp/tiltKd`）、輪速PI（`motor.speedControllerKp/Ki`）、LQI重み・飽和、制限値 |
 | 固定 | 座標系、3輪番号、行列の符号規約 |
+| 設計済みゲイン | `ballbotDesignLqi.m` が起動時に再計算。`fullplant_lqi_design.mat` が存在すれば `stateGain`・`integralGain`・`trackingGainScale` を上書き |
 
 ## 9. 既知の制約
 
@@ -276,7 +323,9 @@ flowchart LR
 |---|---|---|
 | Spatial Contact Force | 球/凸形状、Infinite Plane、分離、法線ペナルティ、Provided by Input摩擦、接触量出力 | [MathWorks公式](https://www.mathworks.com/help/sm/ref/spatialcontactforce.html) |
 | Transform Sensor | 相対フレーム運動の理想計測 | [MathWorks Multibody Dynamics](https://www.mathworks.com/help/sm/multibody-dynamics.html) |
-| `Simulink.SimulationInput` | StopTime等をモデル非破壊で上書き | 既存`matlab_ws/3wd_omnirover/run_demo.m` |
+| `Simulink.SimulationInput` | StopTime等をモデル非破壊で上書き | 本ワークスペースのシミュレーション実行方法 |
 | `ballbotWheelGeometry` | $A_\tau$のランク3 | MATLAB R2026aで実行確認 |
 | `ballbotEstimatorStep` | 静止入力で状態変化0、接触信頼度1 | MATLAB R2026aで実行確認 |
 | `ballbotEstimatorStepTest` | バイアス学習・抑止・上限・再開・起動ガード・インターフェース回帰 | MATLAB R2026aで16件合格 |
+| `Simulink.BlockDiagram.createSubsystem` | 信号線と物理接続の境界ポートを自動生成 | モジュール化で使用 |
+| モデル更新 | `SimulationCommand=update` が ode15s で成功 | モジュール化後に確認 |

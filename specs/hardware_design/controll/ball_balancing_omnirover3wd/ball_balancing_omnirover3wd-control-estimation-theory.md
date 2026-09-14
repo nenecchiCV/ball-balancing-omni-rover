@@ -70,17 +70,20 @@ A_\tau=\frac{R_b}{R_w}
 \begin{bmatrix}a_1^B&a_2^B&a_3^B\end{bmatrix}
 $$
 
-実装は正則化疑似逆行列を用いる。
+上式は3輪トルクがボールへ及ぼす一般化トルクの物理関係である。現行の制御器はトルク配分ではなく輪速空間で指令を生成するため、速度指令への対応として同じ幾何から
 
 $$
-\tau_{w,raw}=A_\tau^T(A_\tau A_\tau^T+10^{-10}I)^{-1}\tau_{b,d}
+\omega_{w,d}=W_\omega
+\begin{bmatrix}u_{planar}\\ r_d\end{bmatrix},\qquad
+W_\omega=
+\begin{bmatrix}
+-\dfrac{\sin\lambda}{R_w}G_{r,xy}^T & \dfrac{R_c}{R_w}\mathbf{1}_3
+\end{bmatrix}
 $$
 
-$$
-\tau_w=\operatorname{sat}(\tau_{w,raw},\pm p.\mathrm{wheel.commandTorqueLimit})
-$$
+を用いる。$G_{r,xy}$は3輪の転動方向ベクトル$t_i^B$のXY成分を並べた$2\times3$行列（`p.wheel.geometry.rollingBody(1:2,:)`）、$R_c$はシャーシ半径である。逆方向には$W_\omega(:,1{:}2)$の疑似逆行列で機体平面速度を輪速から再構成する。
 
-対応実装: `ballbotWheelGeometry.m`、`ballbotTorqueAllocator.m`。
+対応実装: `ballbotWheelGeometry.m`（幾何）、`ballbotFullPlantParameters.m`（$W_\omega$生成）。
 
 ## 3. 接触モデル
 
@@ -127,7 +130,7 @@ $$
 y_{IMU}=\begin{bmatrix}f^B\\\omega_B^B\end{bmatrix}
 $$
 
-対応実装: `ballbotIdealImu.m`。
+対応実装: `ballbotImuFromJoint.m`→`ballbotIdealImu.m`。
 
 ## 5. 推定器
 
@@ -346,90 +349,174 @@ $$
 
 この順序によりバイアス更新から当該サンプルの姿勢・接触信頼度への直達を設けず、代数ループを作らない。
 
-対応実装: `ballbotWheelRateFromDisplacement.m`、`ballbotEstimatorStep.m`。
+対応実装: `ballbotWheelRateFromDisplacement.m`、`ballbotEstimatorUpdate.m`→`ballbotEstimatorStep.m`。
 
 ## 6. 速度・姿勢・ヨー制御
 
-### 6.1 指令制限
+正本モデルの制御器は階層構造とし、`ballbotLqiControllerUpdate` が `p.controller.fullplant.enabled` を検査して `ballbotFullPlantHierarchyUpdate` へ委譲する。外側層は輪速指令$\omega_{w,d}$を生成し、内側層 `ballbotSpeedPiMotorStep` が輪速PIとDCモータモデルで輪トルクへ変換する。
+
+### 6.1 モード管理と指令成形
 
 $$
-\|v_d^W\|\le0.12\ \mathrm{m/s},\qquad
-|r_d|\le0.80\ \mathrm{rad/s}
+\mathrm{mode}=
+\begin{cases}
+0 & \lnot\mathrm{enable}\ \lor\ \sqrt{\hat\phi^2+\hat\theta^2}\ge35\ \mathrm{deg}\\
+2 & \sqrt{\hat\phi^2+\hat\theta^2}\ge17\ \mathrm{deg}\ \lor\ c_{contact}<c_{min}\\
+1 & \mathrm{otherwise}
+\end{cases}
 $$
 
-### 6.2 速度外側ループ
+正本構成では`p.controller.minimumContactConfidence=0`として接触信頼度ゲートを無効化し、傾斜だけでRECOVERYへ進入する。
 
 $$
-e_v^B=R_z(\hat\psi)^T(v_d^W-\hat v_B^W)
+{}^Bv_d=c_{scale}R_z(\hat\psi)^T{}^Wv_d,\qquad
+\|{}^Bv_d\|\le p.\mathrm{controller.maxSpeed}
+$$
+
+指令スケール$c_{scale}=0.60$は、輪速変換を介してモータ速度指令が物理上限へ達するまでの余裕を確保する。
+
+### 6.2 機体平面速度の再構成
+
+階層制御ではIMU積分速度ではなく、車輪角速度から機体平面速度を再構成する。
+
+$$
+{}^B\hat v=\left(W_{\omega}(:,1{:}2)\right)^\dagger\omega_w
+$$
+
+エンコーダー由来の輪速を直接使うため、比力積分のドリフトが速度外側ループへ入らない。
+
+### 6.3 速度外側ループと傾斜指令
+
+$$
+e_v={}^Bv_d-{}^B\hat v
 $$
 
 $$
-I_{v,k+1}=\operatorname{sat}(I_{v,k}+T_se_v^B,\pm0.20)
+I_{v,k+1}=\operatorname{sat}(I_{v,k}+T_se_v,\pm0.20)
 $$
 
 $$
-a_d^B=K_{pv}e_v^B+K_{iv}I_v,\qquad\|a_d^B\|\le0.60\ \mathrm{m/s^2}
+a_d=K_{p,v}e_v+K_{i,v}I_v,\qquad\|a_d\|\le0.60\ \mathrm{m/s^2}
 $$
 
 $$
-\phi_d=-\operatorname{atan2}(a_{d,y}^B,g),\qquad
-\theta_d=\operatorname{atan2}(a_{d,x}^B,g)
-$$
-
-$$
-|\phi_d|,|\theta_d|\le4\ \mathrm{deg}
+\alpha_d=
+\begin{bmatrix}\operatorname{atan2}(a_{d,x},g)\\ \operatorname{atan2}(a_{d,y},g)\end{bmatrix},
+\qquad\|\alpha_d\|_\infty\le4\ \mathrm{deg}
 $$
 
 | ゲイン | 値 |
 |---|---:|
-| $K_{pv}$ | $\operatorname{diag}(0.35,0.35)$ s$^{-1}$ |
-| $K_{iv}$ | $\operatorname{diag}(0.04,0.04)$ s$^{-2}$ |
+| $K_{p,v}$ | $\operatorname{diag}(2.3,2.3)$ s$^{-1}$ |
+| $K_{i,v}$ | $\operatorname{diag}(0,0)$ s$^{-2}$ |
 
-### 6.3 姿勢内側ループ
+### 6.4 傾斜安定化と輪速指令
 
-$$
-\tau_{b,x}=-s_m\{0.95(\hat\phi-\phi_d)+0.12\hat p\}
-$$
+傾斜状態は$[\theta;-\phi]$、傾斜角速度は$[q;-p]$で統一する。
 
 $$
-\tau_{b,y}=-s_m\{0.95(\hat\theta-\theta_d)+0.12\hat q\}
+u_{planar}=s_{stab}\left\{
+K_{p,\alpha}(\alpha-\alpha_d)+K_{d,\alpha}\dot\alpha
+\right\}-K_{ff}\,{}^Bv_d
 $$
 
-$$
-\tau_{b,z}=s_{yaw}\,0.08(r_d-\hat r)
-$$
+| パラメーター | 値 |
+|---|---:|
+| $K_{p,\alpha}$ | $\operatorname{diag}(16,16)$ |
+| $K_{d,\alpha}$ | $\operatorname{diag}(1.6,1.6)$ |
+| $s_{stab}$ | $+1$ |
+| $K_{ff}$ | $1.0$ |
 
-| モード | $s_m$ | $(\phi_d,\theta_d,r_d)$ |
-|---|---:|---|
-| BALANCE | 1.00 | 速度外側ループの値 |
-| RECOVERY | 1.35 | $(0,0,0)$ |
-| FALLEN/DISABLED | - | $\tau_b=0$ |
+RECOVERYでは$\alpha_d=0$、FALLEN/DISABLEDでは$u_{planar}=0$とする。
 
-### 6.4 起動時ヨー制御ガード
+### 6.5 起動時ヨー制御ガード
 
 $$
 s_{ready,k+1}=s_{ready,k}\lor
 \left(\gamma_k=1\land|\hat r_k|\le0.002\ \mathrm{rad/s}\right)
 $$
 
-明示的なヨー指令がない場合は$s_{yaw}=s_{ready}$とし、未補正バイアスにヨー制御器が反応して車輪を回し、低運動認定を自ら解除する競合を防ぐ。ロール・ピッチ制御は常時有効である。一度成立した$s_{ready}$は推定器・制御器リセットまで保持する。$|r_d|>1.0\times10^{-6}$ rad/sの明示指令では$s_{yaw}=1$として指令を優先するが、運動中のバイアス更新は低運動ゲートにより停止する。
+$$
+r_{d,eff}=
+\begin{cases}
+\operatorname{sat}(r_d,\pm0.80) & s_{ready}\ \lor\ |r_d|>1.0\times10^{-6}\\
+0 & \mathrm{otherwise}
+\end{cases}
+$$
 
-### 6.5 飽和・アンチワインドアップ
+明示的なヨー指令がない場合はヨー速度指令だけを0とし、未補正バイアスに制御器が反応して車輪を回し、低運動認定を自ら解除する競合を防ぐ。傾斜安定化と速度追従は常時有効である。一度成立した$s_{ready}$は推定器・制御器リセットまで保持する。明示指令では指令を優先するが、運動中のバイアス更新は低運動ゲートにより停止する。
+
+### 6.6 輪速変換と飽和
 
 $$
-\tau_w=\operatorname{sat}(A_\tau^\dagger\tau_b,\pm p.\mathrm{wheel.commandTorqueLimit})
+\omega_{w,d}=\operatorname{sat}\!\left(
+W_\omega\begin{bmatrix}u_{planar}\\ r_{d,eff}\end{bmatrix},
+\ \pm\,0.70\,\omega_{max,motor}\right)
 $$
+
+$\omega_{max,motor}=$ `p.motor.speedCommandLimit` $=d_{max}\omega_{nl}$（$d_{max}$はMDD3A最大デューティ、$\omega_{nl}=210$ rpmの無負荷速度）。
 
 | 条件 | $I_v$更新 |
 |---|---|
-| $\tau_{w,raw}=\tau_w$ | 候補値を採用 |
-| $\tau_{w,raw}\ne\tau_w$ | 前回値を保持 |
+| $\omega_{w,d}$非飽和かつBALANCE | 候補値を採用 |
+| いずれかの輪速が飽和 | 前回値を保持 |
 | mode≠BALANCE | 0 |
 
-FIT0521の加速方向トルクには、6 V無負荷回転速度210 rpmとMDD3Aの3 A連続電流定格から求めた上限
-$\omega_{max}=62\times2\pi/60$ rad/sで0となる線形包絡線を適用する。減速方向トルクは接触トルク上限まで許容する。
+### 6.7 輪速内側ループとモータ
 
-対応実装: `ballbotYawBiasStartupGuard.m`、`ballbotControllerUpdate.m`、`ballbotControlStep.m`、`ballbotTorqueAllocator.m`、`ballbotDcMotorTorqueEnvelope.m`。
+`ballbotSpeedPiMotorStep` は輪速PI、MDD3A電圧制限、DCモータ電気式、トルク制限を順に適用する。
+
+$$
+e_\omega=\omega_{w,d}-\omega_w
+$$
+
+$$
+V_{raw}=K_{p,\omega}e_\omega+K_{i,\omega}I_{\omega,k},\qquad
+V=\operatorname{sat}(V_{raw},\pm d_{max}V_{supply})
+$$
+
+$$
+I_{\omega,k+1}=\operatorname{sat}\!\left(
+I_{\omega,k}+T_s\big(e_\omega+K_{aw,\omega}(V-V_{raw})\big),
+\pm\frac{V_{supply}}{K_{i,\omega}}\right)
+$$
+
+電圧飽和はバックカリキュレーション（$K_{aw,\omega}=1/K_{p,\omega}$）で積分器へ戻す。$V_{supply}=6$ V、$d_{max}$はMDD3A最大デューティ。mode=0では電圧と積分器を0へリセットする。
+
+$$
+I=\operatorname{sat}\!\left(\frac{V-K_e\omega_w}{R_a},\pm I_{cont}\right),\qquad
+I_{cont}=3.0\ \mathrm{A}
+$$
+
+$$
+\tau_w=\operatorname{sat}\!\left(K_tI-B\omega_w,\pm\tau_{lim}\right),\qquad
+\tau_{lim}=\min(\tau_{traction},\tau_{motor})
+$$
+
+正本構成では$\tau_{motor}=$ `p.controller.fullplant.motorTorqueLimit` $=0.010$ N·mを輪トルク上限とし、接触摩擦限界$\tau_{traction}=\mu_d N_{nom}R_w$とMDD3A連続定格トルクの小さい方と併せて制限する。輪速PIゲインは正本構成で$\times0.25$に再調整する（`p.fullplant.speedPiGainScale`）。
+
+### 6.8 代替パス：10状態MIMO LQI
+
+`p.controller.fullplant.enabled=false` の構成では、`ballbotLqiControllerUpdate` 内部の10状態LQIを直接適用する。
+
+$$
+x=\begin{bmatrix}{}^Bv^T&\theta&-\phi&q&-p&r&\omega_w^T\end{bmatrix}^T\in\mathbb{R}^{10}
+$$
+
+$$
+\omega_{w,d}=\operatorname{sat}\!\left(
+W_\omega\begin{bmatrix}0\\0\\r_{d,eff}\end{bmatrix}
+-Kx-\lambda_K K_i I_v,\ \pm\omega_{max,motor}\right)
+$$
+
+$$
+I_v^+=I_v+T_se_v+T_sK_{aw}\,
+\left[W_\omega^\dagger(\omega_{w,d}-\omega_{w,raw})\right]_{1:2}
+$$
+
+ヨーは運動学的フィードフォワードのみとし、平面追従は積分状態経由で入れるため、速度ステップが加速度・傾斜制限を迂回しない。飽和差分は$W_\omega$の疑似逆行列で平面速度空間へ戻し、$K_{aw}=8$で積分器を補正する。RECOVERYでは$\omega_{w,d}=-1.35Kx$、FALLEN/DISABLEDでは0とする。ゲイン$K,K_i$は`ballbotDesignLqi.m`が縮約プラントの線形化モデルから積分拡張LQRで設計する。
+
+対応実装: `ballbotLqiControllerUpdate.m`、`ballbotFullPlantHierarchyUpdate.m`、`ballbotLqiFeedbackState.m`、`ballbotSpeedPiMotorStep.m`、`ballbotMdd3aVoltageController.m`、`ballbotYawBiasStartupGuard.m`、`ballbotDesignLqi.m`。
 
 ## 7. 可観測性・推定誤差
 
@@ -446,14 +533,15 @@ $\omega_{max}=62\times2\pi/60$ rad/sで0となる線形包絡線を適用する�
 
 | 理論節 | MATLAB関数 | Simulinkサブシステム |
 |---|---|---|
-| §2 | `ballbotWheelGeometry.m` | ParameterInitialization |
-| §2 | `ballbotTorqueAllocator.m` | Controller/TorqueAllocator |
-| §3 | `ballbotCustomFriction.m` | MultibodyPlant/WheelBallContact_1..3 |
-| §4 | `ballbotIdealImu.m` | MultibodyPlant/Sensors/Ideal6AxisIMU |
-| §5.4 | `ballbotWheelRateFromDisplacement.m` | Controller/WheelRateDerivative |
-| §5 | `ballbotEstimatorStep.m` | Controller/StateEstimator、YawBiasDiagnostics |
-| §6 | `ballbotControlStep.m` | Controller/ModeAndControl |
-| 全パラメーター | `ballbotParameters.m` | Model workspace `ballbotParams` |
+| §2 | `ballbotWheelGeometry.m` | パラメーター初期化（`ballbotFullPlantParameters`から呼出し） |
+| §2 | $W_\omega$生成 | `ballbotFullPlantParameters.m` |
+| §3 | `ballbotCustomFriction.m` | MultibodyPlant/WheelNCustomFriction→WheelAssemblyN/WheelNBallContact |
+| §4 | `ballbotImuFromJoint.m`→`ballbotIdealImu.m` | MultibodyPlant/IdealIMU |
+| §5.4 | `ballbotWheelRateFromDisplacement.m` | Controller/WheelSpeedSensing/WheelRateCalculation |
+| §5 | `ballbotEstimatorUpdate.m`→`ballbotEstimatorStep.m` | Controller/StateEstimator/EstimatorUpdate |
+| §6.1–6.6 | `ballbotLqiControllerUpdate.m`→`ballbotFullPlantHierarchyUpdate.m` | Controller/BalanceController/LqiController |
+| §6.7 | `ballbotSpeedPiMotorStep.m`→`ballbotMdd3aVoltageController.m` | Controller/WheelDrive/SpeedPiAndDcMotor |
+| 全パラメーター | `ballbotFullPlantParameters.m`（基礎値は`ballbotParameters.m`） | Model workspace `ballbotParams` |
 
 ## 9. 参考資料
 

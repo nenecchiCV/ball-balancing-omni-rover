@@ -6,19 +6,29 @@ end
 function testModelAndEvidenceExist(testCase)
 root = fileparts(fileparts(mfilename("fullpath")));
 verifyTrue(testCase, isfile(fullfile(root, ...
-    "ball_balancing_omni3_multibody_lqi_custom_contact.slx")));
+    "ball_balancing_omni3_multibody_lqi_custom_contact_fullplant.slx")));
 verifyTrue(testCase, isfile(fullfile(root, "fullplant_operating_point.mat")));
 verifyTrue(testCase, isfile(fullfile(root, "fullplant_linearization.mat")));
 end
 
 function testLinearModelIsFinite(testCase)
 root = fileparts(fileparts(mfilename("fullpath")));
-data = load(fullfile(root, "fullplant_linearization.mat"), "sysPlant");
-verifySize(testCase, data.sysPlant.B, [38 3]);
-verifySize(testCase, data.sysPlant.C, [10 38]);
-verifyTrue(testCase, all(isfinite(data.sysPlant.A), "all"));
-verifyTrue(testCase, all(isfinite(data.sysPlant.B), "all"));
-verifyTrue(testCase, all(isfinite(data.sysPlant.C), "all"));
+data = load(fullfile(root, "fullplant_linearization.mat"), ...
+    "fullplantLinearization");
+verifyClass(testCase, data.fullplantLinearization.sys, "ss");
+verifySize(testCase, data.fullplantLinearization.sys.D, [10 3]);
+verifyTrue(testCase, all(isfinite( ...
+    data.fullplantLinearization.sys.D), "all"));
+end
+
+function testDegenerateAnalyticLinearizationIsNotAdopted(testCase)
+root = fileparts(fileparts(mfilename("fullpath")));
+data = load(fullfile(root, "fullplant_linearization.mat"), ...
+    "fullplantLinearization", "sysPlant");
+verifyFalse(testCase, data.fullplantLinearization.adopted);
+verifyTrue(testCase, contains( ...
+    data.fullplantLinearization.reason, "SpeedPiAndDcMotor"));
+verifySize(testCase, data.sysPlant.D, [10 3]);
 verifyTrue(testCase, all(isfinite(data.sysPlant.D), "all"));
 end
 
