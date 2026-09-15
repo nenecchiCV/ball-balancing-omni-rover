@@ -10,14 +10,14 @@ FILE_DESCRIPTION(
 
 FILE_NAME(
 /* name */ 'WheelAdapter_v3.step',
-/* time_stamp */ '2026-09-16T02:53:17+09:00',
+/* time_stamp */ '2026-09-16T03:12:33+09:00',
 /* author */ (''),
 /* organization */ (''),
 /* preprocessor_version */ 'ST-DEVELOPER v20.2',
 /* originating_system */ 'Autodesk Translation Framework v15.15.0.0',
 /* authorisation */ '');
 
-FILE_SCHEMA (('AUTOMOTIVE_DESIGN { 1 0 10303 214 3 1 1 }'));
+FILE_SCHEMA (('AUTOMOTIVE_DESIGN { 1 0 10303 214 3 1 1 }','INTEGRATED_CNC_SCHEMA'));
 ENDSEC;
 
 DATA;
@@ -182,7 +182,7 @@ SOLID_ANGLE_UNIT()
 #131=PRODUCT_DEFINITION_SHAPE('',$,#134);
 #132=SHAPE_REPRESENTATION('',(#78),#124);
 #133=PRODUCT_DEFINITION_CONTEXT('part definition',#138,'design');
-#134=PRODUCT_DEFINITION('2026-09-16-02-53-17-842','WheelAdapter_v3',#135,
+#134=PRODUCT_DEFINITION('2026-09-16-03-12-33-328','WheelAdapter_v3',#135,
 #133);
 #135=PRODUCT_DEFINITION_FORMATION('',$,#140);
 #136=PRODUCT_RELATED_PRODUCT_CATEGORY('WheelAdapter_v3',
@@ -192,7 +192,7 @@ SOLID_ANGLE_UNIT()
 #138=APPLICATION_CONTEXT(
 'Core Data for Automotive Mechanical Design Process');
 #139=PRODUCT_CONTEXT('part definition',#138,'mechanical');
-#140=PRODUCT('2026-09-16-02-53-17-842','WheelAdapter_v3',$,(#139));
+#140=PRODUCT('2026-09-16-03-12-33-328','WheelAdapter_v3',$,(#139));
 #141=PRESENTATION_STYLE_ASSIGNMENT((#142));
 #142=SURFACE_STYLE_USAGE(.BOTH.,#143);
 #143=SURFACE_SIDE_STYLE('',(#144));
