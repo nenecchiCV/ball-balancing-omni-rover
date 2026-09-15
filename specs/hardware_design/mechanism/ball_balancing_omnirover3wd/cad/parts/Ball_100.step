@@ -10,7 +10,7 @@ FILE_DESCRIPTION(
 
 FILE_NAME(
 /* name */ 'Ball_100.step',
-/* time_stamp */ '2026-09-15T09:20:26+09:00',
+/* time_stamp */ '2026-09-16T02:53:16+09:00',
 /* author */ (''),
 /* organization */ (''),
 /* preprocessor_version */ 'ST-DEVELOPER v20.2',
@@ -112,7 +112,7 @@ SOLID_ANGLE_UNIT()
 #61=PRODUCT_DEFINITION_SHAPE('',$,#64);
 #62=SHAPE_REPRESENTATION('',(#38),#54);
 #63=PRODUCT_DEFINITION_CONTEXT('part definition',#68,'design');
-#64=PRODUCT_DEFINITION('2026-09-15-09-20-26-782','Ball_100',#65,#63);
+#64=PRODUCT_DEFINITION('2026-09-16-02-53-16-917','Ball_100',#65,#63);
 #65=PRODUCT_DEFINITION_FORMATION('',$,#70);
 #66=PRODUCT_RELATED_PRODUCT_CATEGORY('Ball_100','Ball_100',(#70));
 #67=APPLICATION_PROTOCOL_DEFINITION('international standard',
@@ -120,7 +120,7 @@ SOLID_ANGLE_UNIT()
 #68=APPLICATION_CONTEXT(
 'Core Data for Automotive Mechanical Design Process');
 #69=PRODUCT_CONTEXT('part definition',#68,'mechanical');
-#70=PRODUCT('2026-09-15-09-20-26-782','Ball_100',$,(#69));
+#70=PRODUCT('2026-09-16-02-53-16-917','Ball_100',$,(#69));
 #71=PRESENTATION_STYLE_ASSIGNMENT((#72));
 #72=SURFACE_STYLE_USAGE(.BOTH.,#73);
 #73=SURFACE_SIDE_STYLE('',(#74));

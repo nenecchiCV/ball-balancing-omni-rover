@@ -10,7 +10,7 @@ FILE_DESCRIPTION(
 
 FILE_NAME(
 /* name */ 'Ground_ref.step',
-/* time_stamp */ '2026-09-15T09:20:26+09:00',
+/* time_stamp */ '2026-09-16T02:53:16+09:00',
 /* author */ (''),
 /* organization */ (''),
 /* preprocessor_version */ 'ST-DEVELOPER v20.2',
@@ -143,7 +143,7 @@ SOLID_ANGLE_UNIT()
 #92=PRODUCT_DEFINITION_SHAPE('',$,#95);
 #93=SHAPE_REPRESENTATION('',(#55),#85);
 #94=PRODUCT_DEFINITION_CONTEXT('part definition',#99,'design');
-#95=PRODUCT_DEFINITION('2026-09-15-09-20-26-502','Ground_ref',#96,#94);
+#95=PRODUCT_DEFINITION('2026-09-16-02-53-16-655','Ground_ref',#96,#94);
 #96=PRODUCT_DEFINITION_FORMATION('',$,#101);
 #97=PRODUCT_RELATED_PRODUCT_CATEGORY('Ground_ref','Ground_ref',(#101));
 #98=APPLICATION_PROTOCOL_DEFINITION('international standard',
@@ -151,7 +151,7 @@ SOLID_ANGLE_UNIT()
 #99=APPLICATION_CONTEXT(
 'Core Data for Automotive Mechanical Design Process');
 #100=PRODUCT_CONTEXT('part definition',#99,'mechanical');
-#101=PRODUCT('2026-09-15-09-20-26-502','Ground_ref',$,(#100));
+#101=PRODUCT('2026-09-16-02-53-16-655','Ground_ref',$,(#100));
 #102=PRESENTATION_STYLE_ASSIGNMENT((#103));
 #103=SURFACE_STYLE_USAGE(.BOTH.,#104);
 #104=SURFACE_SIDE_STYLE('',(#105));
