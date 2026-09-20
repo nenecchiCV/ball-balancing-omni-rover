@@ -92,7 +92,7 @@ flowchart TB
 | モータドライバ | Cytron MDD3A | 2 | 2チャネル/枚、4–16 V、3 A連続・5 Aピーク/チャネル、PWM最大20 kHz、PWM/DIR入力 | [Cytron公式仕様](https://my.cytron.io/p-3amp-4v-16v-dc-motor-driver-2-channels) |
 | IMU | 理想6軸IMU | 1 | 3軸比力、3軸角速度、機体中央配置 | シミュレーションセンサー |
 | エンコーダー | FIT0521内蔵2相Hall | 3 | 3.3/5 V、出力軸341.2 PPR、各輪回転変位（回転速度は制御器内で微分） | DFRobot公式仕様。実機のカウント逓倍方式は受入試験で確定 |
-| 上部ロッド | 角柱バラスト | 1 | 質量0.500 kg、長さ300 mm、断面20 mm角、機体上面中央へ剛体固定 | `ball_balancing_omni3_multibody_lqi_custom_contact.slx` の正式仕様 |
+| 上部ロッド | 角柱バラスト | 1 | 質量0.500 kg、長さ300 mm、断面20 mm角、機体上面中央へ剛体固定 | `ball_balancing_omni3_multibody_lqi_custom_contact_fullplant.slx` の正式仕様 |
 
 ## 質量・慣性予算
 

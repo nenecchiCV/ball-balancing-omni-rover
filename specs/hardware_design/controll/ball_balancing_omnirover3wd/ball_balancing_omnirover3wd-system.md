@@ -6,7 +6,7 @@
 |---|---|
 | ステータス | 実装中 |
 | 最終更新日 | 2026-09-09 |
-| 対象モデル | `matlab_ws/ball_balancing_omni3/ball_balancing_omni3_multibody_lqi_custom_contact.slx` |
+| 対象モデル | `matlab_ws/ball_balancing_omni3/ball_balancing_omni3_multibody_lqi_custom_contact_fullplant.slx` |
 | 機構仕様 | [玉乗り3WDオムニローバー機構仕様](../../mechanism/ball_balancing_omnirover3wd/README.md) |
 
 ## 1. 目的
@@ -33,7 +33,7 @@
 
 | 対象 | v1 |
 |---|---|
-| 物理モデル | 上部ロッドを含む剛体、球–床接触、次工程で実装する3組のcustomホイール–球接触、接触分離、異方性摩擦 |
+| 物理モデル | 上部ロッドを含む剛体、球–床接触、3組のcustomホイール–球接触、接触分離、異方性摩擦 |
 | 制御 | 平面速度、ロール・ピッチ、ヨー角速度、モード、飽和、積分器アンチワインドアップ |
 | 推定 | 姿勢、平面速度、ボール角速度、機体–ボール相対変位、ヨー軸ジャイロバイアス、低運動継続時間、接触信頼度 |
 | センサー | 比力、角速度、車輪回転変位。MILではバイアス・ノイズ・振動を注入可能 |
@@ -76,7 +76,7 @@
 
 | 名前 | 記号 | 次元 | 単位 | サンプル時間 | 範囲 |
 |---|---:|---:|---:|---:|---:|
-| 車輪軸トルク指令 | $\tau_w$ | 3 | N·m | 5 ms | ±`p.wheel.commandTorqueLimit`（MDD3A連続定格から公称±0.919） |
+| 車輪軸トルク | $\tau_w$ | 3 | N·m | 5 ms | ±`min(p.controller.tractionLimitedWheelTorque, p.controller.fullplant.motorTorqueLimit)`（正本構成の公称±0.010） |
 | 推定状態 | $\hat z$ | 14 | 混合 | 5 ms | [理論仕様](ball_balancing_omnirover3wd-control-estimation-theory.md) |
 | 制御モード | mode | 1 | uint8 | 5 ms | 0,1,2 |
 
@@ -105,9 +105,11 @@
 
 | 値 | モード | 進入条件 | 動作 | 積分器 |
 |---:|---|---|---|---|
-| 0 | DISABLED/FALLEN | `enable=0` または傾斜≥35 deg | 全輪トルク0 | 0へリセット |
-| 1 | BALANCE | 傾斜<18 deg、接触信頼度≥0.20 | 速度・姿勢・ヨーの全制御 | 条件付き積分 |
-| 2 | RECOVERY | 傾斜18–35 degまたは接触信頼度<0.20 | 速度・ヨー指令0、姿勢ゲイン1.35倍 | 0へリセット |
+| 0 | DISABLED/FALLEN | `enable=0` または傾斜≥35 deg | 全輪速度指令0、駆動電圧0 | 0へリセット |
+| 1 | BALANCE | 傾斜<17 deg | 速度・姿勢・ヨーの全制御 | 条件付き積分 |
+| 2 | RECOVERY | 傾斜17–35 degまたは接触信頼度<0.20 | 傾斜指令0へ強制し直立復帰を優先 | 0へリセット |
+
+正本構成では `p.controller.recoveryTilt=17` deg とし、輪速指令による上側接触の減荷前にRECOVERYへ進入する。`p.controller.minimumContactConfidence=0` として接触信頼度ゲートは無効化する。
 
 ## 7. 初期値・タイミング
 

@@ -31,8 +31,8 @@ flowchart LR
 |---|---|---|---|---|
 | U-01 | WheelGeometry | 公称$p$ | $n_i,t_i,a_i$相互直交 | 内積$<10^{-12}$ |
 | U-02 | WheelGeometry | 公称$p$ | $A_\tau$フルランク | rank=3 |
-| U-03 | TorqueAllocator | $\tau_b=[0.01,-0.02,0.005]^T$ | 往復一致 | 非飽和時誤差$<10^{-9}$ N·m |
-| U-04 | TorqueAllocator | 大トルク | 全輪飽和 | $|\tau_i|\le p.wheel.commandTorqueLimit$（公称0.919 N·m） |
+| U-03 | 輪速変換$W_\omega$ | $u=[u_{planar};r_d]$任意 | 疑似逆で往復一致 | 平面速度再構成誤差$<10^{-9}$ m/s |
+| U-04 | 輪速飽和 | 大指令 | 全輪飽和 | $|\omega_{w,d,i}|\le p.controller.lqi.maximumWheelSpeedCommand$ |
 | U-05 | CustomFriction | $v_t\ne0,F_n>0$ | $F_t^Tv_t\le0$ | 常に非正 |
 | U-06 | WheelRateDerivative | 変位増分$[0.01,-0.02,0.03]^T$ rad、$T_s=5$ ms | 後退差分 | $[2,-4,6]^T$ rad/s、誤差$<10^{-12}$ rad/s |
 | U-07 | Estimator | 静止IMU、車輪回転変位一定 | 状態不変・接触信頼度 | ノルム誤差$<10^{-10}$、信頼度$>0.99$ |
@@ -106,8 +106,8 @@ B-01～B-12は`matlab_ws/ball_balancing_omni3/tests/ballbotEstimatorStepTest.m`�
 | 3輪接触率 | 各輪99%以上 |
 | 球–床分離時間 | 0 s |
 | 輪–球すべりRMS | 0.03 m/s未満 |
-| 車輪トルク | 全サンプルで±`p.wheel.commandTorqueLimit`以内（公称±0.919 N·m） |
-| 車輪速度 | 連続定常で±5.55 rad/s以内 |
+| 車輪トルク | 全サンプルで±`min(p.controller.tractionLimitedWheelTorque, p.controller.fullplant.motorTorqueLimit)`以内（正本構成の公称±0.010 N·m） |
+| 車輪速度指令 | 全サンプルで±`p.controller.lqi.maximumWheelSpeedCommand`以内 |
 
 ## 5. 推定精度
 
@@ -171,9 +171,10 @@ B-01～B-12は`matlab_ws/ball_balancing_omni3/tests/ballbotEstimatorStepTest.m`�
 ## 10. 実行方法
 
 ```matlab
-p = ballbotParameters;
+p = ballbotFullPlantParameters;
 assignin("base", "ballbotParams", p);
-in = Simulink.SimulationInput("ball_balancing_omni3_multibody");
+in = Simulink.SimulationInput( ...
+    "ball_balancing_omni3_multibody_lqi_custom_contact_fullplant");
 in = in.setVariable("ballbotParams", p);
 in = in.setModelParameter("StopTime", "4");
 out = sim(in);
@@ -186,8 +187,10 @@ out = sim(in);
 | 項目 | 状態 | 理由 |
 |---|---|---|
 | 更新則の離散計算 | 合格 | 0.02 rad/s注入時の15 s誤差$1.046\times10^{-8}$ rad/s、続く静止10 sドリフト$6.022\times10^{-7}$ deg |
-| B-01～B-12 | 合格 | MATLAB R2026aで16件中16件合格 |
-| StateEstimator構造チェック | 合格 | 14状態、14要素`estimate`、診断3信号、起動ガードの接続をToolkitで確認 |
+| B-01～B-12 | 合格 | MATLAB R2026aで16件中16件合格（現行LQI制御器向けに更新済み） |
+| モジュール化回帰 | 合格 | サブシステム化後モデルと再構成前ベースラインで全ログ信号が共通時間グリッド上で一致。最大相対差は摩擦力で約$4\times10^{-3}$（可変ステップ誤差範囲） |
+| モデル更新 | 合格 | モジュール化後モデルで`update`成功（ode15s） |
+| `run_fullplant_regression` | 3/4合格 | upright・x・yは4接触維持・転倒なし・トルク上限内。xy合成指令は両モデルとも接触維持限界域で、再構成モデルは約2 sで輪―球接触を一時喪失。再構成前モデルも最小法線力0.04 Nの限界域であり、静止・指令前区間では両モデル一致（$10^{-4}$ rad級）。保存済み`fullplant_verification_results.mat`は現行HEADモデルでも再現しない旧条件の結果であり、制御再調整後に回帰基準を再生成する |
 | C-09短時間ゲート | 合格 | 0.02 rad/s注入時、4 s誤差0.001916 rad/s、3～4 sドリフト0.005293 deg |
 | C-09～C-14長時間 | 未完 | 全機体モデルがバイアス試験で4.760 s、公称指令で2.195 sにFALLENへ遷移するため |
 | 既存C-01～C-08回帰 | 一部合格 | 0.5 s複合指令は平均ヨー速度0.197879 rad/s、最終mode=1。長時間ゲートは未完 |

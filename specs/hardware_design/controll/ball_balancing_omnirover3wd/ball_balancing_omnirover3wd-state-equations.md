@@ -193,7 +193,7 @@ $$
 F_t=-\mu_dF_n\tanh(v_d/v_c)t-\mu_rF_n\tanh(v_r/v_c)r
 $$
 
-この形は分離とすべりを扱え、`ball_balancing_omni3_multibody_lqi_custom_contact.slx`へ次工程で実装するcustom contact物理モデルに対応する。
+この形は分離とすべりを扱え、正本モデル`ball_balancing_omni3_multibody_lqi_custom_contact_fullplant.slx`のcustom contact物理モデルに対応する。
 
 ## 7. 出力方程式
 

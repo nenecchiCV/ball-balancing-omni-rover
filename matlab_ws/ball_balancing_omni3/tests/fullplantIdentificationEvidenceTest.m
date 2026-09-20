@@ -2,7 +2,7 @@ classdef fullplantIdentificationEvidenceTest < matlab.unittest.TestCase
     %FULLPLANTIDENTIFICATIONEVIDENCETEST Validate saved analysis evidence.
 
     properties (TestParameter)
-        FrfIndex = {1, 2, 3}
+        TrialIndex = {1, 2, 3, 4, 5, 6}
     end
 
     methods (TestClassSetup)
@@ -14,29 +14,37 @@ classdef fullplantIdentificationEvidenceTest < matlab.unittest.TestCase
     end
 
     methods (Test)
-        function testLinearizationIsFinite(testCase)
+        function testIdentifiedModelIsFinite(testCase)
             evidence = loadEvidence;
-            matrices = [evidence.linearPlant.A(:); ...
-                evidence.linearPlant.B(:); evidence.linearPlant.C(:); ...
-                evidence.linearPlant.D(:)];
-            testCase.verifyTrue(all(isfinite(matrices)));
-            testCase.verifySize(evidence.linearPlant, [10, 3]);
+            testCase.verifySize(evidence.A, [4, 4]);
+            testCase.verifySize(evidence.B, [4, 1]);
+            testCase.verifyTrue(all(isfinite(evidence.A), "all"));
+            testCase.verifyTrue(all(isfinite(evidence.B), "all"));
+            testCase.verifyNumElements(evidence.stateDefinition, 4);
         end
 
-        function testFrequencyResponseIsFinite(testCase, FrfIndex)
+        function testTrialsAreFinite(testCase, TrialIndex)
             evidence = loadEvidence;
-            response = evidence.frf{FrfIndex}.ResponseData;
-            testCase.verifyTrue(all(isfinite(response), "all"));
-            testCase.verifySize(evidence.frf{FrfIndex}, [10, 3]);
+            trial = evidence.trials(TrialIndex);
+            testCase.verifyTrue(all(isfinite(trial.state), "all"));
+            testCase.verifyTrue(all(isfinite(trial.input), "all"));
+            testCase.verifyTrue(all(isfinite(trial.time), "all"));
+            testCase.verifyTrue(all(trial.minimumContact >= 0));
+            testCase.verifyGreaterThan(min(trial.maxTiltDeg), 0);
         end
 
-        function testUnusableOperatingPointRemainsExplicit(testCase)
+        function testFitPercentIsRecorded(testCase)
             evidence = loadEvidence;
-            violation = ...
-                evidence.trimReport.OptimizationOutput.constrviolation;
-            testCase.verifyGreaterThan(violation, 1.0e-6);
-            testCase.verifyGreaterThan( ...
-                min(evidence.relativeMismatch20To100RadPerSec), 1.0);
+            testCase.verifyTrue(all(isfinite(evidence.fitPercent)));
+            testCase.verifyTrue(all(evidence.fitPercent > 50));
+        end
+
+        function testAnalyticLinearizationRejectionIsExplicit(testCase)
+            evidence = loadEvidence;
+            testCase.verifyTrue( ...
+                evidence.analyticLinearizationWasZero);
+            testCase.verifyTrue(contains( ...
+                evidence.analyticAdvisorBlock, "SpeedPiAndDcMotor"));
         end
     end
 end

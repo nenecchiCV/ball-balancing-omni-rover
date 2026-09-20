@@ -685,24 +685,16 @@ $$
 
 推測値で電気パラメーターを埋めると、LQIが存在しない帯域やトルク余裕を利用する可能性がある。少なくとも無負荷速度応答、ストール電流、負荷時速度の測定後にゲインを確定する。
 
-## 14. 現行実装との差分
+## 14. 現行実装との対応
 
-現在の`ballbotDesignLqi.m`は、各平面軸を、
+本書の目標構成は正本モデル`ball_balancing_omni3_multibody_lqi_custom_contact_fullplant.slx`へ実装済みである。
 
-$$
-x=\begin{bmatrix}v&\alpha&\dot\alpha\end{bmatrix}^T
-$$
+- LQI設計モデルはサーボ速度状態を含む10状態MIMOで、`ballbotDesignLqi.m`が縮約プラントからゲインを設計する。
+- LQI出力は3輪速度指令$\omega_{w,d}$とし、`ballbotLqiControllerUpdate`が生成する。
+- 内側速度制御は`ballbotSpeedPiMotorStep`→`ballbotMdd3aVoltageController`の輪速PIで、電流・逆起電力・粘性摩擦・電圧・電流制限はMATLAB関数内の解析的DCモータモデルで表現する。Simscape Electricalプラントへの置き換えは実機詳細化の拡張余地として残す。
+- 接触力はLQI設計時に拘束消去し、詳細モデル上で法線荷重と摩擦限界を検証する方針を維持する。
 
-とする3状態近似で、入力は一般化球トルクである。`ballbotLqiControllerUpdate.m`もLQI出力を球トルクへ変換し、車輪トルク配分器へ渡している。
-
-本書の目標構成では次を変更する。
-
-- LQI設計モデルを3状態SISOから、サーボ速度状態を含む10状態MIMOへ拡張する。
-- LQI出力を球トルクから3輪速度指令$\omega_{w,d}$へ変更する。
-- トルク包絡線だけのサーボ近似を、内側速度制御器とSimscape Electricalモータープラントへ置き換える。
-- 接触力はLQI設計時に拘束消去し、詳細モデル上で法線荷重と摩擦限界を検証する。
-
-この変更は制御器―プラント間インターフェースを変更するため、実装前に信号単位、車輪正方向、サンプル時間、飽和処理を固定する。
+正本構成では `p.controller.fullplant.enabled=true` として、`ballbotFullPlantHierarchyUpdate.m` の階層制御（速度外側ループ＋傾斜安定化＋輪速変換）を適用する。10状態LQIは `enabled=false` 時の代替パスとして残り、両者は同一の輪速指令インターフェースを共有する。信号単位、車輪正方向、サンプル時間、飽和処理は[制御・状態推定理論](ball_balancing_omnirover3wd-control-estimation-theory.md) §6 に固定済みである。
 
 ## 15. 関連文書
 
