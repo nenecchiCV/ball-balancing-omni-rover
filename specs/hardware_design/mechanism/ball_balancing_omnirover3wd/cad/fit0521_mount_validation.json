@@ -1,9 +1,29 @@
 {
   "valid": true,
-  "cradle_face_count": 41,
-  "cap_face_count": 12,
-  "plate_face_count": 27,
-  "arrangement": "motor on -axle (outward-down) side, coaxial direct drive",
+  "solids_count": {
+    "cradle": [
+      1,
+      1,
+      1
+    ],
+    "cap": [
+      1,
+      1,
+      1
+    ],
+    "caster_holder": [
+      1,
+      1,
+      1
+    ]
+  },
+  "face_count": {
+    "cradle": 35,
+    "cap": 12,
+    "plate": 44,
+    "caster_holder": 51
+  },
+  "arrangement": "motor on -axle (outward-down) side, coaxial direct drive; ball casters at latitude +30deg",
   "overlap_mm3": {
     "cradle_motor": 0.0,
     "cradle_wheel": 0.0,
@@ -13,7 +33,13 @@
     "motor_plate": 0.0,
     "motor_ball": 0.0,
     "motor1_motor2": 0.0,
-    "wheel_ball": -1.0
+    "wheel_ball": -1.0,
+    "holder_cradle": 0.0,
+    "holder_plate": 0.0,
+    "holder_wheel": 0.0,
+    "caster_ball": 0.0,
+    "caster_holder0_holder120": 0.0,
+    "caster_plate": -1.0
   },
   "clearance_mm": {
     "cradle_motor_surface": 0.4,
@@ -22,9 +48,20 @@
     "motor_plate_surface": 1.337,
     "motor_wheel_surface": 4.0,
     "motor1_motor2_surface": 80.7,
-    "wheel_ball_surface": 0.277
+    "wheel_ball_surface": 0.277,
+    "caster_ball_contact": 0.0,
+    "holder_cradle": 11.731,
+    "holder_motor": 29.49,
+    "holder_wheel": 13.363,
+    "holder_caster_unit": 0.0
+  },
+  "bolt_hole_clearance_mm": {
+    "motor_pad": "hole r56/t±24 on pad r49..63/|t|<=30 -> >=6mm clear ring on pad",
+    "caster_pad": "hole r62/t±12 on pad r56..70/|t|<=19 -> >=6mm clear ring on pad"
   },
   "assumptions": [
+    "ボールキャスターは品番未定の汎用モデル(ボールØ10、本体Ø13x14+フランジ)。実物品番でソケット寸法を確定",
+    "キャスター接触緯度+30°はホイールと同じ半球側(上側)の解釈。下半球(-30°)ならCASTER_LATITUDEを負にして再生成",
     "FIT0521前面M3タップPCD 20.2 mmは25GA370系流通ブラケットの仕様からの仮値。実機採寸で確定",
     "ハブアダプタ(12 mm六角 -> 4 mm Dシャフト)は仮モデル。実物の形状・締結で確定",
     "モーター軸方向の固定はクランプ摩擦。滑りが出たら前面M3タップ固定の面金具を追加",
@@ -33,12 +70,12 @@
   "envelope_mm": {
     "assembly_bbox": {
       "x": [
-        -71.51,
+        -70.0,
         111.3
       ],
       "y": [
-        -101.85,
-        101.85
+        -98.47,
+        98.47
       ],
       "z": [
         -50.0,
