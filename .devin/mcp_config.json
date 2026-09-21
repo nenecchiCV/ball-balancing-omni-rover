@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "autodesk-fusion-mcp": {
+      "url": "http://127.0.0.1:8765/mcp",
+      "transport": "http"
+    },
+    "matlab": {
+      "command": "C:\\Users\\cafdr\\.matlab\\agentic-toolkits\\bin\\matlab-mcp-server.exe",
+      "transport": "stdio"
+    }
+  }
+}
