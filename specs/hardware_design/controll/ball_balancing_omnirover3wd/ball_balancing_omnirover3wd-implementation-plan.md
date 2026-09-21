@@ -96,7 +96,7 @@ flowchart TD
 | 2.2 | ルートをCommandSource/Controller/MultibodyPlant/Loggingへ分割 | `model_overview` |
 | 2.3 | Infinite Planeと直径100 mm Spherical Solidを配置 | `model_read` |
 | 2.4 | 球–床Spatial Contact Forceを接続 | `model_read`, `model_check` |
-| 2.5 | 3輪中心を球面$\lambda=55$ degへ再配置 | Transform確認 |
+| 2.5 | 3輪中心を球面$\lambda=65$ degへ再配置 | Transform確認 |
 | 2.6 | 3組のRevolute Jointを$+a_i$へ整列 | Joint軸確認 |
 | 2.7 | 3組の輪–球Spatial Contact Forceを接続 | 物理ポート確認 |
 | 2.8 | Provided by Input摩擦と`ballbotCustomFriction`を接続 | すべり/力ログ |

@@ -14,7 +14,8 @@ p.wheel.width = 0.0251;
 p.wheel.mass = 0.039;
 p.wheel.rollerCount = 8;
 p.wheel.azimuth = deg2rad([0; 120; 240]);
-p.wheel.contactLatitude = deg2rad(55);
+% Coaxial outward pod layout uses the maximum practical latitude.
+p.wheel.contactLatitude = deg2rad(65);
 % Small geometric preload keeps all three nominally tangent contacts
 % active despite contact-detection and floating-point tolerances.
 p.wheel.contactPreload = 5.0e-5;
@@ -199,7 +200,7 @@ p.controller.theoreticalCommandAcceleration = min([ ...
     p.controller.theoreticalTractionAcceleration, ...
     p.controller.theoreticalLeanAcceleration]);
 
-% Ten-state MIMO LQI with the physical 55-degree three-wheel geometry.
+% Ten-state MIMO LQI with the physical 65-degree three-wheel geometry.
 rollingXY = p.wheel.geometry.rollingBody(1:2, :).';
 p.controller.lqi.wheelSpeedFromPlanarVelocity = [ ...
     -(sin(p.wheel.contactLatitude)/p.wheel.radius)*rollingXY, ...
