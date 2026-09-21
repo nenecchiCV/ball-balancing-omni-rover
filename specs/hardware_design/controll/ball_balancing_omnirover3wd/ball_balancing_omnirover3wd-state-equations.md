@@ -242,7 +242,7 @@ $$
 | $\mu_d,\mu_r$ | 0.75, 0.02 | - | `p.contact.wheelBall.*Friction` |
 | $v_c$ | 0.005 | m/s | `p.contact.wheelBall.criticalVelocity` |
 
-状態方程式は実行モデルに合わせて$\lambda=55$ degを採用する。既存の制御・推定理論文書にある45 degとは不一致であり、幾何を固定する際に統一が必要である。
+状態方程式は実行モデルおよび実機CAD測定値に合わせて$\lambda=65$ degを採用する（旧モデルの55 deg、旧理論文書の45 degから統一済み）。
 
 ### 8.2 独立実装前に追加・同定する値
 
