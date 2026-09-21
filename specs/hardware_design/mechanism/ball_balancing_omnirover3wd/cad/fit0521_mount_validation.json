@@ -1,86 +1,68 @@
 {
   "valid": true,
+  "revision": "v5 (Fusion 360: MotorMount_v9 gearbox-bolted bracket + MotorClampStrap_v1; ball casters removed; motors rotated 180deg)",
   "solids_count": {
-    "cradle": [
-      1,
-      1,
-      1
-    ],
-    "cap": [
-      1,
-      1,
-      1
-    ],
-    "caster_holder": [
-      1,
-      1,
-      1
-    ]
+    "bracket": [1, 1, 1],
+    "strap": [1, 1, 1],
+    "motor": [2, 2, 2]
   },
   "face_count": {
-    "cradle": 35,
-    "cap": 12,
-    "plate": 44,
-    "caster_holder": 51
+    "bracket": 46,
+    "strap": 15,
+    "previous_mount_v8": 64,
+    "previous_mount_v7": 559
   },
-  "arrangement": "motor on -axle (outward-down) side, coaxial direct drive; ball casters at latitude +30deg",
+  "arrangement": "motor inserted from gearbox/wheel side into tilted cradle; gearbox front face bolted to bracket wall plate via 4x M3 taps (PCD17); motor barrel clamped by strap; one-piece portal bracket reaches Frame_L1 underside",
   "overlap_mm3": {
-    "cradle_motor": 0.0,
-    "cradle_wheel": 0.0,
-    "cradle_plate": 0.0,
-    "cap_motor": 0.0,
-    "motor_wheel": 0.0,
-    "motor_plate": 0.0,
-    "motor_ball": 0.0,
-    "motor1_motor2": 0.0,
-    "wheel_ball": -1.0,
-    "holder_cradle": 0.0,
-    "holder_plate": 0.0,
-    "holder_wheel": 0.0,
-    "caster_ball": 0.0,
-    "caster_holder0_holder120": 0.0,
-    "caster_plate": -1.0
+    "bracket_motor": 0.0,
+    "bracket_shaft": 0.0,
+    "bracket_wheel": 0.0,
+    "bracket_adapter": 0.0,
+    "bracket_frame_L1": 0.0,
+    "bracket_ball": 0.0,
+    "strap_shaft": 0.0,
+    "strap_wheel": 0.0,
+    "strap_adapter": 0.0,
+    "strap_motor": 8.86,
+    "strap_bracket_seat": 34.74,
+    "note": "strap_motor はモーター冠部リブへの押さえ代(設計上のプリロード)。strap_bracket_seat はストラップ座面とレール上面の座り代(面一接触+局所、平均約0.04mm)。その他は全ペア 0 mm3、3ユニットとも同一結果"
+  },
+  "hole_alignment": {
+    "gearbox_taps": "motor front face M3 taps at PCD17 (±8.5,0)/(0,±8.5) local, Ø2.5 modeled",
+    "wall_plate_holes": "4x Ø3.4 coaxial with taps (3.0 mm axial offset between cylinder origins only)",
+    "strap_holes_vs_insert_pockets": "4x Ø3.4 through / 4x Ø4.6 pockets, coaxial",
+    "pad_holes_vs_frame": "4x Ø4.5 at (57,±9)/(64,±9) mm match Frame_L1 Ø4.2 holes"
   },
   "clearance_mm": {
-    "cradle_motor_surface": 0.4,
-    "cap_motor_surface": 0.5,
-    "cap_cradle_interface": 0.0,
-    "motor_plate_surface": 1.337,
-    "motor_wheel_surface": 4.0,
-    "motor1_motor2_surface": 80.7,
-    "wheel_ball_surface": 0.277,
-    "caster_ball_contact": 0.0,
-    "holder_cradle": 11.731,
-    "holder_motor": 29.49,
-    "holder_wheel": 13.363,
-    "holder_caster_unit": 0.0
+    "gearbox_face_to_adapter": 8.2,
+    "washer_room_gearbox_bolts": "adjacent tap pitch 12 mm; flat face around Ø3.4 holes fits M3 washers",
+    "note": "壁板はギアボックス前面とアダプタの間(約8 mm)にあり、ボルト頭+ワッシャーが収まる"
   },
-  "bolt_hole_clearance_mm": {
-    "motor_pad": "hole r56/t±24 on pad r49..63/|t|<=30 -> >=6mm clear ring on pad",
-    "caster_pad": "hole r62/t±12 on pad r56..70/|t|<=19 -> >=6mm clear ring on pad"
+  "fasteners": {
+    "frame_L1": {
+      "type": "M4 screw + nut (clearance holes both sides)",
+      "bracket_pad_holes": "4x Ø4.5 vertical at (57,±9) and (64,±9) mm, pad top flush with Frame_L1 bottom",
+      "frame_holes": "4x Ø4.2 at identical XY positions (verified on Frame_L1 solid)"
+    },
+    "gearbox_face": {
+      "type": "M3 bolts + washers through bracket wall plate into gearbox taps",
+      "wall_plate_holes": "4x Ø3.4, coaxial with PCD17 tap pattern",
+      "taps": "4x M3 on gearbox front face"
+    },
+    "clamp_strap": {
+      "type": "M3 screws into thermal insert nuts",
+      "bracket_insert_pockets": "4x Ø4.6 on cradle block top faces",
+      "strap_holes": "4x Ø3.4 through, coaxial with insert pockets"
+    }
+  },
+  "removed": {
+    "ball_casters": "Caster_Pololu_P0/P1/P2 occurrences and components deleted; holder exports removed",
+    "old_mounts": "MotorMount_v8 and MotorClampPlate_v1 components deleted"
   },
   "assumptions": [
-    "ボールキャスターは品番未定の汎用モデル(ボールØ10、本体Ø13x14+フランジ)。実物品番でソケット寸法を確定",
-    "キャスター接触緯度+30°はホイールと同じ半球側(上側)の解釈。下半球(-30°)ならCASTER_LATITUDEを負にして再生成",
-    "FIT0521前面M3タップPCD 20.2 mmは25GA370系流通ブラケットの仕様からの仮値。実機採寸で確定",
-    "ハブアダプタ(12 mm六角 -> 4 mm Dシャフト)は仮モデル。実物の形状・締結で確定",
-    "モーター軸方向の固定はクランプ摩擦。滑りが出たら前面M3タップ固定の面金具を追加",
-    "エンコーダー・コネクタ突起はφ20 x 6 mmの仮包絡"
-  ],
-  "envelope_mm": {
-    "assembly_bbox": {
-      "x": [
-        -70.0,
-        111.3
-      ],
-      "y": [
-        -98.47,
-        98.47
-      ],
-      "z": [
-        -50.0,
-        84.66
-      ]
-    }
-  }
+    "パッド上面は Frame_L1 下面に面一で接し、M4 ネジ+ナットで締結",
+    "モーターはギアボックス側(ホイール側)の開口から挿入。エンコーダー・コネクタ非対称張り出しは開口側を向き非拘束",
+    "保持はギアボックスタップ締結+ストラップ締め付け。実機で抜け・ガタが出たら抜け止め形状を追加",
+    "ギアボックス前面タップの実寸(径・有効深さ)は実機採寸で確定する"
+  ]
 }
