@@ -86,7 +86,41 @@ p.servo.maxTorque = p.motor.stallTorque;
 p.servo.maxSpeed = p.motor.noLoadSpeed;
 
 % Redesigned triangular body. The body frame origin is the IMU location.
-p.rover.bodyMass = 0.180;
+% Chassis lump follows the ball_balancing_omnirover3wd_assembly frame
+% structure: three ABS frame plates (D160x3 at z = 148.5/201.5/254.5 mm
+% above ground), twelve M4x50 ABS spacers at r = 65 mm, three ABS
+% MotorMount_v9 brackets plus clamp straps below L1, and the L1/L2
+% electronics payload (battery, two MDD3A drivers, Nucleo+IKS4A1 stack).
+% Heights below are measured above the ball center (ground z = 50 mm).
+rhoABS = 1050;
+frameDiscMass = rhoABS*pi*0.080^2*0.003;
+frameDiscInertia = frameDiscMass*(3*0.080^2 + 0.003^2)/12;
+spacerMass = rhoABS*(3*sqrt(3)/2)*0.003^2*0.050;
+spacerInertia = spacerMass*(3*0.003^2 + 0.050^2)/12;
+mountMass = rhoABS*44569.7e-9;   % MotorMount_v9 STEP solid volume
+strapMass = rhoABS*2819.7e-9;    % MotorClampStrap_v1 STEP solid volume
+chassisParts = [ ...
+%    mass[kg]        comZ above ball center [m]  Ixx about own COM [kg m^2]
+    frameDiscMass   0.0985                      frameDiscInertia
+    frameDiscMass   0.1515                      frameDiscInertia
+    frameDiscMass   0.2045                      frameDiscInertia
+    6*spacerMass    0.12525                     6*spacerInertia
+    6*spacerMass    0.17825                     6*spacerInertia
+    3*mountMass     0.0602                      3*mountMass*0.047^2/6
+    3*strapMass     0.0617                      3*strapMass*0.02^2/12
+    0.120           0.106                       0.120*(0.070^2+0.035^2)/12
+    0.030           0.103                       0.030*(0.050^2+0.030^2)/12
+    0.090           0.156                       0.090*(0.133^2+0.080^2)/12
+    0.010           0.110                       0];
+p.rover.bodyMass = sum(chassisParts(:, 1));
+p.rover.bodyComAboveBall = ...
+    sum(chassisParts(:, 1).*chassisParts(:, 2))/p.rover.bodyMass;
+offAxisYaw = 6*spacerMass*0.065^2*2 + 3*mountMass*0.061^2 + ...
+    3*strapMass*0.0768^2;
+bodyTiltInertia = sum(chassisParts(:, 3) + chassisParts(:, 1).* ...
+    (chassisParts(:, 2) - p.rover.bodyComAboveBall).^2) + offAxisYaw/2;
+p.rover.bodyInertia = [bodyTiltInertia; bodyTiltInertia; ...
+    2*sum(chassisParts(:, 3)) + offAxisYaw];
 p.rover.mass = p.rover.bodyMass + 3*(p.motor.mass + p.wheel.mass);
 p.rover.centerAboveBall = 0.125;
 p.rover.chassisRadius = 0.080;
@@ -131,6 +165,12 @@ p.wheel.geometry = geometry;
 p.estimator.sampleTime = 0.005;
 p.estimator.attitudeCorrectionGain = 2.5;
 p.estimator.accelNormGate = 0.25*p.gravity;
+% Reject the accelerometer up-vector correction while the body accelerates
+% horizontally: the norm gate alone cannot see horizontal acceleration
+% (|a| changes only at second order), so without this gate sustained
+% translation biases the tilt estimate by ~atan(a/g) and the balance loop
+% under-corrects until the rover falls.
+p.estimator.accelHorizontalGate = 0.20;
 p.estimator.velocityLeak = 0.9995;
 p.estimator.ballRateTimeConstant = 0.030;
 p.estimator.relativePositionLeak = 0.9998;

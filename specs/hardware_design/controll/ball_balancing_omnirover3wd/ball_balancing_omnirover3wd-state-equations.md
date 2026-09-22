@@ -234,9 +234,9 @@ $$
 | $\beta_i$ | $[0,120,240]$ | deg | `p.wheel.azimuth` |
 | $\lambda$ | 55 | deg | `p.wheel.contactLatitude` |
 | $\delta_p$ | $5.0\times10^{-5}$ | m | `p.wheel.contactPreload` |
-| $m_R$ | 1.085 | kg | `p.rover.mass` |
+| $m_R$ | 1.509 | kg | `p.rover.mass` |
 | $h_{BK}$ | 0.125 | m | 機体原点の幾何高さ、`p.rover.centerAboveBall` |
-| $h_{COM}$ | 0.2010 | m | 上部ロッド込み合成重心高、`p.rover.comAboveBall` |
+| $h_{COM}$ | 0.1611 | m | 上部ロッド込み合成重心高、`p.rover.comAboveBall` |
 | $k_{n,w},c_{n,w}$ | $2.0\times10^5,250$ | N/m, N/(m/s) | `p.contact.wheelBall.*` |
 | $k_{n,g},c_{n,g}$ | $3.0\times10^5,180$ | N/m, N/(m/s) | `p.contact.ballGround.*` |
 | $\mu_d,\mu_r$ | 0.75, 0.02 | - | `p.contact.wheelBall.*Friction` |

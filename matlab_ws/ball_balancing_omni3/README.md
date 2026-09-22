@@ -4,7 +4,7 @@
 
 ## 正本モデル
 
-`ball_balancing_omni3_multibody_lqi_custom_contact_fullplant.slx` を現行の正式開発モデルとします。機体上部には質量0.50 kg、長さ300 mm、断面20 mm角のロッドを備え、ローバー総質量1.085 kg、球中心からの合成重心高約201 mmとして設計します。
+`ball_balancing_omni3_multibody_lqi_custom_contact_fullplant.slx` を現行の正式開発モデルとします。機体上部には質量0.50 kg、長さ300 mm、断面20 mm角のロッドを備え、ローバー総質量1.509 kg、球中心からの合成重心高約161 mmとして設計します（フレーム構造は `ball_balancing_omnirover3wd_assembly` をABS素材で簡易再現）。
 
 球―地面と3組のホイール―球はすべて `Spatial Contact Force` で接続し、ホイール―球接触は `ballbotCustomFriction.m` による異方性摩擦を `Provided by Input` で与えます。
 

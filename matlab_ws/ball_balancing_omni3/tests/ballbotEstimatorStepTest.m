@@ -14,10 +14,20 @@ classdef ballbotEstimatorStepTest < matlab.unittest.TestCase
             wheelDisplacement = [0.01; -0.02; 0.03];
             previousWheelDisplacement = zeros(3, 1);
 
+            encoderQuantum = 1.0e-3;
             wheelRate = ballbotWheelRateFromDisplacement( ...
-                wheelDisplacement, previousWheelDisplacement, 0.005);
+                wheelDisplacement, previousWheelDisplacement, 0.005, ...
+                encoderQuantum);
 
             testCase.verifyEqual(wheelRate, [2; -4; 6], ...
+                AbsTol=1.0e-12);
+
+            % Sub-count motion is invisible at the encoder grid.
+            wheelRate = ballbotWheelRateFromDisplacement( ...
+                0.4*encoderQuantum*ones(3, 1), zeros(3, 1), 0.005, ...
+                encoderQuantum);
+
+            testCase.verifyEqual(wheelRate, zeros(3, 1), ...
                 AbsTol=1.0e-12);
         end
 

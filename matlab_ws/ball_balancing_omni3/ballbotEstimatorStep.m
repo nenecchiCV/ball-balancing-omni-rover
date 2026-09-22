@@ -23,7 +23,11 @@ gyroBody = gyroBodyRaw - [0; 0; gyroBiasZPrevious];
 rotationWorldFromBody = quaternionToRotation(quaternion);
 
 accelerationNorm = norm(specificForceBody);
-if abs(accelerationNorm - p.gravity) <= p.estimator.accelNormGate
+predictedAccelerationWorld = rotationWorldFromBody*specificForceBody + ...
+    [0; 0; -p.gravity];
+horizontalAcceleration = norm(predictedAccelerationWorld(1:2));
+if abs(accelerationNorm - p.gravity) <= p.estimator.accelNormGate && ...
+        horizontalAcceleration <= p.estimator.accelHorizontalGate
     measuredUpBody = specificForceBody/max(accelerationNorm, eps);
     predictedUpBody = rotationWorldFromBody'*[0; 0; 1];
     correction = p.estimator.attitudeCorrectionGain* ...

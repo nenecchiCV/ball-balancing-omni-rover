@@ -18,7 +18,11 @@ else
     height = p.rover.centerAboveBall;
 end
 bodyRadius = p.rover.chassisRadius;
-effectiveInertia = mass*(height^2 + bodyRadius^2/4);
+if isfield(p.rover, "tiltInertiaCom")
+    effectiveInertia = mass*height^2 + p.rover.tiltInertiaCom;
+else
+    effectiveInertia = mass*(height^2 + bodyRadius^2/4);
+end
 gravityGain = mass*p.gravity*height/effectiveInertia;
 accelerationGain = mass*height/effectiveInertia;
 stateDerivative = [driveAcceleration; tiltRate; ...
