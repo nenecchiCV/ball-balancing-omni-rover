@@ -38,8 +38,15 @@ if nargin >= 1 && ~isempty(payloadMass)
         p.rover.mass*p.gravity/(3*sin(p.wheel.contactLatitude));
     p.wheel.contactTorqueLimit = p.contact.wheelBall.dynamicFriction* ...
         p.wheel.normalLoadNominal*p.wheel.radius;
+    % The assembled model's logged wheel-ball normal force is ~4.07 N at
+    % rest, not mg/(3 sin(lat)) = 5.44 N.  Worse, the normal force dips
+    % ~50% during transients, so the clamp must sit well under the
+    % nominal dynamic slip threshold (mu*N*r = 0.073 N*m) or a torque
+    % command spins the wheel free and the motor reaction tips the
+    % chassis.
     p.controller.tractionLimitedWheelTorque = min( ...
-        p.driver.continuousTorqueLimit, p.wheel.contactTorqueLimit);
+        p.driver.continuousTorqueLimit, ...
+        0.55*p.contact.wheelBall.dynamicFriction*4.07*p.wheel.radius);
     p.controller.theoreticalTractionAcceleration = sqrt(3)* ...
         p.controller.tractionLimitedWheelTorque/(p.wheel.radius* ...
         (p.rover.mass + p.ball.mass));
@@ -59,6 +66,15 @@ if nargin >= 1 && ~isempty(payloadMass)
     p.rover.initialPositionWorld(3) = p.ball.radius + ...
         p.rover.comAboveBall - p.fullplant.groundStaticDeflection;
 end
+% The assembled model's logged wheel-ball normal force is ~4.07 N at
+% rest, not mg/(3 sin(lat)) = 5.44 N.  Worse, the normal force dips ~50%
+% during transients, so the clamp must sit well under the nominal
+% dynamic slip threshold (mu*N*r = 0.073 N*m) or a torque command spins
+% the wheel free and the motor reaction tips the chassis.  Applies to
+% the default call too, not only payload sweeps.
+p.controller.tractionLimitedWheelTorque = min( ...
+    p.driver.continuousTorqueLimit, ...
+    0.55*p.contact.wheelBall.dynamicFriction*4.07*p.wheel.radius);
 
 % Armature inductance is not in the FIT0521 datasheet.  A typical 6 V
 % micro-gearmotor of this size has an electrical time constant well below
@@ -108,6 +124,97 @@ p.command.profileVelocityWorld = [ ...
     p.controller.maxSpeed/p.controller.fullplant.commandScale; 0];
 % Simultaneous yaw request, capped by the controller at maxYawRate.
 p.command.profileYawRate = p.controller.maxYawRate;
+
+% Torque-mode wheel drive.  The voltage PI closes the wheel-rate loop at
+% about 6 rad/s, slower than the ~6.4 rad/s unstable tilt pole, so the
+% balance loop can never catch the plant.  ballbotTorqueDutyStep instead
+% takes a wheel-torque command and inverts the motor equation for the
+% duty, so the fast channel responds at the electrical time scale and no
+% quantized wheel-rate feedback multiplies into full-scale torque.  The
+% LQI is redesigned on the torque-input plant ballbotTorquePlantDynamics.
+p.controller.torqueDrive.enabled = true;
+% Slip-rate damping [N*m per rad/s] applied per wheel on the excess of
+% measured wheel rate over the kinematic rolling rate.  A slipping wheel
+% cannot transmit its torque to the ball, so braking the slip keeps the
+% contact engaged instead of letting the wheel free-spin.  slipDeadzone
+% hides the encoder-quantization flicker (quantization/sampleTime), and
+% backEmfSpeedTimeConstant low-passes the wheel speed used in the
+% duty back-EMF term for the same reason.
+p.controller.torqueDrive.slipDampingGain = 0.01;
+p.controller.torqueDrive.slipDeadzone = ...
+    1.2*p.encoder.quantization/p.controller.sampleTime;
+p.controller.torqueDrive.backEmfSpeedTimeConstant = 0.015;
+% Velocity-integral leak [1/s]: in torque mode a wound-up integral is a
+% constant torque bias that tips the chassis, so it must decay unless a
+% commanded velocity keeps feeding it.
+p.controller.torqueDrive.integralLeak = 2.0;
+% Bisection switches while the torque path is being brought up.
+p.controller.torqueDrive.integralEnabled = false;
+p.controller.fullplant.enabled = false;
+% Open-loop torque-step fit measured on the Simscape rev1 plant (0.01 N*m
+% per wheel, 0.25 s): the rigid reduced model overpredicts the tilt and
+% planar coupling by ~2.4x and the yaw coupling by ~70x, and the wheels
+% drag each other through the chassis.  ballbotTorquePlantDynamics
+% applies these scales so the torque LQI is designed on the measured
+% plant rather than the idealized one.
+p.torqueFit.forceScale = 0.5;
+p.torqueFit.tiltScale = 0.425;
+p.torqueFit.yawScale = 0.0145;
+p.torqueFit.wheelDriveMatrix = 306* ...
+    [1, 0.106, 0.106; 0.106, 1, 0.105; 0.105, 0.106, 1];
+p.controller.torqueLqi.maximumState = p.controller.lqi.maximumState;
+p.controller.torqueLqi.maximumVelocityIntegral = ...
+    p.controller.lqi.maximumVelocityIntegral;
+p.controller.torqueLqi.maximumWheelTorqueCommand = ...
+    p.controller.tractionLimitedWheelTorque*ones(3, 1);
+p.controller.torqueLqi.linearizationStateStep = ...
+    p.controller.lqi.linearizationStateStep;
+p.controller.torqueLqi.linearizationInputStep = 1.0e-3*ones(3, 1);
+p.controller.torqueLqi = ballbotDesignTorqueLqi(p, p.controller.torqueLqi);
+
+% Measured-plant gains: ballbotDesignTorqueLqi designs on the reduced
+% model, which leaves a slowly-growing residual mode on the assembled
+% plant.  These gains come from a discrete LQR on the directly measured
+% torque-input B matrix (open-loop steps through the real drive chain):
+% tilt channel scaled x8 to overcome the stiction/quantization floor,
+% tilt-rate channel scaled x0.25 (full dlqr rate gain rings at ~9 Hz
+% because the electrical + sampling lag is not in the plant model), yaw
+% rate scaled x5 for tracking authority.  velocity and wheel-rate
+% columns stay zero: velocity tracking in torque mode has no feedforward
+% yet, and wheel-rate feedback re-injects encoder quantization.
+measuredB = [ ...
+    0.0520, -23.5629, 23.5170; ...   % pitch accel  [rad/s^2 per N*m]
+    -27.1781, 13.5441, 13.6378; ...   % roll accel
+    22.7010, 22.6692, 22.7372; ...    % yaw accel
+    305.9042, 32.1404, 32.7251; ...   % wheel1 accel
+    32.7227, 305.9042, 32.1425; ...   % wheel2 accel
+    32.1404, 32.7227, 305.9652];      % wheel3 accel
+unstableTiltPole2 = 41;              % ~(m g h / I) on the rev1 build
+amp = zeros(8);                      % [pitch, -roll, q, -p, r, w1..w3]
+amp(1, 3) = 1; amp(2, 4) = 1;
+amp(3, 1) = unstableTiltPole2; amp(4, 2) = unstableTiltPole2;
+amp(6, 6) = -1.35; amp(7, 7) = -1.35; amp(8, 8) = -1.35;
+bmp = zeros(8, 3);
+bmp(3, :) = measuredB(1, :);         % pitch accel
+bmp(4, :) = -measuredB(2, :);        % d(-roll)/dt = -p
+bmp(5, :) = measuredB(3, :);         % yaw accel
+bmp(6:8, :) = measuredB(4:6, :);     % wheel accels
+plantDiscrete = c2d(ss(amp, bmp, eye(8), zeros(8, 3)), ...
+    p.controller.sampleTime);
+KMeasured = dlqr(plantDiscrete.A, plantDiscrete.B, ...
+    diag([200, 200, 20, 20, 5, 0.2, 0.2, 0.2]), 2000*eye(3));
+K10 = zeros(3, 10);
+K10(:, 3:4) = 8*KMeasured(:, 1:2);     % tilt [pitch, -roll]
+K10(:, 5:6) = 0.25*KMeasured(:, 3:4);  % tilt rate [q, -p]
+K10(:, 7) = 5*KMeasured(:, 5);         % yaw rate
+p.controller.torqueLqi.stateGain = K10;
+p.controller.torqueLqi.integralGain = zeros(3, 2);
+p.controller.torqueDrive.slipDampingGain = 0.02;
+% Station-keeping gain [N*m per m of rover-ball offset]: intended to
+% close the slow creep mode that pure tilt PD cannot see.  Both signs
+% were tried and both shorten time-to-fall, so it ships disabled; the
+% residual slow drift remains the open item.
+p.controller.torqueDrive.positionGain = 0;
 
 % Identifies which builder produced this set so the rev1 model InitFcn
 % can regenerate ballbotParams when a stale variant (which lacks the

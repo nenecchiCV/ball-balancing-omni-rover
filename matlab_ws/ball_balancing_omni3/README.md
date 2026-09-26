@@ -136,6 +136,16 @@ out = sim(in);
 
 100 mm球での長時間安定性・速度追従性能の検証は継続中です。既知の残課題と設計経緯は `FULLPLANT_LQI_INVESTIGATION.md` と `FULLPLANT_CUSTOM_CONTACT_CONTROL_REPORT.md` を参照してください。
 
+### トルク/duty直接制御（rev1、進行中）
+
+実測で輪速PIループの追従帯域が約5.6 rad/sと判明し、不安定傾斜極（約6.4 rad/s）を下回るため、傾きチャネルを速度PIから切り離す改造を進行中です。`p.controller.torqueDrive.enabled = true` で `ballbotLqiControllerUpdate` が輪トルク指令を出力し、`ballbotTorqueDutyStep` がモータ式の逆解き（`duty = (R*I + Ke*w)/Vs`）でdutyへ変換します。`enabled = false` では従来の輪速PI経路にフォールバックします。
+
+現状の知見:
+
+- 実プラントのトルク入力B行列を開ループステップで同定し、縮約モデルが傾斜結合を約2.4倍・ヨー結合を約70倍過大評価していることを確認（`p.torqueFit` に反映）。
+- 測定B行列上の離散LQR（傾き×8、傾斜レート×0.25、ヨー×5にスケーリング）で、ゼロ指令バランスが最大約20秒まで改善（従来は1〜5秒で転倒）。レート項をフルゲインで入れると約9 Hzの発振発散が出るため、電気・サンプリング遅延を考慮して減衰側に落としている。
+- 残課題: 約10〜20秒スケールの緩慢なクリープモードが残り、その後転倒。速度積分・位置フィードバック（`positionGain`、現状無効）の導入は試したが両符号とも転倒を早めたため、外側ループの設計は未解決。移動指令は現在トルク経路にフィードフォワードがなく、速度追従は未実装。
+
 ## 仕様
 
 - [機構仕様](../../specs/hardware_design/mechanism/ball_balancing_omnirover3wd/README.md)
