@@ -108,4 +108,10 @@ p.command.profileVelocityWorld = [ ...
     p.controller.maxSpeed/p.controller.fullplant.commandScale; 0];
 % Simultaneous yaw request, capped by the controller at maxYawRate.
 p.command.profileYawRate = p.controller.maxYawRate;
+
+% Identifies which builder produced this set so the rev1 model InitFcn
+% can regenerate ballbotParams when a stale variant (which lacks the
+% electrical actuator fields the Simscape network requires) is left in
+% the workspace.
+p.parameterSource = "ballbotRev1Parameters";
 end

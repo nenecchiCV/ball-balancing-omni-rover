@@ -117,4 +117,9 @@ if isfile(designFile)
     p.controller.lqi.trackingGainScale = ...
         data.fullplantDesign.trackingGainScale;
 end
+
+% Identifies which builder produced this set so a model InitFcn can
+% regenerate ballbotParams when a stale variant is left in the
+% workspace.
+p.parameterSource = "ballbotFullPlantParameters";
 end

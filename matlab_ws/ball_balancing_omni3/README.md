@@ -6,9 +6,18 @@
 
 `ball_balancing_omni3_multibody_lqi_custom_contact_fullplant.slx` を現行の正式開発モデルとします。機体上部には質量0.50 kg、長さ300 mm、断面20 mm角のロッドを備え、ローバー総質量1.509 kg、球中心からの合成重心高約161 mmとして設計します（フレーム構造は `ball_balancing_omnirover3wd_assembly` をABS素材で簡易再現）。
 
+`ball_balancing_omni3_multibody_lqi_rev1.slx` は実機rev1ハードウェア構成を再現する派生モデルで、車輪駆動を集中トルクではなくFIT0521モータ＋MDD3AドライバのSimscape Electrical回路（PWM duty、エンコーダー量子化341.2 PPR）としてモデル化しています。
+
 球―地面と3組のホイール―球はすべて `Spatial Contact Force` で接続し、ホイール―球接触は `ballbotCustomFriction.m` による異方性摩擦を `Provided by Input` で与えます。
 
-パラメーターは `ballbotFullPlantParameters.m` が生成する構造体 `ballbotParams` をモデルワークスペースへ設定します。
+パラメーターはモデルごとに1対1で対応する関数が生成する構造体 `ballbotParams` をモデルワークスペースへ設定します（各モデルの `PreLoadFcn` が未設定時に自動で呼び出します）。
+
+| モデル | パラメーター関数 |
+|---|---|
+| `ball_balancing_omni3_multibody_lqi_custom_contact_fullplant.slx` | `ballbotFullPlantParameters` |
+| `ball_balancing_omni3_multibody_lqi_rev1.slx` | `ballbotRev1Parameters` |
+
+両パラメーター関数とも内部で `ballbotParameters` を呼び、幾何・モータ・接触の基礎値を共有します。`ballbotRev1Parameters` は fullplant パラメーターへ電気系アクチュエータ量（電機子インダクタンス、MDD3A論理・ブリッジ抵抗）と移動/停止繰り返し指令プロファイルを追加します。
 
 ## モデル階層
 
@@ -63,11 +72,14 @@ flowchart LR
 
 | ファイル | モデル内の呼出元 | 役割 |
 |---|---|---|
-| `ballbotFullPlantParameters.m` | パラメーター初期化 | 正本モデル用パラメーター `ballbotParams` を生成 |
-| `ballbotParameters.m` | `ballbotFullPlantParameters` から呼出し | 幾何・モータ・接触・推定・制御の基礎パラメーター |
+| `ballbotFullPlantParameters.m` | fullplantモデルのパラメーター初期化 | 正本モデル用パラメーター `ballbotParams` を生成 |
+| `ballbotRev1Parameters.m` | rev1モデルのパラメーター初期化 | rev1モデル用パラメーター `ballbotParams` を生成 |
+| `ballbotParameters.m` | 両パラメーター関数から呼出し | 幾何・モータ・接触・推定・制御の基礎パラメーター |
 | `ballbotWheelGeometry.m` | パラメーター初期化 | 球面接触点、転動方向、車軸方向、輪速変換行列 |
 | `ballbotDesignLqi.m` | パラメーター初期化 | 縮約10状態プラントのLQIゲイン設計 |
-| `ballbotCommandProfile.m` | `CommandSource` | 時間窓付き速度・ヨー指令プロファイル |
+| `ballbotReducedPlantDynamics.m` | `ballbotDesignLqi` から呼出し | 縮約10状態プラントの非線形動力学 |
+| `ballbotCommandProfile.m` | `CommandSource`（fullplant） | 時間窓付き速度・ヨー指令プロファイル |
+| `ballbotRev1CommandProfile.m` | `CommandSource`（rev1） | 移動/停止繰り返し＋ヨー同時指令プロファイル |
 | `ballbotCustomFriction.m` | `WheelAssembly/WheelContact` | 駆動方向とローラー方向を分離した異方性接触摩擦 |
 | `ballbotIdealImu.m` / `ballbotImuFromJoint.m` | `MultibodyPlant/IdealIMU` | 6-DOF Joint真値から比力・角速度を生成 |
 | `ballbotWheelRateFromDisplacement.m` | `Controller/WheelSpeedSensing` | 車輪回転変位を5 ms後退差分して回転速度を算出 |
@@ -77,27 +89,41 @@ flowchart LR
 | `ballbotLqiControllerUpdate.m` | `Controller/BalanceController/LqiController` | モード管理・ヨーガード付き輪速指令生成、階層制御への委譲 |
 | `ballbotFullPlantHierarchyUpdate.m` | `ballbotLqiControllerUpdate` から呼出し | 速度外側ループ＋傾斜安定化＋輪速変換の階層制御 |
 | `ballbotLqiFeedbackState.m` | `Controller/BalanceController` | LQIフィードバック状態ベクトルの組立て |
-| `ballbotSpeedPiMotorStep.m` | `Controller/WheelDrive` | 輪速PI・MDD3A電圧制限・DCモータトルク |
-| `ballbotMdd3aVoltageController.m` | `ballbotSpeedPiMotorStep` から呼出し | 輪速PIからMDD3A電圧と積分器更新を生成 |
+| `ballbotSpeedPiMotorStep.m` | `Controller/WheelDrive`（fullplant） | 輪速PI・MDD3A電圧制限・DCモータトルク |
+| `ballbotSpeedPiDutyStep.m` | `Controller/WheelDrive`（rev1） | 輪速PIからPWM dutyを生成しトラクション限界で制限 |
+| `ballbotMdd3aVoltageController.m` | 輪速PI関数から呼出し | 輪速PIからMDD3A電圧と積分器更新を生成 |
+| `ballbotMdd3aGateDrive.m` | `WheelDrive`（rev1） | duty指令をMDD3AのPWM/方向ロジック信号へ変換 |
 | `ballbotPoseFromJoint.m` | `Logging` | 位置・クォータニオンからxyz/RPY真値を生成 |
-| `ballbotRoverInitialPosition.m` | 初期値式 | ローバー初期高さの計算 |
+| `ballbotRoverInitialPosition.m` | `RoverFreeJoint` 初期位置ターゲット | ローバー初期位置の計算 |
 | `ballbotEulerToQuaternion.m` | 補助 | オイラー角からクォータニオン変換 |
 
 推定器の内部状態は14要素で、末尾にヨー軸ジャイロバイアス推定値と低運動継続時間を保持します。制御器へ渡す`estimate(14)`の幅と順序は維持し、4～6番目をバイアス補正後の機体角速度とします。バイアス推定値、学習許可、継続時間は診断信号として扱います。起動時はバイアス収束までヨートルクだけを抑止し、明示的なヨー指令は抑止をバイパスします。
 
 ## 実行
 
+モデルを開くだけで `PreLoadFcn` が対応するパラメーター関数を呼び出すため、`ballbotParams` をベースワークスペースへ明示設定する必要はありません。各パラメーター構造体の `parameterSource` フィールドが生成元を記録し、`InitFcn` が不一致・未設定の `ballbotParams` をシミュレーション開始時に自動で再生成します。明示する場合の対応は次のとおりです。
+
 ```matlab
 cd matlab_ws/ball_balancing_omni3
+
+% 正本モデル（集中トルク駆動）
 p = ballbotFullPlantParameters;
 assignin("base", "ballbotParams", p);
 in = Simulink.SimulationInput( ...
     "ball_balancing_omni3_multibody_lqi_custom_contact_fullplant");
 in = in.setModelParameter("StopTime", "4");
 out = sim(in);
+
+% rev1モデル（Simscape Electricalモータ/duty駆動）
+p = ballbotRev1Parameters;
+assignin("base", "ballbotParams", p);
+in = Simulink.SimulationInput( ...
+    "ball_balancing_omni3_multibody_lqi_rev1");
+in = in.setModelParameter("StopTime", "4");
+out = sim(in);
 ```
 
-`ballbotFullPlantParameters.m` の `p.command.velocityWorld` と `p.command.yawRate` を変更するか、`p.command.profileEnabled = true` で時間窓付き指令プロファイルを有効にします。
+`ballbotFullPlantParameters.m` の `p.command.velocityWorld` と `p.command.yawRate` を変更するか、`p.command.profileEnabled = true` で時間窓付き指令プロファイルを有効にします。rev1モデルでは `p.command.cyclesEnabled` の移動/停止繰り返しプロファイルが既定で有効です。
 
 ## 検証状態
 
