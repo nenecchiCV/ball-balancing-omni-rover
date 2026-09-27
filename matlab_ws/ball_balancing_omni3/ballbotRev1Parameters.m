@@ -211,7 +211,15 @@ KMeasured = dlqr(plantDiscrete.A, plantDiscrete.B, ...
 K10 = zeros(3, 10);
 K10(:, 3:4) = 8*KMeasured(:, 1:2);     % tilt [pitch, -roll]
 K10(:, 5:6) = 0.25*KMeasured(:, 3:4);  % tilt rate [q, -p]
-K10(:, 7) = 5*KMeasured(:, 5);         % yaw rate
+% Yaw-rate column disabled: the A/B experiment (estimator vs plant-truth
+% feedback, identical otherwise) showed the yaw damper + ball-spin brake
+% pair is the dominant destabilizer -- common-mode wheel torque shuffles
+% angular momentum between chassis yaw and the ball's free spin mode
+% until the contacts unload (~5 s tip-over).  With both channels off the
+% plant holds machine-zero tilt for ~10.5 s even under estimator
+% feedback, so neither channel ships enabled.  Yaw commands then track
+% open-loop only; re-enabling needs a dissipating design, not just gain.
+K10(:, 7) = 0*KMeasured(:, 5);         % yaw rate
 p.controller.torqueLqi.stateGain = K10;
 p.controller.torqueLqi.integralGain = zeros(3, 2);
 p.controller.torqueDrive.slipDampingGain = 0.02;
@@ -225,10 +233,10 @@ p.controller.torqueDrive.slipDampingGain = 0.02;
 % [1/s] sets the outer bandwidth (~1 rad/s, well under the ~6 rad/s
 % tilt loop), and leanSetpointLimit [rad] keeps the commanded lean
 % inside the recoverable cone.
-% Disabled by default: with the inner loop still tipping at ~4-7 s,
-% the lean channel cannot be validated in isolation.  A 0.09 m/s
-% command test diverged at ~2.3 s, indistinguishable from the baseline
-% instability.  Enable once the inner loop holds past tens of seconds.
+% Disabled by default: with the yaw-damper/ball-brake pump removed the
+% inner loop now holds machine-zero tilt ~10.5 s, then slow creep pushes
+% tilt past the torque-limited recovery cone (~0.03 rad) -- the lean
+% channel has not yet been validated against that residual mode.
 p.controller.torqueDrive.velocityLeanGain = 0;
 p.controller.torqueDrive.leanSetpointLimit = 0.035;
 % Channel 2, station keeping: tau += W*(positionGain*s +
@@ -243,10 +251,16 @@ p.controller.torqueDrive.positionDampingGain = 0;
 % damper sheds chassis angular momentum through common-mode wheel
 % torque, which lands on the ball's uncontrolled spin mode and spins it
 % up ~1 rad/s^2 until the contacts need lateral slip and let go.  The
-% common-mode channel couples at ~22.7 rad/s^2 per N*m, so 0.02 gives
-% ~0.45/s damping at the cost of up to 0.07 N*m per wheel near the
-% runaway point (clamped by the traction limit).
-p.controller.torqueDrive.ballYawGain = 0.01;
+% brake was expected to damp that mode, but the A/B truth-feedback
+% experiment showed the yaw-damper + brake pair still pumps the
+% yaw/ball-spin mode to tip-over (~5 s), while disabling both holds
+% machine-zero tilt ~10.5 s -- so it ships at 0.
+p.controller.torqueDrive.ballYawGain = 0;
+
+% Diagnostic: feed plant truth (roverPose/ballPose) through TruthGate
+% instead of the estimator output, to separate estimator error from
+% plant/controller physics in divergence analysis.  Model default off.
+p.estimator.truthFeedbackEnabled = false;
 
 % Identifies which builder produced this set so the rev1 model InitFcn
 % can regenerate ballbotParams when a stale variant (which lacks the
