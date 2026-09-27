@@ -104,6 +104,21 @@ if torqueDrive
             ~p.controller.torqueDrive.wheelRateFeedbackEnabled
         state(8:10) = 0;
     end
+    % Outer loop, channel 1: velocity error -> lean setpoint.  Wheel
+    % torque is internal to the rover+ball system and cannot accelerate
+    % the assembly centre of mass, so translation commands can only be
+    % tracked through gravity: lean the chassis toward the desired
+    % acceleration and let the tilt PD hold it there.
+    velocityLeanGain = p.controller.torqueDrive.velocityLeanGain;
+    if velocityLeanGain ~= 0
+        velocityErrorBody = commandVelocityBody - velocityBody;
+        accelerationDemand = velocityLeanGain*velocityErrorBody;
+        leanLimit = p.controller.torqueDrive.leanSetpointLimit;
+        accelerationDemand = min(max(accelerationDemand, -leanLimit* ...
+            p.gravity), leanLimit*p.gravity);
+        state(3:4) = state(3:4) - ...
+            [accelerationDemand(1); -accelerationDemand(2)]/p.gravity;
+    end
     rawWheelCommand = -lqi.stateGain*state - ...
         lqi.integralGain*candidateIntegral;
     % Traction control: a wheel that spins faster than the kinematic
@@ -113,15 +128,40 @@ if torqueDrive
     % rad/s) out of the damping channel.
     kinematicRate = p.controller.lqi.wheelSpeedFromPlanarVelocity* ...
         [velocityBody; bodyRate(3)];
-    % Station keeping: relativePositionBody (rover - ball) feeds a small
-    % torque through the wheel map so the chassis re-centers over the
-    % ball.  Without it the ball creeps out from under the chassis --
-    % the residual slow mode the tilt loop cannot see.
-    if isfield(p.controller.torqueDrive, "positionGain")
-        rawWheelCommand = rawWheelCommand - ...
-            p.controller.torqueDrive.positionGain* ...
+    % Outer loop, channel 2: station keeping.  relativePositionBody is
+    % rover - ball; wheel torque redistributes it internally (ball +x,
+    % chassis reaction -x), so a positive offset wants a positive-pattern
+    % torque: d2s/dt2 = -beta*(torque coefficient), beta ~29 m/s^2 per
+    % N*m.  The position term needs the relative-velocity term for
+    % damping -- a pure position loop on this double-integrator is a
+    % delay-driven oscillator, which is why both +/- signs of the old
+    % undamped positionGain fell faster than no feedback.
+    if isfield(p.controller.torqueDrive, "positionGain") && ...
+            p.controller.torqueDrive.positionGain ~= 0
+        ballVelocityWorld = [p.ball.radius*estimate(10); ...
+            -p.ball.radius*estimate(9)];
+        relativeVelocityBody = rotationBodyFromWorld* ...
+            (estimate(7:8) - ballVelocityWorld);
+        rawWheelCommand = rawWheelCommand + ...
             p.controller.lqi.wheelSpeedFromPlanarVelocity(:, 1:2)* ...
-            estimate(12:13);
+            (p.controller.torqueDrive.positionGain*estimate(12:13) + ...
+             p.controller.torqueDrive.positionDampingGain* ...
+             relativeVelocityBody);
+    end
+    % Ball vertical spin brake: common-mode wheel torque is what the
+    % rover-yaw damper uses to shed angular momentum, and it all lands
+    % on the ball's free spin mode (nothing regulates omegaBall_z).
+    % Left alone the spin accumulates ~1 rad/s^2 until the wheels need
+    % lateral slip to stay engaged and the contact lets go around
+    % |oBz| ~3.5 rad/s.  Braking the ball spin directly through the
+    % common-mode channel stops the momentum dumping; the reaction on
+    % the chassis also helps the yaw damper instead of fighting it.
+    ballYawGain = p.controller.torqueDrive.ballYawGain;
+    if ballYawGain ~= 0
+        % +common torque accelerates the ball toward -z (measured), so
+        % braking a -z spin needs torque of the same sign as oBz.
+        rawWheelCommand = rawWheelCommand + ballYawGain*estimate(11)* ...
+            ones(3, 1);
     end
     slipRate = wheelRate(:) - kinematicRate;
     slipDeadzone = p.controller.torqueDrive.slipDeadzone;

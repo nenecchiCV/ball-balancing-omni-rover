@@ -143,7 +143,12 @@ p.controller.torqueDrive.enabled = true;
 p.controller.torqueDrive.slipDampingGain = 0.01;
 p.controller.torqueDrive.slipDeadzone = ...
     1.2*p.encoder.quantization/p.controller.sampleTime;
-p.controller.torqueDrive.backEmfSpeedTimeConstant = 0.015;
+% 15 ms still passes ~+-0.08 duty of encoder flicker (quantization/dt =
+% 3.68 rad/s through a 5 ms blend of 0.25), which is ~0.066 N*m of
+% torque noise -- above the traction clamp itself and the observed
+% limit-cycle exciter.  80 ms attenuates the flicker to ~+-0.005 duty;
+% the lag only slows back-EMF tracking of genuine speed changes.
+p.controller.torqueDrive.backEmfSpeedTimeConstant = 0.08;
 % Velocity-integral leak [1/s]: in torque mode a wound-up integral is a
 % constant torque bias that tips the chassis, so it must decay unless a
 % commanded velocity keeps feeding it.
@@ -210,11 +215,38 @@ K10(:, 7) = 5*KMeasured(:, 5);         % yaw rate
 p.controller.torqueLqi.stateGain = K10;
 p.controller.torqueLqi.integralGain = zeros(3, 2);
 p.controller.torqueDrive.slipDampingGain = 0.02;
-% Station-keeping gain [N*m per m of rover-ball offset]: intended to
-% close the slow creep mode that pure tilt PD cannot see.  Both signs
-% were tried and both shorten time-to-fall, so it ships disabled; the
-% residual slow drift remains the open item.
+% Outer loop.  Two structurally separate channels, because wheel torque
+% is an internal force of the rover+ball system: it cannot accelerate
+% the assembly centre of mass, so velocity tracking has to go through
+% gravity (a lean setpoint), while the rover-ball offset IS an internal
+% degree of freedom and takes a direct torque through the wheel map.
+% Channel 1, velocity -> lean: state(3:4) is shifted by
+% [aX; -aY]/g where a = velocityLeanGain*(cmd - v).  velocityLeanGain
+% [1/s] sets the outer bandwidth (~1 rad/s, well under the ~6 rad/s
+% tilt loop), and leanSetpointLimit [rad] keeps the commanded lean
+% inside the recoverable cone.
+% Disabled by default: with the inner loop still tipping at ~4-7 s,
+% the lean channel cannot be validated in isolation.  A 0.09 m/s
+% command test diverged at ~2.3 s, indistinguishable from the baseline
+% instability.  Enable once the inner loop holds past tens of seconds.
+p.controller.torqueDrive.velocityLeanGain = 0;
+p.controller.torqueDrive.leanSetpointLimit = 0.035;
+% Channel 2, station keeping: tau += W*(positionGain*s +
+% positionDampingGain*sDot).  The open-loop offset dynamics measure
+% s2 ~= -8.7*c [m/s^2 per N*m coefficient], but inside the tilt loop the
+% PD converts most of an applied torque into lean, so the quasi-static
+% effective gain is small and inverted; pending gains need a coupled
+% design, so this channel ships disabled.
 p.controller.torqueDrive.positionGain = 0;
+p.controller.torqueDrive.positionDampingGain = 0;
+% Ball vertical-spin brake [N*m per rad/s of omegaBall_z]: the rover-yaw
+% damper sheds chassis angular momentum through common-mode wheel
+% torque, which lands on the ball's uncontrolled spin mode and spins it
+% up ~1 rad/s^2 until the contacts need lateral slip and let go.  The
+% common-mode channel couples at ~22.7 rad/s^2 per N*m, so 0.02 gives
+% ~0.45/s damping at the cost of up to 0.07 N*m per wheel near the
+% runaway point (clamped by the traction limit).
+p.controller.torqueDrive.ballYawGain = 0.01;
 
 % Identifies which builder produced this set so the rev1 model InitFcn
 % can regenerate ballbotParams when a stale variant (which lacks the
