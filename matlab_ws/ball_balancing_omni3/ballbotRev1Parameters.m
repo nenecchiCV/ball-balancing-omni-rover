@@ -22,15 +22,6 @@ if nargin >= 1 && ~isempty(payloadMass)
         p.rover.mass*p.gravity/(3*sin(p.wheel.contactLatitude));
     p.wheel.contactTorqueLimit = p.contact.wheelBall.dynamicFriction* ...
         p.wheel.normalLoadNominal*p.wheel.radius;
-    % The assembled model's logged wheel-ball normal force is ~4.07 N at
-    % rest, not mg/(3 sin(lat)) = 5.44 N.  Worse, the normal force dips
-    % ~50% during transients, so the clamp must sit well under the
-    % nominal dynamic slip threshold (mu*N*r = 0.073 N*m) or a torque
-    % command spins the wheel free and the motor reaction tips the
-    % chassis.
-    p.controller.tractionLimitedWheelTorque = min( ...
-        p.driver.continuousTorqueLimit, ...
-        0.55*p.contact.wheelBall.dynamicFriction*4.07*p.wheel.radius);
     p.controller.theoreticalTractionAcceleration = sqrt(3)* ...
         p.controller.tractionLimitedWheelTorque/(p.wheel.radius* ...
         (p.rover.mass + p.ball.mass));
@@ -47,18 +38,30 @@ if nargin >= 1 && ~isempty(payloadMass)
         p.fullplant.payload.originalRoverMass + 0.50;
     p.fullplant.groundStaticDeflection = 1.43e-4* ...
         supportedMass/nominalSupportedMass;
+    % Rover origin is the CHASSIS frame, which sits centerAboveBall above
+    % the ball centre regardless of where the payload moved the combined
+    % COM.  Using comAboveBall here lifted the chassis ~36-68 mm and the
+    % build free-dropped onto the ball: wheels bounced off the contact
+    % (normal force impulses of several kN, then intermittent contact),
+    % which is the observed hopping and seeded the moving-start divergences.
     p.rover.initialPositionWorld(3) = p.ball.radius + ...
-        p.rover.comAboveBall - p.fullplant.groundStaticDeflection;
+        p.rover.centerAboveBall - p.fullplant.groundStaticDeflection;
 end
 % The assembled model's logged wheel-ball normal force is ~4.07 N at
 % rest, not mg/(3 sin(lat)) = 5.44 N.  Worse, the normal force dips ~50%
 % during transients, so the clamp must sit well under the nominal
 % dynamic slip threshold (mu*N*r = 0.073 N*m) or a torque command spins
 % the wheel free and the motor reaction tips the chassis.  Applies to
-% the default call too, not only payload sweeps.
+% the default call too, not only payload sweeps.  The measured rest load
+% scales with supported mass, so the limit does too: heavier builds get
+% the larger traction budget their normal force can actually transmit,
+% which is what gives heavy configurations the torque headroom to leave
+% a static lean instead of stalling.
 p.controller.tractionLimitedWheelTorque = min( ...
     p.driver.continuousTorqueLimit, ...
-    0.55*p.contact.wheelBall.dynamicFriction*4.07*p.wheel.radius);
+    0.55*p.contact.wheelBall.dynamicFriction*4.07* ...
+    (p.rover.mass/(p.fullplant.payload.originalRoverMass + 0.50))* ...
+    p.wheel.radius);
 
 % Armature inductance is not in the FIT0521 datasheet.  A typical 6 V
 % micro-gearmotor of this size has an electrical time constant well below
@@ -183,8 +186,8 @@ p.controller.torqueLqi = ballbotDesignTorqueLqi(p, p.controller.torqueLqi);
 % heavy end, so the fixed gain must come from a heavy-end design; the
 % torque clamp bounds the resulting stiffness on light builds, whose
 % authority margin covers the saturation.  The empirical column scalings
-% are preserved (tilt x8 for the stiction/quantization floor, tilt-rate
-% x0.25 against the ~9 Hz electrical-lag ring, yaw rate x5).  Velocity and
+% are preserved (tilt x4 against the stiction/quantization floor, tilt-rate
+% x0.125 against the ~9 Hz electrical-lag ring, yaw rate x5).  Velocity and
 % wheel-rate columns stay zero: velocity tracking in torque mode has no
 % feedforward yet, and wheel-rate feedback re-injects encoder
 % quantization.
@@ -219,6 +222,12 @@ p.controller.torqueDrive.slipDampingGain = 0.02;
 % margin for transient overshoot.
 p.controller.torqueDrive.velocityLeanGain = 0.3;
 p.controller.torqueDrive.leanSetpointLimit = 0.008;
+% Tilt overshoot guard for the lean channel: once the measured tilt
+% exceeds the demanded lean by leanFadeTilt the demand fades to zero, so
+% a cone-exceeding excursion stops adding forward acceleration bias.
+% 0.02 rad starts fading just past the ~0.023 rad hold cone; tilt inside
+% the commanded band passes unattenuated.
+p.controller.torqueDrive.leanFadeTilt = 0.02;
 % Station-keeping term on the lean channel: relPos = rover - ball.
 % During commanded acceleration the ball must be torqued up through the
 % wheel contacts; if the chassis leads the ball (relPos > 0) the lean
@@ -237,6 +246,13 @@ p.controller.torqueDrive.propulsionGain = 0.005;
 % headroom for attitude correction during acceleration.
 p.controller.torqueDrive.propulsionTorqueLimit = 0.5* ...
     p.controller.tractionLimitedWheelTorque;
+% Stall escape: when the tilt channel saturates the traction budget the
+% leftover-headroom policy gives propulsion zero torque forever -- the
+% rover wedges in a static lean (observed at high payload: ~0.14 rad
+% held, wheels stalled, ball static).  A minimum propulsion share lets
+% the drive pattern break the frictional equilibrium; the overshoot above
+% the nominal clamp is bounded by this share.
+p.controller.torqueDrive.propulsionMinShare = 0.25;
 % Relative-position closure on the wheel-rate command [1/s] and
 % relative-velocity damping [dimensionless]: the ball has to be torqued
 % up by the wheels, so a chassis lead is corrected by spinning the

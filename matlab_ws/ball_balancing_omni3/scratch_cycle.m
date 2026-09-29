@@ -12,9 +12,15 @@ open_system(mdl);
 % Optional payloadMass positional override rescales mass/COM before the
 % generic field overrides.
 payloadMassArg = [];
-if nargin >= 3 && isstruct(ov) && isfield(ov, 'payloadMassArg')
-    payloadMassArg = ov.payloadMassArg;
-    ov = ov.overrides;
+if nargin >= 3 && isstruct(ov)
+    if isfield(ov, 'payloadMassArg')
+        payloadMassArg = ov.payloadMassArg;
+    end
+    if isfield(ov, 'overrides')
+        ov = ov.overrides;
+    else
+        ov = {};
+    end
 end
 ballbotParams = ballbotRev1Parameters(payloadMassArg);
 if nargin >= 3 && ~isempty(ov)

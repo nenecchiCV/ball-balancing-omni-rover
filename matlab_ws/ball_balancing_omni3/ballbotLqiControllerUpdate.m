@@ -127,7 +127,16 @@ if torqueDrive
     % acceleration and let the tilt PD hold it there.
     velocityLeanGain = p.controller.torqueDrive.velocityLeanGain;
     if velocityLeanGain ~= 0
-        velocityErrorBody = commandVelocityBody - velocityBody;
+        % Track the BALL velocity, not the rover velocity: the command
+        % describes the assembly's translation and the ball is the
+        % load-bearing element.  With rover velocity in the error, a
+        % rover lead (relPos > 0) reads as "already at speed" while the
+        % ball lags, so the lean demand eases exactly when the ball most
+        % needs driving torque -- the observed runaway geometry.
+        ballVelocityWorld = [p.ball.radius*estimate(10); ...
+            -p.ball.radius*estimate(9)];
+        ballVelocityBody = rotationBodyFromWorld*ballVelocityWorld;
+        velocityErrorBody = commandVelocityBody - ballVelocityBody;
         accelerationDemand = velocityLeanGain*velocityErrorBody;
         % Ball-tracking through the same lean channel: relPos = rover -
         % ball.  A positive offset (rover ahead of the ball) means the
@@ -137,8 +146,6 @@ if torqueDrive
         % loop -- position-only feedback on this coupled pair is a
         % delay-driven oscillator (same lesson as channel 2).
         if isfield(p.controller.torqueDrive, "positionLeanGain")
-            ballVelocityWorld = [p.ball.radius*estimate(10); ...
-                -p.ball.radius*estimate(9)];
             relativeVelocityBody = rotationBodyFromWorld* ...
                 (estimate(7:8) - ballVelocityWorld);
             accelerationDemand = accelerationDemand - ...
@@ -150,6 +157,16 @@ if torqueDrive
         leanLimit = p.controller.torqueDrive.leanSetpointLimit;
         accelerationDemand = min(max(accelerationDemand, -leanLimit* ...
             p.gravity), leanLimit*p.gravity);
+        % Cone guard: tilt beyond the commanded lean (overshoot,
+        % recovery) gets no additional lean demand -- feeding a demand
+        % the traction-limited torque cannot hold only adds tilt rate
+        % bias on top of the runaway.
+        if isfield(p.controller.torqueDrive, "leanFadeTilt")
+            excessTilt = max(tiltMagnitude - leanLimit, 0);
+            fade = max(1 - excessTilt/ ...
+                p.controller.torqueDrive.leanFadeTilt, 0);
+            accelerationDemand = fade*accelerationDemand;
+        end
         state(3:4) = state(3:4) - ...
             [accelerationDemand(1); -accelerationDemand(2)]/p.gravity;
     end
@@ -238,13 +255,24 @@ if torqueDrive
         % Propulsion yields to attitude: the holdable lean is only
         % ~0.023 rad of tilt with the full traction budget, so the
         % propulsion share is whatever the tilt/attitude channels leave
-        % unused, hard-capped at propulsionTorqueLimit.
+        % unused, hard-capped at propulsionTorqueLimit.  Exception: when
+        % the tilt channel saturates the whole budget the rover wedges
+        % into a static lean (wheels friction-locked, ball force cancels,
+        % position frozen) -- a stall the pure leftover policy can never
+        % exit.  propulsionMinShare reserves a minimum propulsion budget
+        % even at full tilt saturation so the drive pattern can break the
+        % wedge; the total torque then exceeds the nominal clamp by at
+        % most the propulsion share.
         torqueLimit = min(p.driver.continuousTorqueLimit, ...
             p.controller.tractionLimitedWheelTorque);
         propTorque = min(max(propulsionGain*rateActive, ...
             -p.controller.torqueDrive.propulsionTorqueLimit), ...
             p.controller.torqueDrive.propulsionTorqueLimit);
         headroom = max(torqueLimit - abs(rawWheelCommand), 0);
+        if isfield(p.controller.torqueDrive, "propulsionMinShare")
+            headroom = max(headroom, ...
+                p.controller.torqueDrive.propulsionMinShare*torqueLimit);
+        end
         propTorque = sign(propTorque).*min(abs(propTorque), headroom);
         rawWheelCommand = rawWheelCommand + propTorque;
     end

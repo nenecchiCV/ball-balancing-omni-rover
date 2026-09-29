@@ -19,8 +19,9 @@ function [K10, robustness] = ballbotRobustTorqueGains(p)
 %   ROBUSTNESS fields: payloadGrid, closedLoopPoleRadius (design x plant
 %   matrix), worstPlantRadius per candidate, chosenDesign index, K10 is the
 %   3x10 state-gain matrix with the empirical column scalings already
-%   applied (tilt x8, tilt-rate x0.25, yaw-rate x5 -- the measured
-%   corrections for stiction, electrical lag and yaw authority).
+%   applied (tilt x4, tilt-rate x0.125, yaw-rate x5 -- the measured
+%   corrections for stiction, electrical lag and yaw authority; the tilt
+%   pair was halved after the settled-contact fix, see below).
 
 arguments
     p (1, 1) struct
@@ -88,8 +89,15 @@ worstPlantRadius = max(closedLoopPoleRadius, [], 2);
 KMeasured = gains{chosenDesign};
 
 K10 = zeros(3, 10);
-K10(:, 3:4) = 8*KMeasured(:, 1:2);     % tilt [pitch, -roll]
-K10(:, 5:6) = 0.25*KMeasured(:, 3:4);  % tilt rate [q, -p]
+% Column scalings x4 / x0.125: the earlier x8 / x0.25 pair was tuned while
+% the initial-height bug had the rover bouncing on the ball -- the violent
+% impacts needed an aggressively saturated tilt channel.  With the contact
+% now settled continuously (4.07 N steady), the same gains saturate the
+% traction limit into a bang-bang limit cycle (~tilt 0.002 rad already
+% commands the clamp) and halving both tilt channels roughly tripled the
+% measured tip-over time (1.1 s -> 3.0 s cycle runs).
+K10(:, 3:4) = 4*KMeasured(:, 1:2);      % tilt [pitch, -roll]
+K10(:, 5:6) = 0.125*KMeasured(:, 3:4);  % tilt rate [q, -p]
 % Yaw-rate column restored but gated: the A/B experiment (estimator vs
 % plant-truth feedback, identical otherwise) showed continuous yaw-rate
 % feedback is the dominant destabilizer -- common-mode wheel torque
