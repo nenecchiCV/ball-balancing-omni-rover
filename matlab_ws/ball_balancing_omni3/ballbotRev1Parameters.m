@@ -14,26 +14,10 @@ p = ballbotFullPlantParameters;
 
 if nargin >= 1 && ~isempty(payloadMass)
     p.fullplant.payload.mass = payloadMass;
-    wheelCenterAboveBall = p.wheel.geometry.centerFromBall(3, 1);
-    baseComAboveBall = (p.rover.bodyMass*p.rover.bodyComAboveBall + ...
-        3*(p.motor.mass + p.wheel.mass)*wheelCenterAboveBall)/ ...
-        p.fullplant.payload.originalRoverMass;
-    payloadComAboveBall = p.rover.centerAboveBall + ...
-        p.fullplant.payload.centerOffset;
-    p.rover.mass = p.fullplant.payload.originalRoverMass + payloadMass;
-    p.rover.comAboveBall = (p.fullplant.payload.originalRoverMass* ...
-        baseComAboveBall + payloadMass*payloadComAboveBall)/p.rover.mass;
+    [p.rover.mass, p.rover.comAboveBall, p.rover.tiltInertiaCom] = ...
+        ballbotPayloadRoverProperties(p, payloadMass);
     p.fullplant.payload.comAboveChassis = ...
         p.rover.comAboveBall - p.rover.centerAboveBall;
-    p.rover.tiltInertiaCom = p.rover.bodyInertia(1) + ...
-        p.rover.bodyMass*(p.rover.bodyComAboveBall - ...
-        p.rover.comAboveBall)^2 + ...
-        3*(p.motor.mass*(3*0.0122^2 + 0.052^2)/12 + ...
-           p.motor.mass*(wheelCenterAboveBall - p.rover.comAboveBall)^2 + ...
-           p.wheel.mass*p.wheel.radius^2/2 + ...
-           p.wheel.mass*(wheelCenterAboveBall - p.rover.comAboveBall)^2) + ...
-        payloadMass*p.fullplant.payload.length^2/12 + ...
-        payloadMass*(payloadComAboveBall - p.rover.comAboveBall)^2;
     p.wheel.normalLoadNominal = ...
         p.rover.mass*p.gravity/(3*sin(p.wheel.contactLatitude));
     p.wheel.contactTorqueLimit = p.contact.wheelBall.dynamicFriction* ...
@@ -99,11 +83,23 @@ p.driver.bridgeOffConductance = 1.0e-6;
 % the physical lean the body can establish.
 p.command.cyclesEnabled = true;
 p.command.cycleStart = 0.5;
-% 0.9009/0.5 = 1.80 s ramps plus a 0.90 s cruise hold at the peak.
-p.command.cycleMoveDuration = 4.5;
-p.command.cycleStopDuration = 1.0;
+% The move window must cover the lean-limited ramp to slip-limit speed
+% plus a cruise hold: 0.524 m/s / 0.06 m/s^2 ~ 8.7 s ramp + ~1.3 s hold.
+p.command.cycleMoveDuration = 10.0;
+% Yaw control is fully separated from translation: the yaw-rate request
+% is issued as a trapezoid inside the stop window, starting cycleYawDelay
+% seconds after motion stops.  The stationary yaw gate in the controller
+% opens only while command speed is zero, so the profile must guarantee
+% the yaw window lies inside a stop phase with margin on both sides.
+p.command.cycleStopDuration = 4.0;
+p.command.cycleYawDelay = 1.0;
+p.command.cycleYawDuration = 1.5;
 p.command.cycleCount = 3;
-p.command.accelerationLimit = 0.5;
+% The holdable lean cone is ~0.023 rad of tilt at the full traction
+% budget, and propulsion torque spends part of that budget during the
+% ramp.  Commanded acceleration is therefore capped well inside the
+% cone: 0.06 m/s^2 ~ lean 0.006 rad, about a quarter of the limit.
+p.command.accelerationLimit = 0.06;
 
 % Slip-limit cruise speed: the wheel speed where the motor torque-speed
 % curve crosses the wheel-ball contact torque limit mu_d*N_nom*Rw.
@@ -177,50 +173,30 @@ p.controller.torqueLqi.linearizationStateStep = ...
 p.controller.torqueLqi.linearizationInputStep = 1.0e-3*ones(3, 1);
 p.controller.torqueLqi = ballbotDesignTorqueLqi(p, p.controller.torqueLqi);
 
-% Measured-plant gains: ballbotDesignTorqueLqi designs on the reduced
-% model, which leaves a slowly-growing residual mode on the assembled
-% plant.  These gains come from a discrete LQR on the directly measured
-% torque-input B matrix (open-loop steps through the real drive chain):
-% tilt channel scaled x8 to overcome the stiction/quantization floor,
-% tilt-rate channel scaled x0.25 (full dlqr rate gain rings at ~9 Hz
-% because the electrical + sampling lag is not in the plant model), yaw
-% rate scaled x5 for tracking authority.  velocity and wheel-rate
-% columns stay zero: velocity tracking in torque mode has no feedforward
-% yet, and wheel-rate feedback re-injects encoder quantization.
-measuredB = [ ...
-    0.0520, -23.5629, 23.5170; ...   % pitch accel  [rad/s^2 per N*m]
-    -27.1781, 13.5441, 13.6378; ...   % roll accel
-    22.7010, 22.6692, 22.7372; ...    % yaw accel
-    305.9042, 32.1404, 32.7251; ...   % wheel1 accel
-    32.7227, 305.9042, 32.1425; ...   % wheel2 accel
-    32.1404, 32.7227, 305.9652];      % wheel3 accel
-unstableTiltPole2 = 41;              % ~(m g h / I) on the rev1 build
-amp = zeros(8);                      % [pitch, -roll, q, -p, r, w1..w3]
-amp(1, 3) = 1; amp(2, 4) = 1;
-amp(3, 1) = unstableTiltPole2; amp(4, 2) = unstableTiltPole2;
-amp(6, 6) = -1.35; amp(7, 7) = -1.35; amp(8, 8) = -1.35;
-bmp = zeros(8, 3);
-bmp(3, :) = measuredB(1, :);         % pitch accel
-bmp(4, :) = -measuredB(2, :);        % d(-roll)/dt = -p
-bmp(5, :) = measuredB(3, :);         % yaw accel
-bmp(6:8, :) = measuredB(4:6, :);     % wheel accels
-plantDiscrete = c2d(ss(amp, bmp, eye(8), zeros(8, 3)), ...
-    p.controller.sampleTime);
-KMeasured = dlqr(plantDiscrete.A, plantDiscrete.B, ...
-    diag([200, 200, 20, 20, 5, 0.2, 0.2, 0.2]), 2000*eye(3));
-K10 = zeros(3, 10);
-K10(:, 3:4) = 8*KMeasured(:, 1:2);     % tilt [pitch, -roll]
-K10(:, 5:6) = 0.25*KMeasured(:, 3:4);  % tilt rate [q, -p]
-% Yaw-rate column disabled: the A/B experiment (estimator vs plant-truth
-% feedback, identical otherwise) showed the yaw damper + ball-spin brake
-% pair is the dominant destabilizer -- common-mode wheel torque shuffles
-% angular momentum between chassis yaw and the ball's free spin mode
-% until the contacts unload (~5 s tip-over).  With both channels off the
-% plant holds machine-zero tilt for ~10.5 s even under estimator
-% feedback, so neither channel ships enabled.  Yaw commands then track
-% open-loop only; re-enabling needs a dissipating design, not just gain.
-K10(:, 7) = 0*KMeasured(:, 5);         % yaw rate
-p.controller.torqueLqi.stateGain = K10;
+% Measured-plant gains, designed robustly over the payload family instead
+% of at the nominal mass: ballbotRobustTorqueGains scales the measured
+% torque-input B matrix (open-loop steps on the nominal build) across
+% payload 0..1 kg via 1/Ipivot and 1/Iyaw, solves one discrete LQR per
+% mass, and keeps the candidate whose worst-case closed-loop pole radius
+% over the whole family is smallest.  A nominal-point design is NOT
+% robust here: per-torque tilt authority falls ~8x from the light to the
+% heavy end, so the fixed gain must come from a heavy-end design; the
+% torque clamp bounds the resulting stiffness on light builds, whose
+% authority margin covers the saturation.  The empirical column scalings
+% are preserved (tilt x8 for the stiction/quantization floor, tilt-rate
+% x0.25 against the ~9 Hz electrical-lag ring, yaw rate x5).  Velocity and
+% wheel-rate columns stay zero: velocity tracking in torque mode has no
+% feedforward yet, and wheel-rate feedback re-injects encoder
+% quantization.
+[p.controller.torqueLqi.stateGain, p.controller.torqueLqi.robustness] = ...
+    ballbotRobustTorqueGains(p);
+% Stationary yaw gate [SI]: the yaw-rate feedback column and the yaw-rate
+% command are applied only while the rover is near rest.  commandSpeed
+% must be exactly zero so a move window always closes the gate.
+p.controller.torqueDrive.yawGate.maxSpeed = 0.03;
+p.controller.torqueDrive.yawGate.maxTilt = 0.02;
+p.controller.torqueDrive.yawGate.commandThreshold = 1.0e-3;
+p.controller.torqueDrive.yawGate.rateThreshold = 0.05;
 p.controller.torqueLqi.integralGain = zeros(3, 2);
 p.controller.torqueDrive.slipDampingGain = 0.02;
 % Outer loop.  Two structurally separate channels, because wheel torque
@@ -233,12 +209,41 @@ p.controller.torqueDrive.slipDampingGain = 0.02;
 % [1/s] sets the outer bandwidth (~1 rad/s, well under the ~6 rad/s
 % tilt loop), and leanSetpointLimit [rad] keeps the commanded lean
 % inside the recoverable cone.
-% Disabled by default: with the yaw-damper/ball-brake pump removed the
-% inner loop now holds machine-zero tilt ~10.5 s, then slow creep pushes
-% tilt past the torque-limited recovery cone (~0.03 rad) -- the lean
-% channel has not yet been validated against that residual mode.
-p.controller.torqueDrive.velocityLeanGain = 0;
-p.controller.torqueDrive.leanSetpointLimit = 0.035;
+% Enabled: the yaw-damper/ball-brake pump is now removed and the inner
+% loop holds machine-zero tilt, so the lean channel is the only physical
+% translation actuator.  leanSetpointLimit must sit well inside the
+% measured torque-limited hold cone (~0.023 rad): a 0.02 rad demand at
+% 87% of the cone tipped at t ~1 s because any tilt overshoot past the
+% cone is unrecoverable (gravity pole ~6.4 rad/s, ~150 ms e-folding).
+% 0.008 rad covers the 0.06 m/s^2 ramp demand (~0.006 rad) with ~35%
+% margin for transient overshoot.
+p.controller.torqueDrive.velocityLeanGain = 0.3;
+p.controller.torqueDrive.leanSetpointLimit = 0.008;
+% Station-keeping term on the lean channel: relPos = rover - ball.
+% During commanded acceleration the ball must be torqued up through the
+% wheel contacts; if the chassis leads the ball (relPos > 0) the lean
+% demand must back off or the rover runs away from its support and
+% faceplants.  P without D oscillates (measured), so the channel needs
+% the relative-velocity damping term.
+p.controller.torqueDrive.positionLeanGain = 0;
+p.controller.torqueDrive.positionLeanDampingGain = 0;
+% Propulsion: P servo tracking the kinematic wheel rate W*v_cmd, in
+% N*m per rad/s of wheel-rate error.  The tilt loop handles attitude;
+% this term only drives the wheel/ball rolling state toward the command.
+p.controller.torqueDrive.propulsionGain = 0.005;
+% Propulsion torque share cap [N*m]: without a bound the initial rate
+% error (~20 rad/s for a 0.5 m/s command) saturates one wheel's duty to
+% ~0.95 while the tilt channel starves.  Half the traction limit leaves
+% headroom for attitude correction during acceleration.
+p.controller.torqueDrive.propulsionTorqueLimit = 0.5* ...
+    p.controller.tractionLimitedWheelTorque;
+% Relative-position closure on the wheel-rate command [1/s] and
+% relative-velocity damping [dimensionless]: the ball has to be torqued
+% up by the wheels, so a chassis lead is corrected by spinning the
+% ball faster.  Lean-channel closure of the same loop was tried and
+% oscillated; the wheel rate path is faster and kinematically direct.
+p.controller.torqueDrive.propulsionRelPosGain = 0;
+p.controller.torqueDrive.propulsionRelVelGain = 0;
 % Channel 2, station keeping: tau += W*(positionGain*s +
 % positionDampingGain*sDot).  The open-loop offset dynamics measure
 % s2 ~= -8.7*c [m/s^2 per N*m coefficient], but inside the tilt loop the
@@ -259,8 +264,15 @@ p.controller.torqueDrive.ballYawGain = 0;
 
 % Diagnostic: feed plant truth (roverPose/ballPose) through TruthGate
 % instead of the estimator output, to separate estimator error from
-% plant/controller physics in divergence analysis.  Model default off.
+% plant/controller physics in divergence analysis.  truthChannels
+% optionally restricts the substitution to a subset of the 14-element
+% estimate vector ([] = all channels).  Model default off.
 p.estimator.truthFeedbackEnabled = false;
+p.estimator.truthChannels = [];
+% Artificial latency on the truth path (control samples).  Used to test
+% whether the estimator's disadvantage is estimation error or simply
+% the one-step update latency of the estimator pipeline.
+p.estimator.truthDelaySteps = 0;
 
 % Identifies which builder produced this set so the rev1 model InitFcn
 % can regenerate ballbotParams when a stale variant (which lacks the

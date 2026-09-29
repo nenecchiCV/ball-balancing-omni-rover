@@ -26,8 +26,21 @@ accelerationNorm = norm(specificForceBody);
 predictedAccelerationWorld = rotationWorldFromBody*specificForceBody + ...
     [0; 0; -p.gravity];
 horizontalAcceleration = norm(predictedAccelerationWorld(1:2));
+% Attitude correction validity: specific force points along true up only
+% when the body is not accelerating.  The norm test alone cannot see
+% horizontal acceleration (|f| changes at second order in a), and the
+% horizontal gate alone cannot distinguish real acceleration from
+% attitude error (an attitude error delta reads as g*delta), so the gate
+% must be combined with a motion-sensor quiescent test: wheel rate and
+% gyro rates all low means the measured up direction is trustworthy even
+% when horizontalAcceleration is large, and any real acceleration above
+% the gate blocks the correction during motion.
+quasiStatic = max(abs(wheelRate)) <= p.estimator.biasWheelRateThreshold && ...
+    hypot(gyroBody(1), gyroBody(2)) <= p.estimator.biasRollPitchRateThreshold && ...
+    abs(gyroBody(3)) <= p.estimator.biasYawRateThreshold;
 if abs(accelerationNorm - p.gravity) <= p.estimator.accelNormGate && ...
-        horizontalAcceleration <= p.estimator.accelHorizontalGate
+        (horizontalAcceleration <= p.estimator.accelHorizontalGate || ...
+        quasiStatic)
     measuredUpBody = specificForceBody/max(accelerationNorm, eps);
     predictedUpBody = rotationWorldFromBody'*[0; 0; 1];
     correction = p.estimator.attitudeCorrectionGain* ...

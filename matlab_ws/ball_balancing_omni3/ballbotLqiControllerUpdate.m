@@ -85,7 +85,23 @@ if torqueDrive
             zeros(2, 1); double(mode); double(yawBiasReady)];
         return
     end
-    state(7) = state(7) - yawRateCommand;
+    % Yaw/planar separation: common-mode torque (the only yaw actuator)
+    % pumps the ball's free spin mode, and that exchange is what tipped
+    % the plant at ~5 s in the truth-feedback comparison.  The yaw-rate
+    % channel is therefore enabled ONLY while a yaw command is actually
+    % requested at rest.  Damping residual yaw rate at standstill also
+    % pumps the ball spin (measured: oBall_z ~21 rad/s inside 0.15 s
+    % while parked at zero command), so the gate keys on the command
+    % alone; uncommanded yaw drift is left to friction.
+    yawGate = p.controller.torqueDrive.yawGate;
+    stationary = norm(velocityBody) < yawGate.maxSpeed && ...
+        tiltMagnitude < yawGate.maxTilt && commandSpeed == 0;
+    yawActive = stationary && abs(command(3)) > yawGate.commandThreshold;
+    if yawActive
+        state(7) = state(7) - yawRateCommand;
+    else
+        state(7) = 0;
+    end
     if tiltMagnitude > p.controller.tiltPriorityStart
         candidateIntegral = zeros(2, 1);
     end
@@ -113,6 +129,24 @@ if torqueDrive
     if velocityLeanGain ~= 0
         velocityErrorBody = commandVelocityBody - velocityBody;
         accelerationDemand = velocityLeanGain*velocityErrorBody;
+        % Ball-tracking through the same lean channel: relPos = rover -
+        % ball.  A positive offset (rover ahead of the ball) means the
+        % lean has pushed the chassis beyond the ball, which is the
+        % runaway geometry: the chassis must ease off acceleration so
+        % the ball catches up.  The relative-velocity term damps the
+        % loop -- position-only feedback on this coupled pair is a
+        % delay-driven oscillator (same lesson as channel 2).
+        if isfield(p.controller.torqueDrive, "positionLeanGain")
+            ballVelocityWorld = [p.ball.radius*estimate(10); ...
+                -p.ball.radius*estimate(9)];
+            relativeVelocityBody = rotationBodyFromWorld* ...
+                (estimate(7:8) - ballVelocityWorld);
+            accelerationDemand = accelerationDemand - ...
+                p.controller.torqueDrive.positionLeanGain* ...
+                estimate(12:13) - ...
+                p.controller.torqueDrive.positionLeanDampingGain* ...
+                relativeVelocityBody;
+        end
         leanLimit = p.controller.torqueDrive.leanSetpointLimit;
         accelerationDemand = min(max(accelerationDemand, -leanLimit* ...
             p.gravity), leanLimit*p.gravity);
@@ -168,6 +202,52 @@ if torqueDrive
     slipActive = sign(slipRate).*max(abs(slipRate) - slipDeadzone, 0);
     rawWheelCommand = rawWheelCommand - ...
         p.controller.torqueDrive.slipDampingGain*slipActive;
+    % Propulsion: kinematic wheel-rate servo.  Torque mode removed the
+    % wheel-speed PI entirely, but translation still needs the wheels to
+    % roll at the omni kinematic rate W*v.  A modest P term tracks that
+    % target rate; the lean channel supplies the chassis' share of the
+    % acceleration through gravity.  The deadzone keeps encoder flicker
+    % (~3.7 rad/s) from biasing the propulsion torque.
+    propulsionGain = p.controller.torqueDrive.propulsionGain;
+    if propulsionGain ~= 0
+        wheelRateCommand = p.controller.lqi.wheelSpeedFromPlanarVelocity* ...
+            [commandVelocityBody; 0];
+        % The ball must be torqued up through the wheel contacts; during
+        % acceleration the chassis leads the ball and that offset maps
+        % kinematically into pitch (tilt ~ relPos/0.12 m).  Closed on
+        % the wheel-rate command instead of the lean channel so the
+        % fast wheel->ball drive authority reels the ball forward:
+        % rover ahead (relPos > 0) asks for MORE ball rolling rate.
+        if isfield(p.controller.torqueDrive, "propulsionRelPosGain")
+            ballVelocityWorld = [p.ball.radius*estimate(10); ...
+                -p.ball.radius*estimate(9)];
+            relativeVelocityBody = rotationBodyFromWorld* ...
+                (estimate(7:8) - ballVelocityWorld);
+            relCorrection = ...
+                p.controller.torqueDrive.propulsionRelPosGain* ...
+                estimate(12:13) + ...
+                p.controller.torqueDrive.propulsionRelVelGain* ...
+                relativeVelocityBody;
+            wheelRateCommand = wheelRateCommand + ...
+                p.controller.lqi.wheelSpeedFromPlanarVelocity(:, 1:2)* ...
+                relCorrection;
+        end
+        rateError = wheelRateCommand - wheelRate(:);
+        rateActive = sign(rateError).*max(abs(rateError) - ...
+            slipDeadzone, 0);
+        % Propulsion yields to attitude: the holdable lean is only
+        % ~0.023 rad of tilt with the full traction budget, so the
+        % propulsion share is whatever the tilt/attitude channels leave
+        % unused, hard-capped at propulsionTorqueLimit.
+        torqueLimit = min(p.driver.continuousTorqueLimit, ...
+            p.controller.tractionLimitedWheelTorque);
+        propTorque = min(max(propulsionGain*rateActive, ...
+            -p.controller.torqueDrive.propulsionTorqueLimit), ...
+            p.controller.torqueDrive.propulsionTorqueLimit);
+        headroom = max(torqueLimit - abs(rawWheelCommand), 0);
+        propTorque = sign(propTorque).*min(abs(propTorque), headroom);
+        rawWheelCommand = rawWheelCommand + propTorque;
+    end
     limit = min(p.driver.continuousTorqueLimit, ...
         p.controller.tractionLimitedWheelTorque)*ones(3, 1);
     wheelSpeedCommand = min(max(rawWheelCommand, -limit), limit);

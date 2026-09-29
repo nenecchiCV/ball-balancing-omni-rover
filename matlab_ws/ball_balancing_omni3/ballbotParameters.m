@@ -169,8 +169,15 @@ p.estimator.accelNormGate = 0.25*p.gravity;
 % horizontally: the norm gate alone cannot see horizontal acceleration
 % (|a| changes only at second order), so without this gate sustained
 % translation biases the tilt estimate by ~atan(a/g) and the balance loop
-% under-corrects until the rover falls.
-p.estimator.accelHorizontalGate = 0.20;
+% under-corrects until the rover falls.  The gate must sit BELOW the
+% commanded acceleration (0.06 m/s^2 ramps) or the phantom lean a/g keeps
+% being injected during every move window, and above the sensor noise
+% floor.  An attitude error also reads as horizontal acceleration
+% (g*delta), so a too-tight gate self-locks the correction at rest; the
+% wheel-rate/gyro-rate quiescent override in ballbotEstimatorStep keeps
+% the correction alive whenever the motion sensors prove the body is
+% truly at rest.
+p.estimator.accelHorizontalGate = 0.03;
 p.estimator.velocityLeak = 0.9995;
 p.estimator.ballRateTimeConstant = 0.030;
 p.estimator.relativePositionLeak = 0.9998;

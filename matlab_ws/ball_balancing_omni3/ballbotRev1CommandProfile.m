@@ -50,7 +50,27 @@ if isfield(p.command, "cyclesEnabled") && p.command.cyclesEnabled
             fraction = 0;
         end
         command(1:2) = direction*speed*fraction;
-        command(3) = yawTarget*fraction;
+        % Yaw is time-separated from translation (the common-mode torque
+        % that yaws the chassis also spins the ball, so doing both at
+        % once drains the tilt loop's torque budget).  The yaw trapezoid
+        % sits inside the stop window after cycleYawDelay, leaving a
+        % settle margin before the next move phase.
+        yawStart = moveEnd + p.command.cycleYawDelay;
+        yawEnd = yawStart + p.command.cycleYawDuration;
+        if phase >= yawStart && phase < yawEnd
+            yawRamp = min(abs(yawTarget)/accel, ...
+                p.command.cycleYawDuration/2);
+            yawPhase = phase - yawStart;
+            if yawPhase < yawRamp
+                yawFraction = yawPhase/yawRamp;
+            elseif yawPhase < p.command.cycleYawDuration - yawRamp
+                yawFraction = 1;
+            else
+                yawFraction = (p.command.cycleYawDuration - ...
+                    yawPhase)/yawRamp;
+            end
+            command(3) = yawTarget*yawFraction;
+        end
     end
 else
     speed = norm(command(1:2));

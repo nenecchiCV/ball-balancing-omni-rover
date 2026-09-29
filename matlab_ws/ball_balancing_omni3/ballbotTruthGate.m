@@ -15,9 +15,24 @@ if ~isfield(p.estimator, "truthFeedbackEnabled") || ...
 end
 
 dt = p.estimator.sampleTime;
-persistent previousRover previousBall
+persistent previousRover previousBall poseHistory delayInit
+if isempty(delayInit)
+    poseHistory = zeros(0, 12);
+    delayInit = true;
+end
 rover = truthPose(1:6);
 ball = truthPose(7:12);
+% Optional artificial latency (p.estimator.truthDelaySteps, default 0):
+% substitutes N-sample-old truth, reproducing the estimator path's
+% update latency so the value-vs-timing question can be isolated.
+delaySteps = p.estimator.truthDelaySteps;
+poseHistory = [rover(:).', ball(:).'; poseHistory]; %#ok<AGROW>
+if size(poseHistory, 1) > delaySteps + 1
+    poseHistory = poseHistory(1:delaySteps + 1, :);
+end
+delayed = poseHistory(end, :);
+rover = delayed(1:6).';
+ball = delayed(7:12).';
 if isempty(previousRover)
     previousRover = rover;
     previousBall = ball;
@@ -39,8 +54,17 @@ rotationWorldFromYaw = [cos(rover(6)), -sin(rover(6)); ...
     sin(rover(6)), cos(rover(6))];
 relativePositionBody = rotationWorldFromYaw.'*(rover(1:2) - ball(1:2));
 
-estimate = [rover(4:6); bodyRate; velocityWorld(1:2); ...
+truth = [rover(4:6); bodyRate; velocityWorld(1:2); ...
     ballRateWorld; relativePositionBody; 1.0];
+% Optional channel mask (p.estimator.truthChannels, default all 14)
+% lets A/B runs substitute only a subset of the estimate, isolating
+% which estimated channel drives a divergence.
+mask = p.estimator.truthChannels;
+if isempty(mask)
+    estimate = truth;
+else
+    estimate(mask) = truth(mask);
+end
 
 previousRover = rover;
 previousBall = ball;
