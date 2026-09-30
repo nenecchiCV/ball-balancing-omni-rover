@@ -245,6 +245,33 @@ if torqueDrive
     end
     rawWheelCommand = -lqi.stateGain*state - ...
         lqi.integralGain*candidateIntegral;
+    % Bounded leaky tilt-error integrator: at the heavy end the
+    % proportional gain sits only ~5% above the static-hold floor, so
+    % net stiffness B*K-gg is a few percent of nominal and constant
+    % disturbance torques (contact friction, asymmetric wheel load,
+    % relPos gravity moment) walk the tilt into the cone ~2-4 s into
+    % every run.  The integrator slowly takes over the steady holding
+    % load so the equilibrium returns to the commanded lean; the leak
+    % plus state clamp keep it from winding up through saturation.
+    if isfield(p.controller.torqueDrive, "tiltIntegralGain") && ...
+            p.controller.torqueDrive.tiltIntegralGain ~= 0
+        persistent tiltIntegral
+        if isempty(tiltIntegral) || mode ~= 1
+            tiltIntegral = zeros(2, 1);
+        else
+            tiltIntegral = tiltIntegral + p.controller.sampleTime* ...
+                state(3:4);
+            tiltIntegral = tiltIntegral* ...
+                (1 - p.controller.torqueDrive.tiltIntegralLeak* ...
+                 p.controller.sampleTime);
+            tiltIntegral = min(max(tiltIntegral, ...
+                -p.controller.torqueDrive.tiltIntegralLimit), ...
+                p.controller.torqueDrive.tiltIntegralLimit);
+        end
+        rawWheelCommand = rawWheelCommand - ...
+            p.controller.torqueDrive.tiltIntegralGain* ...
+            lqi.stateGain(:, 3:4)*tiltIntegral;
+    end
     if isfield(p.controller.torqueDrive, "leanHoldTorque") && ...
             velocityLeanGain ~= 0
         % Gravity-hold feedforward on the (slew-limited) lean demand:
@@ -253,9 +280,10 @@ if torqueDrive
         % feedforward supplies the hold torque for the DEMANDED lean --
         % smooth and noise-free -- while the feedback gain only
         % multiplies the noisy measured deviation.
-        rawWheelCommand = rawWheelCommand + ...
+        rawWheelCommand = rawWheelCommand + startupRamp( ...
             p.controller.torqueDrive.leanHoldTorque* ...
-            [accelerationDemand(1); -accelerationDemand(2)]/p.gravity;
+            [accelerationDemand(1); -accelerationDemand(2)]/p.gravity, ...
+            enable, mode, p);
     end
     % Traction control: a wheel that spins faster than the kinematic
     % rolling rate is slipping, so its torque cannot reach the ball.
@@ -359,26 +387,15 @@ if torqueDrive
                 p.controller.torqueDrive.propulsionMinShare*torqueLimit);
         end
         propTorque = sign(propTorque).*min(abs(propTorque), headroom);
+        % Soft-start ramps only the DISTURBANCE paths (propulsion +
+        % lean feedforward), never the tilt feedback: a settle-time
+        % excursion needs full authority immediately -- ramping the
+        % balance channel left a 0.023 rad transient uncatchable at 37%
+        % authority (cycle_result_e05), while ramping propulsion removes
+        % the wheelie kick that creates the excursion in the first
+        % place.
+        propTorque = startupRamp(propTorque, enable, mode, p);
         rawWheelCommand = rawWheelCommand + propTorque;
-    end
-    % Soft-start torque ramp: at enable the chassis is still settling
-    % onto the contacts (asymmetric wheel grabs kick the tilt to
-    % ~0.014 rad -- past the ~0.013 rad hold cone on heavy builds, and
-    % a saturated first correction kicks it over the edge).  Ramp the
-    % available torque budget up over startupTorqueRampTime so the
-    % catch is progressive instead of an instantaneous saturation.
-    if isfield(p.controller.torqueDrive, "startupTorqueRampTime") && ...
-            p.controller.torqueDrive.startupTorqueRampTime > 0
-        persistent startupRampClock
-        if isempty(startupRampClock) || ~enable || mode == 0
-            startupRampClock = 0;
-        else
-            startupRampClock = startupRampClock + ...
-                p.controller.sampleTime;
-        end
-        torqueScale = min(1, startupRampClock/ ...
-            p.controller.torqueDrive.startupTorqueRampTime);
-        rawWheelCommand = torqueScale*rawWheelCommand;
     end
     limit = min(p.driver.continuousTorqueLimit, ...
         p.controller.tractionLimitedWheelTorque)*ones(3, 1);
@@ -415,7 +432,7 @@ if torqueDrive
         end
         captureLog(end+1, :) = [captureInputs.', state.', ...
             rawWheelCommand.', wheelSpeedCommand.', ...
-            candidateIntegral.', double(mode)]; %#ok<AGROW>
+            candidateIntegral.', double(mode)];
         assignin('base', 'dbgLqiInputs', captureLog);
     end
     output = [wheelSpeedCommand; nextVelocityIntegral; double(mode); ...
@@ -458,4 +475,25 @@ else
 end
 output = [wheelSpeedCommand; nextVelocityIntegral; double(mode); ...
     double(yawBiasReady)];
+end
+
+function scaled = startupRamp(value, enable, mode, p)
+%STARTRUPRAMP Ramp a torque contribution in over startupTorqueRampTime.
+%   Full authority from the first enabled step lets a settle-time kick
+%   saturate the wheels (cycle_result_g05).  Applied to disturbance
+%   paths only -- the tilt feedback must keep full authority or a
+%   transient becomes uncatchable mid-ramp (cycle_result_e05).
+if ~isfield(p.controller.torqueDrive, "startupTorqueRampTime") || ...
+        p.controller.torqueDrive.startupTorqueRampTime <= 0
+    scaled = value;
+    return
+end
+persistent rampClock
+if isempty(rampClock) || ~enable || mode == 0
+    rampClock = 0;
+else
+    rampClock = rampClock + p.controller.sampleTime;
+end
+scaled = value*min(1, rampClock/ ...
+    p.controller.torqueDrive.startupTorqueRampTime);
 end

@@ -270,6 +270,19 @@ p.controller.torqueDrive.leanRateLimit = 0.05;
 % ~1/3 of the clamp, so gyro noise does not write into the wheels.
 p.controller.torqueDrive.tiltStiffenGain = 3.0;
 p.controller.torqueDrive.tiltStiffenTilt = 0.006;
+% Slow tilt-error integrator [1/s scale on the tilt columns, rad*s
+% state limit, 1/s leak]: the fixed proportional gain sits only ~5%
+% above the 1 kg static-hold floor, so the net tilt stiffness
+% B*K-gg is ~5% of nominal and any residual torque (contact friction,
+% asymmetric wheel loading, relPos gravity moment m*g*dx) walks the
+% tilt ~0.004 rad/s into the cone (all runs tip at ~2-4 s).  A bounded
+% leaky integrator on the tilt error absorbs that constant residual and
+% pulls the equilibrium back to the commanded lean; the leak keeps it
+% from winding up during saturation, and the state limit caps its
+% torque at ~Ki*Kt*limit -- well under the traction clamp.
+p.controller.torqueDrive.tiltIntegralGain = 0.5;
+p.controller.torqueDrive.tiltIntegralLimit = 0.01;
+p.controller.torqueDrive.tiltIntegralLeak = 0.5;
 % Soft-start torque ramp [s]: the first ~0.3 s after enable is the
 % contact-settling transient (asymmetric wheel grabs kick tilt to
 % ~0.014 rad, beyond the ~0.013 rad hold cone on heavy builds).  A

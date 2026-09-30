@@ -23,28 +23,39 @@ gyroBody = gyroBodyRaw - [0; 0; gyroBiasZPrevious];
 rotationWorldFromBody = quaternionToRotation(quaternion);
 
 accelerationNorm = norm(specificForceBody);
-predictedAccelerationWorld = rotationWorldFromBody*specificForceBody + ...
-    [0; 0; -p.gravity];
-horizontalAcceleration = norm(predictedAccelerationWorld(1:2));
 % Attitude correction validity: specific force points along true up only
 % when the body is not accelerating.  The norm test alone cannot see
 % horizontal acceleration (|f| changes at second order in a), and the
-% horizontal gate alone cannot distinguish real acceleration from
-% attitude error (an attitude error delta reads as g*delta), so the gate
-% must be combined with a motion-sensor quiescent test: wheel rate and
-% gyro rates all low means the measured up direction is trustworthy even
-% when horizontalAcceleration is large, and any real acceleration above
-% the gate blocks the correction during motion.
+% horizontal gate cannot be trusted either: it is computed from the
+% ESTIMATED attitude, and once the attitude error approaches a/g the
+% horizontal component of g+a disappears inside the estimate, so the
+% gate locks open during motion and the correction starts tracking the
+% specific-force direction instead of gravity -- measured runaway: est
+% tilt swung to +/-1.8 rad while the true tilt stayed below 0.02 rad
+% (cycle_result_g05).  The only acceleration-free witness independent
+% of the estimated attitude is the motion sensors themselves: wheels
+% at rest and gyro quiescent means the chassis is genuinely parked, so
+% gravity really is the only specific force.  During motion the
+% attitude integrates gyro only; the move/stop cycle re-corrects at
+% every stop, bounding the drift a noisy IMU accumulates per leg.
 quasiStatic = max(abs(wheelRate)) <= p.estimator.biasWheelRateThreshold && ...
     hypot(gyroBody(1), gyroBody(2)) <= p.estimator.biasRollPitchRateThreshold && ...
     abs(gyroBody(3)) <= p.estimator.biasYawRateThreshold;
 if abs(accelerationNorm - p.gravity) <= p.estimator.accelNormGate && ...
-        (horizontalAcceleration <= p.estimator.accelHorizontalGate || ...
-        quasiStatic)
+        quasiStatic
     measuredUpBody = specificForceBody/max(accelerationNorm, eps);
     predictedUpBody = rotationWorldFromBody'*[0; 0; 1];
     correction = p.estimator.attitudeCorrectionGain* ...
         cross(measuredUpBody, predictedUpBody);
+    % Clamp the correction rate: even a legitimate gate opening must not
+    % snap the attitude, because a large single-step rotation outruns
+    % the controller's tilt response.  ~0.5 rad/s still reconverges a
+    % 0.05 rad offset in ~0.1 s of real standstill.
+    maxCorrectionRate = 0.5;
+    correctionMagnitude = norm(correction);
+    if correctionMagnitude > maxCorrectionRate
+        correction = correction*(maxCorrectionRate/correctionMagnitude);
+    end
 else
     correction = zeros(3, 1);
 end
