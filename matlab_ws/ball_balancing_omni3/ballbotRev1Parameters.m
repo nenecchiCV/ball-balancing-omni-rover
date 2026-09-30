@@ -86,9 +86,14 @@ p.driver.bridgeOffConductance = 1.0e-6;
 % the physical lean the body can establish.
 p.command.cyclesEnabled = true;
 p.command.cycleStart = 0.5;
-% The move window must cover the lean-limited ramp to slip-limit speed
-% plus a cruise hold: 0.524 m/s / 0.06 m/s^2 ~ 8.7 s ramp + ~1.3 s hold.
-p.command.cycleMoveDuration = 10.0;
+% The move window must cover the FULL lean-limited trapezoid: the
+% profile caps rampTime at moveDuration/2, so a 10 s window forced the
+% 0.524 m/s reference onto a 5 s ramp = 0.105 m/s^2 -- beyond the
+% 0.008 rad lean cap, pinning every cycle at the cone edge until a
+% perturbation tipped it (~3 s in every experiment).  18 s allows the
+% 8.7 s ramp up + 8.7 s down at the designed 0.06 m/s^2, so the lean
+% demand stays inside the cap with margin instead of saturating.
+p.command.cycleMoveDuration = 18.0;
 % Yaw control is fully separated from translation: the yaw-rate request
 % is issued as a trapezoid inside the stop window, starting cycleYawDelay
 % seconds after motion stops.  The stationary yaw gate in the controller
@@ -148,6 +153,13 @@ p.controller.torqueDrive.slipDeadzone = ...
 % limit-cycle exciter.  80 ms attenuates the flicker to ~+-0.005 duty;
 % the lag only slows back-EMF tracking of genuine speed changes.
 p.controller.torqueDrive.backEmfSpeedTimeConstant = 0.08;
+% Gyro-rate low-pass [s] ahead of state feedback: the estimator passes
+% bias-corrected raw gyro, and with a noisy IMU the rate channel would
+% write sigma_gyro*K_rate of torque noise straight into the command.
+% 20 ms lags the ~9 rad/s tilt poles by only ~10 deg but knocks the
+% broadband floor down; kept short of the ~30 ms where the added phase
+% starts eating the restored damping margin.
+p.controller.torqueDrive.rateFilterTimeConstant = 0.02;
 % Velocity-integral leak [1/s]: in torque mode a wound-up integral is a
 % constant torque bias that tips the chassis, so it must decay unless a
 % commanded velocity keeps feeding it.
@@ -186,13 +198,27 @@ p.controller.torqueLqi = ballbotDesignTorqueLqi(p, p.controller.torqueLqi);
 % heavy end, so the fixed gain must come from a heavy-end design; the
 % torque clamp bounds the resulting stiffness on light builds, whose
 % authority margin covers the saturation.  The empirical column scalings
-% are preserved (tilt x4 against the stiction/quantization floor, tilt-rate
-% x0.125 against the ~9 Hz electrical-lag ring, yaw rate x5).  Velocity and
+% are reset near the LQR design (tilt x1.8 clearing the heavy-build
+% static-hold floor, tilt-rate x1.0 restoring damping, yaw rate
+% x5).  Velocity and
 % wheel-rate columns stay zero: velocity tracking in torque mode has no
 % feedforward yet, and wheel-rate feedback re-injects encoder
 % quantization.
+if nargin >= 1 && ~isempty(payloadMass)
+    payloadForDesign = payloadMass;
+else
+    payloadForDesign = 0.5;
+end
 [p.controller.torqueLqi.stateGain, p.controller.torqueLqi.robustness] = ...
-    ballbotRobustTorqueGains(p);
+    ballbotRobustTorqueGains(p, payloadForDesign);
+% Gravity-hold feedforward on the lean setpoint (see
+% ballbotRobustTorqueGains for the derivation): without it the
+% equilibrium tilt amplifies the commanded lean by BK/(BK-gg) ~9x and a
+% 0.008 rad demand drifts to ~0.07 rad -- past the ~0.016 rad static
+% cone.  leanHoldTorque maps [pitch; -roll] lean demand to the per-wheel
+% hold torque that cancels gravity at that lean.
+p.controller.torqueDrive.leanHoldTorque = ...
+    p.controller.torqueLqi.robustness.leanHoldTorque;
 % Stationary yaw gate [SI]: the yaw-rate feedback column and the yaw-rate
 % command are applied only while the rover is near rest.  commandSpeed
 % must be exactly zero so a move window always closes the gate.
@@ -228,6 +254,28 @@ p.controller.torqueDrive.leanSetpointLimit = 0.008;
 % 0.02 rad starts fading just past the ~0.023 rad hold cone; tilt inside
 % the commanded band passes unattenuated.
 p.controller.torqueDrive.leanFadeTilt = 0.02;
+% Lean-setpoint slew limit [rad/s]: the ball accelerates only through
+% the wheel-contact friction, so a step lean command drives the chassis
+% ahead of its support and relPos converts the offset into tilt runaway
+% within ~0.1 s.  0.05 rad/s ramps a full 0.008 rad lean in ~160 ms,
+% keeping the commanded tilt inside the rate the ball can track.
+p.controller.torqueDrive.leanRateLimit = 0.05;
+% Tilt-gain scheduling: tilt disturbance sensitivity scales like
+% 1/(B*K_tilt - mgh/I), so the quiet low-gain design (IMU-noise
+% robustness) leaves almost no rejection exactly where the pendulum
+% needs it -- near the ~0.016 rad static hold cone.  Past the commanded
+% lean band the tilt+rate columns stiffen smoothly to x3 over a
+% tiltStiffenTilt-wide ramp, reaching near-full authority just inside
+% the cone edge.  Inside the commanded band small-signal torque stays
+% ~1/3 of the clamp, so gyro noise does not write into the wheels.
+p.controller.torqueDrive.tiltStiffenGain = 3.0;
+p.controller.torqueDrive.tiltStiffenTilt = 0.006;
+% Soft-start torque ramp [s]: the first ~0.3 s after enable is the
+% contact-settling transient (asymmetric wheel grabs kick tilt to
+% ~0.014 rad, beyond the ~0.013 rad hold cone on heavy builds).  A
+% ramped torque budget catches the settle progressively instead of an
+% instant full-saturation kick that shoves the chassis past the cone.
+p.controller.torqueDrive.startupTorqueRampTime = 0.4;
 % Station-keeping term on the lean channel: relPos = rover - ball.
 % During commanded acceleration the ball must be torqued up through the
 % wheel contacts; if the chassis leads the ball (relPos > 0) the lean

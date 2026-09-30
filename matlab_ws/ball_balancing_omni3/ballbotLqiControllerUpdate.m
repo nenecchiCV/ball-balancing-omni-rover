@@ -46,7 +46,13 @@ if commandSpeed > p.controller.maxSpeed
 end
 
 if mode == 1
-    velocityError = commandVelocityBody - velocityBody;
+    % Integrate the BALL velocity error, matching the lean channel: the
+    % command describes the assembly's translation and the ball is the
+    % load-bearing element.  Rover velocity leads the ball during any
+    % acceleration, so integrating rover error winds the integrator with
+    % the transient lead every manoeuvre.
+    velocityError = commandVelocityBody - rotationBodyFromWorld* ...
+        [p.ball.radius*estimate(10); -p.ball.radius*estimate(9)];
     candidateIntegral = previousVelocityIntegral + ...
         p.controller.sampleTime*velocityError;
     integralLimit = p.controller.velocityIntegralLimit;
@@ -93,6 +99,32 @@ if torqueDrive
     % pumps the ball spin (measured: oBall_z ~21 rad/s inside 0.15 s
     % while parked at zero command), so the gate keys on the command
     % alone; uncommanded yaw drift is left to friction.
+    % Gyro-rate low-pass for the state feedback path.  The estimator
+    % outputs bias-corrected raw gyro, so noisy IMUs (the planned cheap
+    % unit) would inject torque noise proportional to the rate gain.
+    % A ~20 ms first-order lag costs ~10 deg of phase at the ~9 rad/s
+    % tilt bandwidth -- cheap against zeta ~0.7 -- while attenuating
+    % the broadband gyro floor into the torque command.  Filtered rate
+    % is shared by tilt damping and the yaw gate; it resets whenever the
+    % controller is not balancing so a restart does not inherit stale
+    % state.
+    filteredBodyRate = bodyRate;
+    if isfield(p.controller.torqueDrive, "rateFilterTimeConstant") && ...
+            p.controller.torqueDrive.rateFilterTimeConstant > 0
+        persistent bodyRateFilter
+        if isempty(bodyRateFilter) || mode ~= 1
+            bodyRateFilter = bodyRate;
+        else
+            wRate = p.controller.sampleTime/ ...
+                (p.controller.torqueDrive.rateFilterTimeConstant + ...
+                 p.controller.sampleTime);
+            bodyRateFilter = bodyRateFilter + ...
+                wRate*(bodyRate - bodyRateFilter);
+        end
+        filteredBodyRate = bodyRateFilter;
+    end
+    state(5:7) = [filteredBodyRate(2); -filteredBodyRate(1); ...
+        filteredBodyRate(3)];
     yawGate = p.controller.torqueDrive.yawGate;
     stationary = norm(velocityBody) < yawGate.maxSpeed && ...
         tiltMagnitude < yawGate.maxTilt && commandSpeed == 0;
@@ -157,6 +189,30 @@ if torqueDrive
         leanLimit = p.controller.torqueDrive.leanSetpointLimit;
         accelerationDemand = min(max(accelerationDemand, -leanLimit* ...
             p.gravity), leanLimit*p.gravity);
+        % Slew-rate limit on the lean setpoint: the ball can only roll
+        % out from under the chassis at the contact-friction
+        % acceleration, so a step lean demand tips the chassis past its
+        % support before the ball can follow (measured: tilt 0.004 ->
+        % 0.068 rad in 0.1 s at move onset, wheels unloading).  Rate-
+        % limiting the demand lets the ball track the lean instead of
+        % converting a step into a relPos->tilt runaway.
+        if isfield(p.controller.torqueDrive, "leanRateLimit") && ...
+                p.controller.torqueDrive.leanRateLimit > 0
+            persistent accelerationDemandSlew
+            if isempty(accelerationDemandSlew) || mode ~= 1
+                accelerationDemandSlew = accelerationDemand;
+            else
+                stepLimit = p.controller.torqueDrive.leanRateLimit* ...
+                    p.gravity*p.controller.sampleTime;
+                demandDelta = accelerationDemand - ...
+                    accelerationDemandSlew;
+                demandDelta = min(max(demandDelta, -stepLimit), ...
+                    stepLimit);
+                accelerationDemandSlew = accelerationDemandSlew + ...
+                    demandDelta;
+            end
+            accelerationDemand = accelerationDemandSlew;
+        end
         % Cone guard: tilt beyond the commanded lean (overshoot,
         % recovery) gets no additional lean demand -- feeding a demand
         % the traction-limited torque cannot hold only adds tilt rate
@@ -169,9 +225,38 @@ if torqueDrive
         end
         state(3:4) = state(3:4) - ...
             [accelerationDemand(1); -accelerationDemand(2)]/p.gravity;
+    else
+        accelerationDemand = zeros(2, 1);
+    end
+    % Tilt-gain scheduling: the static disturbance sensitivity is
+    % ~1/(B*K_tilt - mgh/I), so a low tilt gain that stays quiet on IMU
+    % noise also lets disturbance torques (propulsion reaction, contact
+    % friction) walk the tilt past the ~0.016 rad hold cone.  Inside the
+    % commanded lean band the low gain keeps small-signal torque well
+    % under the clamp; past it the gain stiffens smoothly toward the
+    % authority needed to catch a cone-edge excursion.  Scaling the
+    % state equals scaling the tilt columns of the gain matrix.
+    if isfield(p.controller.torqueDrive, "tiltStiffenGain")
+        stiffenStart = p.controller.torqueDrive.leanSetpointLimit;
+        stiffenBand = p.controller.torqueDrive.tiltStiffenTilt;
+        boost = 1 + (p.controller.torqueDrive.tiltStiffenGain - 1)* ...
+            min(max(tiltMagnitude - stiffenStart, 0)/stiffenBand, 1);
+        state(3:6) = boost*state(3:6);
     end
     rawWheelCommand = -lqi.stateGain*state - ...
         lqi.integralGain*candidateIntegral;
+    if isfield(p.controller.torqueDrive, "leanHoldTorque") && ...
+            velocityLeanGain ~= 0
+        % Gravity-hold feedforward on the (slew-limited) lean demand:
+        % pure feedback would need ~9x tilt amplification to reach the
+        % demanded lean, drifting past the static hold cone.  The
+        % feedforward supplies the hold torque for the DEMANDED lean --
+        % smooth and noise-free -- while the feedback gain only
+        % multiplies the noisy measured deviation.
+        rawWheelCommand = rawWheelCommand + ...
+            p.controller.torqueDrive.leanHoldTorque* ...
+            [accelerationDemand(1); -accelerationDemand(2)]/p.gravity;
+    end
     % Traction control: a wheel that spins faster than the kinematic
     % rolling rate is slipping, so its torque cannot reach the ball.
     % Damping the slip rate keeps the contact engaged.  The deadzone
@@ -275,6 +360,25 @@ if torqueDrive
         end
         propTorque = sign(propTorque).*min(abs(propTorque), headroom);
         rawWheelCommand = rawWheelCommand + propTorque;
+    end
+    % Soft-start torque ramp: at enable the chassis is still settling
+    % onto the contacts (asymmetric wheel grabs kick the tilt to
+    % ~0.014 rad -- past the ~0.013 rad hold cone on heavy builds, and
+    % a saturated first correction kicks it over the edge).  Ramp the
+    % available torque budget up over startupTorqueRampTime so the
+    % catch is progressive instead of an instantaneous saturation.
+    if isfield(p.controller.torqueDrive, "startupTorqueRampTime") && ...
+            p.controller.torqueDrive.startupTorqueRampTime > 0
+        persistent startupRampClock
+        if isempty(startupRampClock) || ~enable || mode == 0
+            startupRampClock = 0;
+        else
+            startupRampClock = startupRampClock + ...
+                p.controller.sampleTime;
+        end
+        torqueScale = min(1, startupRampClock/ ...
+            p.controller.torqueDrive.startupTorqueRampTime);
+        rawWheelCommand = torqueScale*rawWheelCommand;
     end
     limit = min(p.driver.continuousTorqueLimit, ...
         p.controller.tractionLimitedWheelTorque)*ones(3, 1);

@@ -1,4 +1,4 @@
-function [K10, robustness] = ballbotRobustTorqueGains(p)
+function [K10, robustness] = ballbotRobustTorqueGains(p, payloadMass)
 %BALLBOTROBUSTTORQUEGAINS Fixed torque-mode state gain over the mass family.
 %   [K10, ROBUSTNESS] = BALLBOTROBUSTTORQUEGAINS(P) designs one fixed
 %   wheel-torque state gain for the whole payload range instead of the
@@ -19,12 +19,13 @@ function [K10, robustness] = ballbotRobustTorqueGains(p)
 %   ROBUSTNESS fields: payloadGrid, closedLoopPoleRadius (design x plant
 %   matrix), worstPlantRadius per candidate, chosenDesign index, K10 is the
 %   3x10 state-gain matrix with the empirical column scalings already
-%   applied (tilt x4, tilt-rate x0.125, yaw-rate x5 -- the measured
-%   corrections for stiction, electrical lag and yaw authority; the tilt
-%   pair was halved after the settled-contact fix, see below).
+%   applied (tilt x1.8, tilt-rate x1.0, yaw-rate x5 -- near the raw LQR
+%   design; the empirical x8/x0.25 corrections tuned during bouncing
+%   contact proved to be a ~32x tilt:rate distortion, see below).
 
 arguments
     p (1, 1) struct
+    payloadMass (1, 1) double = 0.5
 end
 
 % Open-loop torque-step B measured on the nominal (0.5 kg payload) build.
@@ -89,15 +90,26 @@ worstPlantRadius = max(closedLoopPoleRadius, [], 2);
 KMeasured = gains{chosenDesign};
 
 K10 = zeros(3, 10);
-% Column scalings x4 / x0.125: the earlier x8 / x0.25 pair was tuned while
-% the initial-height bug had the rover bouncing on the ball -- the violent
-% impacts needed an aggressively saturated tilt channel.  With the contact
-% now settled continuously (4.07 N steady), the same gains saturate the
-% traction limit into a bang-bang limit cycle (~tilt 0.002 rad already
-% commands the clamp) and halving both tilt channels roughly tripled the
-% measured tip-over time (1.1 s -> 3.0 s cycle runs).
-K10(:, 3:4) = 4*KMeasured(:, 1:2);      % tilt [pitch, -roll]
-K10(:, 5:6) = 0.125*KMeasured(:, 3:4);  % tilt rate [q, -p]
+% Column scalings x1.4 / x1.0.  The earlier x8 / x0.25 pair was tuned
+% while the initial-height bug had the rover bouncing on the ball, and it
+% left the tilt:rate ratio 32x stiffer than the LQR design: tilt 0.004 rad
+% already commanded the full traction clamp (Kt 9.7 N*m/rad) while the
+% rate channel was ~undamped (zeta ~0.04) -- a bang-bang limit cycle.
+% The mass-family stability floor is s_t ~0.175 of the x4 reference
+% (heavier plants go unstable below it), so x1.4 keeps ~2x margin over
+% the floor while small-signal torque at tilt 0.004 rad falls to ~1/3 of
+% the clamp; x1.0 restores the LQR rate gain, giving zeta ~0.7 on the
+% dominant tilt poles instead of a noise-amplifying position-only loop.
+% Tilt x1.8 / rate x1.0: the family static-hold requirement peaks at
+% ~4.2 N*m/rad on the 1.0 kg build (per-torque tilt authority falls with
+% Ipivot); x1.4 sat below that floor and heavy builds tipped inside 0.5 s
+% on the startup transient alone.  x1.8 (K_tilt ~4.4) clears the heavy
+% hold threshold with ~5% margin while tilt 0.004 rad still commands
+% only ~43% of the clamp -- quiet enough for a noisy IMU, and the
+% leanHoldTorque feedforward carries the static load during moves so the
+% feedback only sees deviations.
+K10(:, 3:4) = 1.8*KMeasured(:, 1:2);    % tilt [pitch, -roll]
+K10(:, 5:6) = 1.0*KMeasured(:, 3:4);    % tilt rate [q, -p]
 % Yaw-rate column restored but gated: the A/B experiment (estimator vs
 % plant-truth feedback, identical otherwise) showed continuous yaw-rate
 % feedback is the dominant destabilizer -- common-mode wheel torque
@@ -108,10 +120,30 @@ K10(:, 5:6) = 0.125*KMeasured(:, 3:4);  % tilt rate [q, -p]
 % accumulating it.
 K10(:, 7) = 5*KMeasured(:, 5);         % yaw rate (stationary gate)
 
+% Gravity-hold feedforward on the lean setpoint.  Pure state feedback
+% tau = K*(theta - theta_d) settles at theta_eq = theta_d*BK/(BK-gg),
+% which amplifies the commanded lean ~9x at the modest gains a noisy IMU
+% needs -- a 0.008 rad lean demand drifts to ~0.07 rad, past the ~0.016
+% rad static hold cone, and diverges.  Feeding the demand's static hold
+% torque forward (tau_ff = pinv(Btilt)*gg*theta_d) makes the equilibrium
+% land exactly on the commanded lean while the feedback gain only
+% multiplies the noisy measurement.  Underestimating the hold gain is
+% safe (the loop covers the deficit); the nominal-payload value keeps
+% the feedforward below the true hold requirement on heavy builds.
+[massNow, comNow, tiltNow] = ballbotPayloadRoverProperties(p, payloadMass);
+IpivotNow = tiltNow + massNow*comNow^2;
+gravityGainNow = massNow*p.gravity*comNow/IpivotNow;
+tiltRowsNow = measuredB0(1:2, :)*IpivotRef/IpivotNow;
+Btilt = [tiltRowsNow(1, :); -tiltRowsNow(2, :)];
+% Hold torque per rad of lean, per wheel, sign-checked against the
+% measured tilt coupling so the feedforward opposes gravity.
+leanHoldTorque = -pinv(Btilt)*gravityGainNow;
+
 robustness = struct( ...
     'payloadGrid', payloadGrid, ...
     'closedLoopPoleRadius', closedLoopPoleRadius, ...
     'worstPlantRadius', worstPlantRadius, ...
     'chosenDesign', chosenDesign, ...
-    'chosenPayload', payloadGrid(chosenDesign));
+    'chosenPayload', payloadGrid(chosenDesign), ...
+    'leanHoldTorque', leanHoldTorque);
 end
