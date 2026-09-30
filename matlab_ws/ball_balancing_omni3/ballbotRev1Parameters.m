@@ -351,6 +351,77 @@ p.estimator.truthChannels = [];
 % the one-step update latency of the estimator pipeline.
 p.estimator.truthDelaySteps = 0;
 
+% =====================================================================
+% Cascaded architecture (MiaPURE-style, arXiv:2304.02887): a 6-state
+% LQR owns [tilt(2); tiltRate(2); ballVelocity(2)], the outer loop maps
+% ball-velocity error to a commanded lean, and a bounded leaky PI on the
+% ball-velocity tracking error compensates unmodeled stiction.  This
+% replaces the tilt-only torque LQI whose uncontrolled relPos degree of
+% freedom walked the tilt into the hold cone ~2-4 s into every move.
+p.controller.cascade.enabled = true;
+p.controller.cascade.velocityStateFeedback = false;
+[p.controller.cascade.stateGain, p.controller.cascade.info] = ...
+    ballbotCascadeGains(p, payloadForDesign);
+% Outer velocity->lean loop, same physical bounds as the torque-LQI
+% outer channel.
+p.controller.cascade.velocityLeanGain = 0.3;
+p.controller.cascade.leanSetpointLimit = 0.008;
+p.controller.cascade.leanFadeTilt = 0.02;
+p.controller.cascade.leanRateLimit = 0.05;
+% Same gravity-hold feedforward as the torque path: Btilt*M = -gg*I.
+p.controller.cascade.leanHoldTorque = ...
+    p.controller.torqueLqi.robustness.leanHoldTorque;
+% Gyro-rate LPF for the noisy-IMU small-signal requirement.
+p.controller.cascade.rateFilterTimeConstant = 0.02;
+% Soft-start ramp applied to disturbance paths only (FF + PI + velocity
+% state feedback + lean reference), never to the tilt feedback itself.
+p.controller.cascade.startupTorqueRampTime = 0.4;
+% Slip guard [m/s]: when the ball-rate-derived velocity and the rover
+% velocity disagree by more than this, the ball is slipping/spinning on
+% the ground; the velocity path freezes so it cannot pump the slip.
+p.controller.cascade.slipVelocityThreshold = 0.15;
+% RelPos centering [m/s^2 per m]: leans the chassis toward the rover-
+% ball offset so the ball is re-centered by gravity.  Modest -- a
+% nonzero relPos is the correct acceleration equilibrium; the demand
+% cap keeps it a small bias next to the velocity channel.
+% Disabled: the estimator's relativePosition channel integrates
+% (rover-ball velocity) with a leak and diverges to ~4 m inside the
+% move-start transient -- any control use injects that garbage.  The
+% channel needs an estimator fix before it can carry feedback.
+p.controller.cascade.positionGain = 0;
+p.controller.cascade.positionDemandLimit = 0.02;
+% Wheel-rate damping [N*m per rad/s]: the tilt-only design carried
+% slip-mode damping through its wheel-rate columns; the cascade needs
+% it explicitly or wheel-ball slip pumps ball spin during transients.
+% 0.02 matches the legacy slipDampingGain scale.
+p.controller.cascade.wheelRateDamping = 0.02;
+% Deadzone [rad/s] on the slip rate: encoder quantization/sampleTime
+% flicker is ~3.7 rad/s; the legacy value 4.42 is measured.
+p.controller.cascade.slipDeadzone = 4.42;
+% Ball vertical-spin brake gain [N*m per rad/s of omegaBz], applied as
+% common-mode torque (sign convention measured: +common torque gives
+% -z ball accel, so braking torque = +k*omegaBz).  Fills the encoder
+% deadzone where the wheel-rate channel cannot see the spin.
+p.controller.cascade.ballSpinBrakeGain = 0.02;
+% Ball-velocity PI: allocation pinv(Bvel) gives the minimum-norm wheel
+% torque for a desired ball acceleration; the tilt loop absorbs the
+% residual tilt reaction.
+p.controller.cascade.ballVelocityAllocation = ...
+    pinv(p.controller.cascade.info.BvelNominal);
+p.controller.cascade.ballVelocityKp = 0.05;
+p.controller.cascade.ballVelocityKi = 0.3;
+p.controller.cascade.ballVelocityLeak = 0.5;
+p.controller.cascade.ballVelocityIntegralLimit = 0.5;
+% Stationary yaw gate + common-mode allocation through the measured yaw
+% B row.
+p.controller.cascade.yawGate.maxSpeed = 0.03;
+p.controller.cascade.yawGate.maxTilt = 0.02;
+p.controller.cascade.yawGate.commandThreshold = 1.0e-3;
+p.controller.cascade.yawGate.rateThreshold = 0.05;
+yawRow = [22.7010, 22.6692, 22.7372];   % measuredB0 yaw row (nominal)
+p.controller.cascade.yawAllocation = pinv(yawRow);
+p.controller.cascade.yawRateGain = 0.2;
+
 % Identifies which builder produced this set so the rev1 model InitFcn
 % can regenerate ballbotParams when a stale variant (which lacks the
 % electrical actuator fields the Simscape network requires) is left in
