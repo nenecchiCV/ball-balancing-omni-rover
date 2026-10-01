@@ -191,6 +191,24 @@ if cc.ballVelocityKi ~= 0 || cc.ballVelocityKp ~= 0
         cc.ballVelocityAllocation*correctionAccel, enable, mode, p);
 end
 
+% RelPos centering at the torque level: the lean-domain position term
+% can only move the chassis, while the escaped ball needs a direct
+% rolling torque to be pulled back (MiaPURE keeps the ball angle in the
+% inner LQR state for exactly this reason).  PD on the measured offset
+% and the relative velocity, allocated through pinv(Bvel) so the wheel
+% pattern pushes the ball with minimum-norm torque; the tilt loop
+% absorbs the reaction.  Positive convention: relPos = rover - ball, so
+% a positive demand rolls the ball toward the rover.
+if cc.positionTorqueGain ~= 0 || cc.positionTorqueDamping ~= 0
+    relativeVelocityBody = velocityBody - ballVelocityBody;
+    centeringAccel = cc.positionTorqueGain*estimate(12:13) + ...
+        cc.positionTorqueDamping*relativeVelocityBody;
+    centeringAccel = min(max(centeringAccel, ...
+        -cc.positionTorqueLimit), cc.positionTorqueLimit);
+    rawWheelCommand = rawWheelCommand + startupRamp( ...
+        cc.ballVelocityAllocation*centeringAccel, enable, mode, p);
+end
+
 % Common-mode removal: every non-yaw torque path is zero-sum by design,
 % but the residual mean pumps the ball's vertical spin (omegaBz ran
 % 0 -> 3.8 rad/s inside 0.5 s and dropped the contacts).  Subtract the

@@ -382,15 +382,20 @@ p.controller.cascade.slipVelocityThreshold = 0.15;
 % ball offset so the ball is re-centered by gravity.  Modest -- a
 % nonzero relPos is the correct acceleration equilibrium; the demand
 % cap keeps it a small bias next to the velocity channel.
-% Re-enabled: the estimator's relativePosition channel is now bounded
-% (relativePositionLimit clamp) and its ball-rate feed is zeroed by the
-% stillness gate, so the estimate is trustworthy at the millimetre
-% scale this term needs.  Without it the ball free-rolls away under the
-% chassis (observed: ball escapes ~5 mm at ~1 s, wheel unloads, tilt
-% runs away); a weak gravity centering keeps the support under the
-% body.
-p.controller.cascade.positionGain = 15.0;
+% Lean-domain centering stays off: the lean demand can only move the
+% chassis, which injects tilt disturbance faster than it re-seats the
+% ball (gain sweeps 2->15 shortened hold time).  Centering lives in the
+% direct torque channel below.
+p.controller.cascade.positionGain = 0;
 p.controller.cascade.positionDemandLimit = 0.08;
+% Direct relPos -> wheel-torque PD (MiaPURE ball-angle state): a
+% zero-sum wheel torque rolls the ball back under the chassis without
+% going through the slow lean path.  The reaction leans the chassis and
+% is absorbed by the tilt loop, so the demand is capped well inside the
+% traction budget.
+p.controller.cascade.positionTorqueGain = 30.0;
+p.controller.cascade.positionTorqueDamping = 8.0;
+p.controller.cascade.positionTorqueLimit = 0.15;
 % Wheel-rate damping [N*m per rad/s]: the tilt-only design carried
 % slip-mode damping through its wheel-rate columns; the cascade needs
 % it explicitly or wheel-ball slip pumps ball spin during transients.
