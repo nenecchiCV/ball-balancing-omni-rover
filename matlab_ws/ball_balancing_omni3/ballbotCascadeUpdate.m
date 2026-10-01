@@ -161,6 +161,19 @@ if cc.velocityStateFeedback
         -cc.stateGain(:, 5:6)*velocityState, enable, mode, p);
 end
 
+% Applied-torque feedback (delay-aware LQR term): the lag states model
+% the motor chain's first-order torque delivery, and their gain feeds
+% back the internally tracked applied torque.  Without this the lag
+% eats the phase margin of a gain set designed on an instant-torque
+% plant.
+persistent appliedTorque
+if isempty(appliedTorque) || mode ~= 1 || ~isfield(cc, "appliedTorqueGain")
+    appliedTorque = zeros(3, 1);
+end
+if isfield(cc, "appliedTorqueGain")
+    rawWheelCommand = rawWheelCommand - cc.appliedTorqueGain*appliedTorque;
+end
+
 % Gravity-hold feedforward on the commanded lean, ramped in over the
 % soft-start window together with the PI (both are disturbance paths;
 % the balance feedback keeps full authority from the first step).
@@ -277,9 +290,18 @@ if mode == 1
     wheelSpeedCommand = commonTorque + balanceTorque;
 elseif mode == 2
     wheelSpeedCommand = min(max(-p.controller.recoveryGainScale* ...
-        cc.stateGain*tiltState, -limit), limit);
+        cc.stateGain(:, 1:6)*tiltState, -limit), limit);
 elseif mode == 0
     wheelSpeedCommand = zeros(3, 1);
+end
+
+% Track the delivered torque through the same first-order lag the
+% design modelled: this is the lag state the applied-torque gain feeds
+% back next sample.
+if isfield(cc, "appliedTorqueGain") && isfield(cc, "actuatorLagTimeConstant")
+    lagWeight = p.controller.sampleTime/ ...
+        (cc.actuatorLagTimeConstant + p.controller.sampleTime);
+    appliedTorque = appliedTorque + lagWeight*(wheelSpeedCommand - appliedTorque);
 end
 
 if mode == 1

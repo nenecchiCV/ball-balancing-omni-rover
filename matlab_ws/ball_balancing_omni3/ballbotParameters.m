@@ -189,7 +189,11 @@ p.estimator.accelNormGate = 0.25*p.gravity;
 p.estimator.accelHorizontalGate = 0.03;
 p.estimator.velocityLeak = 0.9995;
 p.estimator.ballRateTimeConstant = 0.080;
-p.estimator.relativePositionLeak = 0.9998;
+% Leaky integrator, ~1.5 s fold time: the relative-velocity difference
+% of two drifting estimates accumulates a phantom offset (~1 cm in 4 s
+% measured at tau=25 s); tau=1.5 s bounds the phantom near ~1 mm while
+% real ball-escape offsets (which persist for seconds) still pass.
+p.estimator.relativePositionLeak = 0.9967;
 % Stillness gate for the ball-rate kinematic solve: below the encoder
 % flicker bound (1.2*quantization/dt ~ 4.4 rad/s) with a quiescent
 % gyro, a resting ball cannot rotate, so the solve target is forced to
@@ -198,7 +202,7 @@ p.estimator.ballRateStillWheelRate = ...
     1.2*p.encoder.quantization/p.estimator.sampleTime;
 p.estimator.ballRateStillGyroRate = 0.15;
 % Physical bound on rover-minus-ball offset [m]: ball radius scale.
-p.estimator.relativePositionLimit = 0.05;
+p.estimator.relativePositionLimit = 0.12;
 p.estimator.kinematicRegularization = 1.0e-8;
 p.estimator.contactResidualScale = 0.25;
 

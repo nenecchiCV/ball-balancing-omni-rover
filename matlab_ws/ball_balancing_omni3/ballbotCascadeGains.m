@@ -46,10 +46,30 @@ W = p.controller.lqi.wheelSpeedFromPlanarVelocity;   % 3x3: [vx;vy;yawRate]->w
 % state mainly damps relative drift, which is what walked the tilt
 % into the hold cone in the tilt-only design.
 Q = diag([1500, 1500, 150, 150, 30, 30]);
-R = 800*eye(3);
+% Control-effort sweep: the saturation cone demands ||K_tilt|| <=
+% cap/leanBand, which no single R hits reliably across the payload
+% family, so each plant produces a candidate per R value and the
+% selector picks the best feasible gain overall.
+RGrid = [400, 800, 1600, 3200, 6400, 12000];
 
-plants = cell(1, plantCount);
-gains = cell(1, plantCount);
+% Actuator-lag augmentation: each wheel torque channel gets a lag state
+% tau_i, tau_dot = (u_cmd - tau)/tauA.  tauA covers the motor's
+% electromechanical constant (30 ms) PLUS the unmodelled loop delays the
+% lag must absorb: gyro rate filter (~10 ms equivalent phase) and the
+% 5 ms sample ZOH (~2.5 ms) -- 45 ms total keeps the designed phase
+% margin honest.  The LQR then returns gains on [x(6); tau(3)] and the
+% controller tracks tau internally (it knows the commands it issued),
+% feeding back -Klag*tau_est -- the delay-aware equivalent of
+% estimating the applied torque.
+tauA = 0.045;
+if isfield(p.motor, "actuatorLagTimeConstant")
+    tauA = max(tauA, 1.5*p.motor.actuatorLagTimeConstant);
+end
+
+plants = cell(1, plantCount);      % 6-state physical plants
+plantsAug = cell(1, plantCount);   % 9-state lag-augmented plants
+candidates = {};                   % each: {gain 3x9, designPayload}
+candidateDesign = [];
 for i = 1:plantCount
     [mass, comAboveBall, tiltInertiaCom] = ...
         ballbotPayloadRoverProperties(p, payloadGrid(i));
@@ -74,14 +94,43 @@ for i = 1:plantCount
     bmp(3:4, :) = [tiltRows(1, :); -tiltRows(2, :)];
     bmp(5:6, :) = Bvel;
     plants{i} = c2d(ss(amp, bmp, eye(6), zeros(6, 3)), Ts);
-    gains{i} = dlqr(plants{i}.A, plants{i}.B, Q, R);
+    if tauA > 0
+        % Continuous lag augmentation then discretise.
+        Aa = [amp, bmp; zeros(3, 6), -eye(3)/tauA];
+        Ba = [zeros(6, 3); eye(3)/tauA];
+        sysA = c2d(ss(Aa, Ba, eye(9), zeros(9, 3)), Ts);
+        plantsAug{i} = sysA;
+        Qa = blkdiag(Q, zeros(3));
+        for rScale = RGrid
+            candidates{end + 1} = dlqr(sysA.A, sysA.B, Qa, ...
+                rScale*eye(3)); %#ok<AGROW>
+            candidateDesign(end + 1) = payloadGrid(i); %#ok<AGROW>
+        end
+    else
+        plantsAug{i} = [];
+        for rScale = RGrid
+            candidates{end + 1} = [dlqr(plants{i}.A, plants{i}.B, ...
+                Q, rScale*eye(3)), zeros(3)]; %#ok<AGROW>
+            candidateDesign(end + 1) = payloadGrid(i); %#ok<AGROW>
+        end
+    end
 end
+gains = candidates;
+designCount = numel(gains);
 
-closedLoopPoleRadius = zeros(plantCount);
-for i = 1:plantCount
+closedLoopPoleRadius = zeros(designCount, plantCount);
+for i = 1:designCount
     for j = 1:plantCount
-        closedLoopPoleRadius(i, j) = max(abs(eig( ...
-            plants{j}.A - plants{j}.B*gains{i})));
+        % Closed-loop poles on the full lag-augmented plant: the lag
+        % states feed back through Klag, so the Kx-only subsystem is not
+        % a valid stability check.
+        if ~isempty(plantsAug{j})
+            closedLoopPoleRadius(i, j) = max(abs(eig( ...
+                plantsAug{j}.A - plantsAug{j}.B*gains{i})));
+        else
+            closedLoopPoleRadius(i, j) = max(abs(eig( ...
+                plants{j}.A - plants{j}.B*gains{i}(:, 1:6))));
+        end
     end
 end
 worstPlantRadius = max(closedLoopPoleRadius, [], 2);
@@ -108,42 +157,58 @@ for i = 1:plantCount
     tiltB{i} = [tiltRows(1, :); -tiltRows(2, :)];
 end
 holdMargin = 1.3;
-feasible = false(1, plantCount);
-tiltColumn = zeros(1, plantCount);
-for i = 1:plantCount
-    tiltColumn(i) = min([norm(gains{i}(:, 1)), norm(gains{i}(:, 2))]);
-    ok = true;
-    for j = 1:plantCount
-        stiffness = eig(tiltB{j}*gains{i}(:, 1:2));
-        if any(~isreal(stiffness)) || ...
-                min(real(stiffness)) <= holdMargin*gravityGainGrid(j)
-            ok = false;
-            break
-        end
-    end
-    feasible(i) = ok;
+% Saturation cone constraint: the tilt feedback stays linear only while
+% K*theta < cap; beyond leanBand the demand clips to the traction budget
+% and the loop degenerates to bang-bang (measured: demand at 0.05 rad
+% was ~0.5 N*m vs a 0.04 N*m cap -- the loop had no linear range at
+% all).  Feasibility is checked on the TARGET payload only: floor and
+% cone do not intersect for a single gain across the whole family
+% (light builds cap out before the heavy build's floor clears), so the
+% gain is payload-scheduled -- the physical payload is bolted and known.
+% tractionLimitedWheelTorque already scales with this payload's normal
+% load (see ballbotRev1Parameters), so the target-plant cap is the field
+% itself -- no further mass scaling.
+targetIndex = find(payloadGrid >= payloadMass, 1);
+if isempty(targetIndex), targetIndex = plantCount; end
+capTarget = p.controller.tractionLimitedWheelTorque;
+leanBand = 0.015;
+tiltColumn = zeros(1, designCount);   % largest of the two tilt cols
+feasible = false(1, designCount);
+for i = 1:designCount
+    tiltColumn(i) = max([norm(gains{i}(:, 1)), norm(gains{i}(:, 2))]);
+    stiffness = eig(tiltB{targetIndex}*gains{i}(:, 1:2));
+    feasible(i) = all(isreal(stiffness)) && ...
+        min(real(stiffness)) > holdMargin*gravityGainGrid(targetIndex) && ...
+        tiltColumn(i) <= capTarget/leanBand;
 end
-% Among feasible designs pick the largest tilt column: the recoverable
-% cone is theta_cone = svd_min(Btilt)*tau_limit/gg, which narrows toward
-% the heavy end (~0.015 rad at 1 kg -- the size of the startup
-% transient), so the heaviest plant needs the most torque per radian to
-% catch the transient before it leaves the cone.  Pole radius is nearly
-% flat across the family (0.9955-0.998) and is not the discriminator.
+% Among feasible designs pick the fastest closed-loop radius on the
+% TARGET plant (the gain is payload-scheduled, so target-plant damping
+% is the objective; family radius is kept in info as a robustness
+% diagnostic).  When nothing clears floor+cone on the target, fall back
+% to the largest tilt column (maximal capture authority) as before.
+score = closedLoopPoleRadius(:, targetIndex);
 if any(feasible)
-    tiltColumn(~feasible) = -inf;
+    score(~feasible) = inf;
+    [~, chosenDesign] = min(score);
+else
+    [~, chosenDesign] = max(tiltColumn);
 end
-[~, chosenDesign] = max(tiltColumn);
-K6 = gains{chosenDesign};
+K9 = gains{chosenDesign};
+K6 = K9(:, 1:6);
+Klag = K9(:, 7:9);
 
 info = struct( ...
     'payloadGrid', payloadGrid, ...
     'closedLoopPoleRadius', closedLoopPoleRadius, ...
     'worstPlantRadius', worstPlantRadius, ...
     'chosenDesign', chosenDesign, ...
-    'chosenPayload', payloadGrid(chosenDesign), ...
+    'chosenPayload', candidateDesign(chosenDesign), ...
     'gravityGainGrid', gravityGainGrid, ...
     'holdFeasible', feasible, ...
     'tiltColumnNorm', tiltColumn, ...
+    'leanBand', leanBand, ...
+    'appliedTorqueGain', Klag, ...
+    'actuatorLagTimeConstant', tauA, ...
     'BvelNominal', forceScale*W(:, 1:2).'/(p.rover.mass + p.ball.mass + ...
         p.ball.inertia(1, 1)/p.ball.radius^2));
 end

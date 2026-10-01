@@ -7,8 +7,10 @@ function p = ballbotRev1Parameters(payloadMass)
 %
 %   p = BALLBOTREV1PARAMETERS(payloadMass) replaces the mounted payload
 %   mass [kg] and recomputes every payload-dependent plant quantity.  The
-%   LQI and PI gains intentionally stay at the nominal design so the sweep
-%   measures robustness to an unannounced load change.
+%   legacy LQI and PI gains intentionally stay at the nominal design; the
+%   cascade LQR is payload-SCHEDULED instead (its hold floor and the
+%   traction saturation cone do not intersect for a single gain across
+%   the family, and the mounted payload is physically known anyway).
 
 p = ballbotFullPlantParameters;
 
@@ -46,18 +48,18 @@ if nargin >= 1 && ~isempty(payloadMass)
         p.rover.centerAboveBall - p.fullplant.groundStaticDeflection;
 end
 % The assembled model's logged wheel-ball normal force is ~4.07 N at
-% rest, not mg/(3 sin(lat)) = 5.44 N.  Worse, the normal force dips ~50%
-% during transients, so the clamp must sit well under the nominal
-% dynamic slip threshold (mu*N*r = 0.073 N*m) or a torque command spins
-% the wheel free and the motor reaction tips the chassis.  Applies to
-% the default call too, not only payload sweeps.  The measured rest load
-% scales with supported mass, so the limit does too: heavier builds get
-% the larger traction budget their normal force can actually transmit,
-% which is what gives heavy configurations the torque headroom to leave
-% a static lean instead of stalling.
+% rest, not mg/(3 sin(lat)) = 5.44 N.  The clamp sits at 80% of the
+% nominal slip threshold: with the idealized (critically damped,
+% slip-free) contacts the transient N-dips are modest, so the earlier
+% 0.55 derating was overcautious.  Applies to the default call too, not
+% only payload sweeps.  The measured rest load scales with supported
+% mass, so the limit does too: heavier builds get the larger traction
+% budget their normal force can actually transmit, which is what gives
+% heavy configurations the torque headroom to leave a static lean
+% instead of stalling.
 p.controller.tractionLimitedWheelTorque = min( ...
     p.driver.continuousTorqueLimit, ...
-    0.55*p.contact.wheelBall.tractionEstimateFriction*4.07* ...
+    0.80*p.contact.wheelBall.tractionEstimateFriction*4.07* ...
     (p.rover.mass/(p.fullplant.payload.originalRoverMass + 0.50))* ...
     p.wheel.radius);
 
@@ -65,6 +67,14 @@ p.controller.tractionLimitedWheelTorque = min( ...
 % micro-gearmotor of this size has an electrical time constant well below
 % 1 ms; 1 mH gives tau_e = 0.53 ms against the 30 ms mechanical constant.
 p.motor.armatureInductance = 1.0e-3;
+% Effective actuator lag seen by the balance loop [s]: dominated by the
+% motor's electromechanical time constant (30 ms in the base motor
+% spec); the ~0.5 ms armature lag and 5 ms discrete ZOH are absorbed
+% into the same first-order model.  The cascade LQR design augments the
+% plant with a first-order lag of this value and feeds back the tracked
+% applied torque, so phase loss is designed in rather than discovered
+% in the sim.
+p.motor.actuatorLagTimeConstant = p.motor.timeConstant;
 
 % MDD3A logic inputs accept 3.3/5 V logic.  The averaged H-Bridge maps the
 % PWM input voltage 0..logicHighVoltage onto a 0..100% duty ratio and
@@ -120,10 +130,13 @@ p.controller.maxSpeed = p.controller.slipLimitSpeed;
 % allow the command to reach the full motor speed envelope.
 p.controller.lqi.maximumWheelSpeedCommand = ...
     p.motor.speedCommandLimit*ones(3, 1);
+% Goal: cruise at 80% of the theoretical (motor no-load) top speed =
+% 0.8*0.553 ~ 0.442 m/s, ramped trapezoidally at accelerationLimit.
 % commandScale derates the planar reference, so the profile requests the
-% value that leaves commandScale*command == maxSpeed.
+% value that leaves commandScale*command == target speed.
 p.command.profileVelocityWorld = [ ...
-    p.controller.maxSpeed/p.controller.fullplant.commandScale; 0];
+    0.8*p.controller.theoreticalMaxSpeed/ ...
+    p.controller.fullplant.commandScale; 0];
 % Simultaneous yaw request, capped by the controller at maxYawRate.
 p.command.profileYawRate = p.controller.maxYawRate;
 
@@ -360,6 +373,14 @@ p.controller.cascade.enabled = true;
 p.controller.cascade.velocityStateFeedback = false;
 [p.controller.cascade.stateGain, p.controller.cascade.info] = ...
     ballbotCascadeGains(p, payloadForDesign);
+% stateGain keeps only the physical-state columns; the lag-state
+% columns live in appliedTorqueGain and feed back the internally
+% tracked applied torque (delay-aware LQR term).
+p.controller.cascade.stateGain = p.controller.cascade.stateGain(:, 1:6);
+p.controller.cascade.appliedTorqueGain = ...
+    p.controller.cascade.info.appliedTorqueGain;
+p.controller.cascade.actuatorLagTimeConstant = ...
+    p.controller.cascade.info.actuatorLagTimeConstant;
 % Outer velocity->lean loop, same physical bounds as the torque-LQI
 % outer channel.
 p.controller.cascade.velocityLeanGain = 0.3;
@@ -395,7 +416,7 @@ p.controller.cascade.positionDemandLimit = 0.08;
 % traction budget.
 p.controller.cascade.positionTorqueGain = 30.0;
 p.controller.cascade.positionTorqueDamping = 8.0;
-p.controller.cascade.positionTorqueLimit = 0.15;
+p.controller.cascade.positionTorqueLimit = 0.30;
 % Wheel-rate damping [N*m per rad/s]: the tilt-only design carried
 % slip-mode damping through its wheel-rate columns; the cascade needs
 % it explicitly or wheel-ball slip pumps ball spin during transients.
