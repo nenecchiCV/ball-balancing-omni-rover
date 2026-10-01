@@ -408,8 +408,8 @@ p.controller.cascade.ballSpinBrakeGain = 0.02;
 % residual tilt reaction.
 p.controller.cascade.ballVelocityAllocation = ...
     pinv(p.controller.cascade.info.BvelNominal);
-p.controller.cascade.ballVelocityKp = 0.05;
-p.controller.cascade.ballVelocityKi = 0.3;
+p.controller.cascade.ballVelocityKp = 0.3;
+p.controller.cascade.ballVelocityKi = 0.5;
 p.controller.cascade.ballVelocityLeak = 0.5;
 p.controller.cascade.ballVelocityIntegralLimit = 0.5;
 % Stationary yaw gate + common-mode allocation through the measured yaw

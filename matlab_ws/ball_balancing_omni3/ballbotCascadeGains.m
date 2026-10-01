@@ -58,7 +58,14 @@ for i = 1:plantCount
     massEffective = mass + p.ball.mass + ...
         p.ball.inertia(1, 1)/p.ball.radius^2;
     tiltRows = measuredB0(1:2, :)*IpivotRef/Ipivot;
-    Bvel = W(:, 1:2).'/massEffective;                % 2x3, m/s^2 per N*m
+    % Empirical coupling: the compliant wheel-ball contact delivers only
+    % ~forceScale of the rigid power-dual force (fitted from open-loop
+    % torque steps on the Simscape plant, see p.torqueFit).
+    forceScale = 1;
+    if isfield(p, "torqueFit") && isfield(p.torqueFit, "forceScale")
+        forceScale = p.torqueFit.forceScale;
+    end
+    Bvel = forceScale*W(:, 1:2).'/massEffective;    % 2x3, m/s^2 per N*m
 
     amp = zeros(6);
     amp(1, 3) = 1; amp(2, 4) = 1;
@@ -137,6 +144,6 @@ info = struct( ...
     'gravityGainGrid', gravityGainGrid, ...
     'holdFeasible', feasible, ...
     'tiltColumnNorm', tiltColumn, ...
-    'BvelNominal', W(:, 1:2).'/(p.rover.mass + p.ball.mass + ...
+    'BvelNominal', forceScale*W(:, 1:2).'/(p.rover.mass + p.ball.mass + ...
         p.ball.inertia(1, 1)/p.ball.radius^2));
 end
