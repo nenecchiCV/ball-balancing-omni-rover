@@ -239,13 +239,29 @@ if yawActive && cc.yawRateGain ~= 0
 end
 
 limit = min(p.driver.continuousTorqueLimit, ...
-    p.controller.tractionLimitedWheelTorque)*ones(3, 1);
-wheelSpeedCommand = min(max(rawWheelCommand, -limit), limit);
-if mode == 2
+    p.controller.tractionLimitedWheelTorque);
+if mode == 1
+    % Per-wheel clipping of a zero-sum balance pattern leaves a nonzero
+    % mean, and that residual common-mode torque pumps the ball's
+    % vertical spin (observed: omegaBz 0 -> 1.3 rad/s within 0.7 s of a
+    % clean settle, all-wheel negative duty).  Split the command into
+    % the intentional common-mode part (spin brake + yaw) and the
+    % zero-sum balance part, scale the balance part UNIFORMLY into the
+    % headroom the common part leaves, then recombine -- uniform
+    % scaling preserves zero-sum exactly.
+    commonTorque = mean(rawWheelCommand);
+    balanceTorque = rawWheelCommand - commonTorque;
+    headroom = max(limit - abs(commonTorque), 0);
+    peakBalance = max(abs(balanceTorque));
+    if peakBalance > headroom
+        balanceTorque = balanceTorque*(headroom/peakBalance);
+    end
+    wheelSpeedCommand = commonTorque + balanceTorque;
+elseif mode == 2
     wheelSpeedCommand = min(max(-p.controller.recoveryGainScale* ...
         cc.stateGain*tiltState, -limit), limit);
 elseif mode == 0
-    wheelSpeedCommand(:) = 0;
+    wheelSpeedCommand = zeros(3, 1);
 end
 
 if mode == 1

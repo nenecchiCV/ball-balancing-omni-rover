@@ -50,7 +50,11 @@ p.rover.tiltInertiaCom = p.rover.bodyInertia(1) + ...
 % without a kinematic retention constraint.  A 0.20 mm preload is the
 % smallest tested value that retained contact at 17 degrees; larger values
 % (0.50 mm and above) produced excessive penalty-contact reactions.
-p.wheel.contactPreload = 2.0e-4;
+% 0.40 mm retested after the contacts became near-critically damped: the
+% deeper engagement doubles the tilt at which a wheel geometrically
+% unloads (preload depth ~ tilt*ballRadius*cos(contactLatitude)), which
+% is the margin the ball-escape transient needs.
+p.wheel.contactPreload = 4.0e-4;
 p.wheel.geometry = ballbotWheelGeometry(p);
 rollingXY = p.wheel.geometry.rollingBody(1:2, :).';
 p.controller.lqi.wheelSpeedFromPlanarVelocity = [ ...
@@ -58,7 +62,7 @@ p.controller.lqi.wheelSpeedFromPlanarVelocity = [ ...
     (p.rover.chassisRadius/p.wheel.radius)*ones(3, 1)];
 p.wheel.normalLoadNominal = ...
     p.rover.mass*p.gravity/(3*sin(p.wheel.contactLatitude));
-p.wheel.contactTorqueLimit = p.contact.wheelBall.dynamicFriction* ...
+p.wheel.contactTorqueLimit = p.contact.wheelBall.tractionEstimateFriction* ...
     p.wheel.normalLoadNominal*p.wheel.radius;
 p.controller.tractionLimitedWheelTorque = min( ...
     p.driver.continuousTorqueLimit, p.wheel.contactTorqueLimit);
@@ -75,10 +79,10 @@ p.controller.theoreticalCommandAcceleration = min([ ...
 supportedMass = p.ball.mass + p.rover.mass;
 p.fullplant.linearSpringDeflection = supportedMass*p.gravity/ ...
     p.contact.ballGround.normalStiffness;
-% The smooth transition region reduces the effective stiffness near first
-% contact.  A vertical-acceleration zero search of the actual Multibody
-% model gives this equilibrium penetration for the nominal parameters.
-p.fullplant.groundStaticDeflection = 1.43e-4;
+% Use the analytic spring sag: the previous 1.43e-4 m constant was an
+% empirical zero-search result for the old 3e5 N/m stiffness and does
+% not transfer after the contact softening.
+p.fullplant.groundStaticDeflection = p.fullplant.linearSpringDeflection;
 p.rover.initialPositionWorld(3) = p.ball.radius + ...
     p.rover.centerAboveBall - p.fullplant.groundStaticDeflection;
 p.command.velocityWorld = zeros(2, 1);

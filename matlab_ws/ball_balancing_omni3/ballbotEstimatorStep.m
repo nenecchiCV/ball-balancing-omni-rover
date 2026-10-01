@@ -96,6 +96,19 @@ end
 regularization = p.estimator.kinematicRegularization;
 ballRateKinematic = (kinematicMatrix'*kinematicMatrix + ...
     regularization*eye(3))\(kinematicMatrix'*kinematicRightSide);
+% Stillness gate: when every wheel rate sits inside the encoder
+% quantization flicker band and the gyro is quiescent the assembly is
+% at rest, and a ball resting on the ground cannot sustain rotation --
+% any nonzero solve at that point is quantization noise, not spin.
+% Without this the flicker (~3.7 rad/s per sample) writes ~1 rad/s of
+% phantom ball rate into every downstream channel (spin brake, ball
+% velocity, relPos).
+assemblyStill = max(abs(wheelRate)) <= ...
+    p.estimator.ballRateStillWheelRate && ...
+    norm(gyroBody) <= p.estimator.ballRateStillGyroRate;
+if assemblyStill
+    ballRateKinematic(:) = 0;
+end
 filterWeight = dt/(p.estimator.ballRateTimeConstant + dt);
 ballRateWorld = ballRateWorldPrevious + ...
     filterWeight*(ballRateKinematic - ballRateWorldPrevious);
@@ -109,6 +122,15 @@ relativePositionWorldPrevious = rotationWorldFromYaw* ...
     relativePositionBodyPrevious;
 relativePositionWorld = p.estimator.relativePositionLeak* ...
     relativePositionWorldPrevious + dt*relativeVelocityWorld(1:2);
+% Physical bound: the rover cannot be further from the ball than the
+% ball radius plus the contact latitude sag -- a larger estimate is
+% always integrator windup, and unbounded values poison every relPos
+% consumer.
+relativePositionNorm = norm(relativePositionWorld);
+if relativePositionNorm > p.estimator.relativePositionLimit
+    relativePositionWorld = relativePositionWorld* ...
+        (p.estimator.relativePositionLimit/relativePositionNorm);
+end
 relativePositionBody = rotationWorldFromYaw'*relativePositionWorld;
 
 residual = kinematicMatrix*ballRateWorld - kinematicRightSide;

@@ -130,27 +130,36 @@ p.rover.initialPositionWorld = [0; 0; ...
 p.rover.initialEulerWorld = deg2rad([0; 0; 0]);
 p.rover.noseAxisBody = [1; 0; 0];
 
-% Penalty contacts. Friction values are calibration starting points.
-p.contact.wheelBall.normalStiffness = 2.0e5;
-p.contact.wheelBall.normalDamping = 250;
+% Penalty contacts, idealized environment: near-critically damped normals
+% kill the settle bounce (bare values gave zeta ~0.1-0.4, the seed of the
+% startup tipping mode), and high fixed friction makes slip impossible.
+% The wheel-slip acceleration limit the controller must respect is NOT
+% modeled here -- it lives in tractionLimitedWheelTorque below, which keeps
+% the physical mu=0.75 estimate even though the contact itself cannot slip.
+p.contact.wheelBall.normalStiffness = 2.0e4;
+p.contact.wheelBall.normalDamping = 200;   % ~critical for k=2e4, m~0.5 kg/wheel
 p.contact.wheelBall.transitionWidth = 5.0e-4;
 % Relaxed value used by the cascade model to reduce contact-state chatter.
 p.contact.wheelBall.relaxedTransitionWidth = 1.5e-3;
-p.contact.wheelBall.staticFriction = 0.90;
-p.contact.wheelBall.dynamicFriction = 0.75;
+p.contact.wheelBall.staticFriction = 2.0;
+p.contact.wheelBall.dynamicFriction = 2.0;
 p.contact.wheelBall.rollerFriction = 0.02;
 p.contact.wheelBall.criticalVelocity = 5.0e-3;
-p.contact.ballGround.normalStiffness = 3.0e5;
-p.contact.ballGround.normalDamping = 180;
+p.contact.ballGround.normalStiffness = 3.0e4;
+p.contact.ballGround.normalDamping = 500;  % ~critical for k=3e4, m~1.8 kg
 p.contact.ballGround.transitionWidth = 5.0e-4;
-p.contact.ballGround.staticFriction = 0.90;
-p.contact.ballGround.dynamicFriction = 0.80;
+p.contact.ballGround.staticFriction = 2.0;
+p.contact.ballGround.dynamicFriction = 2.0;
 p.contact.ballGround.criticalVelocity = 5.0e-3;
 
 geometry = ballbotWheelGeometry(p);
 p.wheel.normalLoadNominal = ...
     p.rover.mass*p.gravity/(3*sin(p.wheel.contactLatitude));
-p.wheel.contactTorqueLimit = p.contact.wheelBall.dynamicFriction* ...
+% Controller-side traction budget: keep the PHYSICAL mu of the real
+% wheel-ball pair so the torque cap still encodes the wheel-slip limit,
+% independent of the idealized (slip-free) contact friction above.
+p.contact.wheelBall.tractionEstimateFriction = 0.75;
+p.wheel.contactTorqueLimit = p.contact.wheelBall.tractionEstimateFriction* ...
     p.wheel.normalLoadNominal*p.wheel.radius;
 % Limit the actuator command by the servo capability.  The former limit
 % also clipped it to the nominal wheel-ball traction torque (about
@@ -179,8 +188,17 @@ p.estimator.accelNormGate = 0.25*p.gravity;
 % truly at rest.
 p.estimator.accelHorizontalGate = 0.03;
 p.estimator.velocityLeak = 0.9995;
-p.estimator.ballRateTimeConstant = 0.030;
+p.estimator.ballRateTimeConstant = 0.080;
 p.estimator.relativePositionLeak = 0.9998;
+% Stillness gate for the ball-rate kinematic solve: below the encoder
+% flicker bound (1.2*quantization/dt ~ 4.4 rad/s) with a quiescent
+% gyro, a resting ball cannot rotate, so the solve target is forced to
+% zero instead of amplifying quantization noise into phantom spin.
+p.estimator.ballRateStillWheelRate = ...
+    1.2*p.encoder.quantization/p.estimator.sampleTime;
+p.estimator.ballRateStillGyroRate = 0.15;
+% Physical bound on rover-minus-ball offset [m]: ball radius scale.
+p.estimator.relativePositionLimit = 0.05;
 p.estimator.kinematicRegularization = 1.0e-8;
 p.estimator.contactResidualScale = 0.25;
 

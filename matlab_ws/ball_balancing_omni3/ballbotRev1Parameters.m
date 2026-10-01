@@ -20,7 +20,7 @@ if nargin >= 1 && ~isempty(payloadMass)
         p.rover.comAboveBall - p.rover.centerAboveBall;
     p.wheel.normalLoadNominal = ...
         p.rover.mass*p.gravity/(3*sin(p.wheel.contactLatitude));
-    p.wheel.contactTorqueLimit = p.contact.wheelBall.dynamicFriction* ...
+    p.wheel.contactTorqueLimit = p.contact.wheelBall.tractionEstimateFriction* ...
         p.wheel.normalLoadNominal*p.wheel.radius;
     p.controller.theoreticalTractionAcceleration = sqrt(3)* ...
         p.controller.tractionLimitedWheelTorque/(p.wheel.radius* ...
@@ -32,12 +32,10 @@ if nargin >= 1 && ~isempty(payloadMass)
     supportedMass = p.ball.mass + p.rover.mass;
     p.fullplant.linearSpringDeflection = supportedMass*p.gravity/ ...
         p.contact.ballGround.normalStiffness;
-    % Scale the empirically fitted static deflection with the supported
-    % mass; the reference value was measured at the nominal payload.
-    nominalSupportedMass = p.ball.mass + ...
-        p.fullplant.payload.originalRoverMass + 0.50;
-    p.fullplant.groundStaticDeflection = 1.43e-4* ...
-        supportedMass/nominalSupportedMass;
+    % Static deflection is the analytic spring sag under the supported
+    % mass (the previous 1.43e-4 m constant was an empirical fit for the
+    % old 3e5 N/m stiffness and does not transfer across stiffness).
+    p.fullplant.groundStaticDeflection = p.fullplant.linearSpringDeflection;
     % Rover origin is the CHASSIS frame, which sits centerAboveBall above
     % the ball centre regardless of where the payload moved the combined
     % COM.  Using comAboveBall here lifted the chassis ~36-68 mm and the
@@ -59,7 +57,7 @@ end
 % a static lean instead of stalling.
 p.controller.tractionLimitedWheelTorque = min( ...
     p.driver.continuousTorqueLimit, ...
-    0.55*p.contact.wheelBall.dynamicFriction*4.07* ...
+    0.55*p.contact.wheelBall.tractionEstimateFriction*4.07* ...
     (p.rover.mass/(p.fullplant.payload.originalRoverMass + 0.50))* ...
     p.wheel.radius);
 
@@ -384,12 +382,15 @@ p.controller.cascade.slipVelocityThreshold = 0.15;
 % ball offset so the ball is re-centered by gravity.  Modest -- a
 % nonzero relPos is the correct acceleration equilibrium; the demand
 % cap keeps it a small bias next to the velocity channel.
-% Disabled: the estimator's relativePosition channel integrates
-% (rover-ball velocity) with a leak and diverges to ~4 m inside the
-% move-start transient -- any control use injects that garbage.  The
-% channel needs an estimator fix before it can carry feedback.
-p.controller.cascade.positionGain = 0;
-p.controller.cascade.positionDemandLimit = 0.02;
+% Re-enabled: the estimator's relativePosition channel is now bounded
+% (relativePositionLimit clamp) and its ball-rate feed is zeroed by the
+% stillness gate, so the estimate is trustworthy at the millimetre
+% scale this term needs.  Without it the ball free-rolls away under the
+% chassis (observed: ball escapes ~5 mm at ~1 s, wheel unloads, tilt
+% runs away); a weak gravity centering keeps the support under the
+% body.
+p.controller.cascade.positionGain = 15.0;
+p.controller.cascade.positionDemandLimit = 0.08;
 % Wheel-rate damping [N*m per rad/s]: the tilt-only design carried
 % slip-mode damping through its wheel-rate columns; the cascade needs
 % it explicitly or wheel-ball slip pumps ball spin during transients.
