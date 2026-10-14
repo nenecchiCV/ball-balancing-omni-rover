@@ -141,7 +141,12 @@ p.command.accelerationLimit = 0.03;
 % braking torque margin is thinner (decel drives the chassis pitch-back
 % that kicks the ball forward), so the ramp-down gets its own gentler
 % limit.  ballbotRev1CommandProfile applies it to the move-window tail.
-p.command.decelerationLimit = 0.02;
+% Measured at the mu_est=1.0 traction budget: 0.02 dies in the first
+% stop window (~15 s, ball still rolling 0.24 m/s rolls out sideways),
+% 0.01 roughly doubles survival (~39-41 s, mid cycle 3).  0.005 is
+% worse again -- too-slow decel enters the stop phase with even more
+% residual ball speed, so do not simply keep reducing it.
+p.command.decelerationLimit = 0.01;
 
 % Slip-limit cruise speed: the wheel speed where the motor torque-speed
 % curve crosses the wheel-ball contact torque limit mu_d*N_nom*Rw.
@@ -295,13 +300,20 @@ p.controller.torqueDrive.slipDampingGain = 0.02;
 % Enabled: the yaw-damper/ball-brake pump is now removed and the inner
 % loop holds machine-zero tilt, so the lean channel is the only physical
 % translation actuator.  leanSetpointLimit must sit well inside the
-% measured torque-limited hold cone (~0.023 rad): a 0.02 rad demand at
-% 87% of the cone tipped at t ~1 s because any tilt overshoot past the
-% cone is unrecoverable (gravity pole ~6.4 rad/s, ~150 ms e-folding).
-% 0.008 rad covers the 0.06 m/s^2 ramp demand (~0.006 rad) with ~35%
-% margin for transient overshoot.
+% torque-limited hold cone (~0.023 rad measured at the mu_est=0.75
+% clamp; the cone scales with the traction budget, widening to ~0.031
+% rad at mu_est=1.0): a lean demand near the cone edge tips at t ~1 s
+% because any tilt overshoot past the cone is unrecoverable (gravity
+% pole ~6.4 rad/s, ~150 ms e-folding).  0.016 rad is about half the
+% widened cone and lifts the gravity-drive speed cap that throttled the
+% ball to ~0.13 m/s at the 0.008 rad setting.
 p.controller.torqueDrive.velocityLeanGain = 0.3;
-p.controller.torqueDrive.leanSetpointLimit = 0.008;
+p.controller.torqueDrive.leanSetpointLimit = 0.016;
+% Command-acceleration feedforward gain on the lean demand: the ramped
+% command needs lean ~a_cmd/g (0.003 rad at 0.03 m/s^2), far below the
+% P-error saturation cap, so feedforward carries the nominal lean and
+% the error term only trims tracking lag.  1.0 is the model value.
+p.controller.torqueDrive.accelFeedforwardGain = 1.0;
 % Tilt overshoot guard for the lean channel: once the measured tilt
 % exceeds the demanded lean by leanFadeTilt the demand fades to zero, so
 % a cone-exceeding excursion stops adding forward acceleration bias.
@@ -396,16 +408,28 @@ p.controller.torqueDrive.positionDampingGain = 0;
 % common-mode residual of saturated torque patterns; the accumulated
 % spin is what walked the cruise tilt into the cone (~0.01 -> 0.02 rad
 % per move leg) and unloads a wheel past ~0.2 m/s.  0.06 removed the
-% cruise tilt walk entirely in tests (tilt flat <=0.011 rad through the
-% whole leg); 0.02 let it resume, and larger gains saturate the traction
-% budget without extending the ~0.2 m/s envelope.
-p.controller.torqueDrive.ballYawGain = 0.06;
+% cruise tilt walk at the mu_est=0.75 budget; with the raised mu_est=1.0
+% traction budget, 0.12 damps the spin residual faster without starving
+% the balance channels (the clamp is ~33% wider, so the brake's share
+% is affordable).
+p.controller.torqueDrive.ballYawGain = 0.12;
+% Brake torque cap [N*m]: the spin brake is a common-mode term, so at
+% |oBz| ~0.5 rad/s the uncapped request (~0.06 N*m) would eat most of
+% the ~0.078 N*m traction clamp and cancel the zero-sum tilt pattern on
+% the wheels where they disagree -- measured: the first stop transition
+% starved the roll channel this way.  0.025 leaves the brake effective
+% against spin buildup while keeping ~2/3 of the budget for attitude.
+p.controller.torqueDrive.ballYawTorqueLimit = 0.025;
 % Passive yaw damper during translation [N*m common-mode per rad/s of
 % yaw rate]: the gated yaw channel is off while a translation command
 % is active and ball z-spin drags the chassis yaw, rotating the push
 % direction sideways.  Gated to commandSpeed > 0 so standstill sees no
-% yaw/gyro-noise limit cycle.
-p.controller.torqueDrive.yawDampingGain = 0.02;
+% yaw/gyro-noise limit cycle.  0.02 was far too weak: at cruise the
+% chassis yawed ~0.2 rad/s (~90 deg per 10 s), sweeping the wheel loads
+% periodically until a wheel unloaded -- the dominant low-speed cruise
+% failure.  0.10-0.30 all held cruise 15 s at <=0.011 rad tilt; 0.30
+% keeps the drift fully damped without measurable budget cost.
+p.controller.torqueDrive.yawDampingGain = 0.30;
 
 % Diagnostic: feed plant truth (roverPose/ballPose) through TruthGate
 % instead of the estimator output, to separate estimator error from

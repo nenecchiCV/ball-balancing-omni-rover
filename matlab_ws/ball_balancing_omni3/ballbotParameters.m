@@ -8,11 +8,15 @@ p.ball.radius = 0.050;
 p.ball.mass = 0.285;
 p.ball.inertia = (2/3)*p.ball.mass*p.ball.radius^2*eye(3);
 
-% Nexus Robot 14108 omniwheel.
+% goBILDA/ServoCity 48 mm omniwheel (3624-4008-0048, 8 mm REX bore):
+% two staggered rows of six 50A-durometer rubber rollers; the second row
+% bridges the roller gaps, so contact is effectively continuous around
+% the circumference (vs the previous single-row Nexus 14108).  Overall
+% width 18 mm from the manufacturer's schematic.
 p.wheel.radius = 0.024;
-p.wheel.width = 0.0251;
-p.wheel.mass = 0.039;
-p.wheel.rollerCount = 8;
+p.wheel.width = 0.018;
+p.wheel.mass = 0.032;
+p.wheel.rollerCount = 12;
 p.wheel.azimuth = deg2rad([0; 120; 240]);
 % Coaxial outward pod layout uses the maximum practical latitude.
 p.wheel.contactLatitude = deg2rad(65);
@@ -207,7 +211,11 @@ p.wheel.normalLoadNominal = ...
 % Controller-side traction budget: keep the PHYSICAL mu of the real
 % wheel-ball pair so the torque cap still encodes the wheel-slip limit,
 % independent of the idealized (slip-free) contact friction above.
-p.contact.wheelBall.tractionEstimateFriction = 0.75;
+% 50A-durometer rubber rollers on a rubber-sprayed ball: rubber-on-rubber
+% static friction is ~1.0-1.5 clean/dry (kinetic ~0.8-1.1), so 1.0 is a
+% conservative design point until the slip-onset torque is measured on
+% the real pair.  Revisit upward only with bench data.
+p.contact.wheelBall.tractionEstimateFriction = 1.0;
 p.wheel.contactTorqueLimit = p.contact.wheelBall.tractionEstimateFriction* ...
     p.wheel.normalLoadNominal*p.wheel.radius;
 % Limit the actuator command by the servo capability.  The former limit

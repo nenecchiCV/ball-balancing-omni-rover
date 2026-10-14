@@ -201,6 +201,28 @@ if torqueDrive
         ballVelocityBody = rotationBodyFromWorld*ballVelocityWorld;
         velocityErrorBody = commandVelocityBody - ballVelocityBody;
         accelerationDemand = velocityLeanGain*velocityErrorBody;
+        % Command-acceleration feedforward: a saturated P demand parks
+        % the lean at its cap, which drives the ball ~3-5x harder than
+        % the ramped command needs -- the ball overshoots the command,
+        % the demand flips sign, and the momentum-transfer kicks ring the
+        % tilt loop until it exits the cone (observed as accel-phase
+        % divergence ~0.2-0.3 m/s at every traction setting).  Feeding
+        % the command's own acceleration forward supplies the lean the
+        % ramp actually needs, so the error term stays in its linear
+        % range and only trims residual lag.
+        if isfield(p.controller.torqueDrive, "accelFeedforwardGain") && ...
+                p.controller.torqueDrive.accelFeedforwardGain ~= 0
+            persistent prevCommandVelocity
+            if isempty(prevCommandVelocity) || mode ~= 1
+                prevCommandVelocity = commandVelocityBody;
+            end
+            commandAccelBody = (commandVelocityBody - ...
+                prevCommandVelocity)/p.controller.sampleTime;
+            prevCommandVelocity = commandVelocityBody;
+            accelerationDemand = accelerationDemand + ...
+                p.controller.torqueDrive.accelFeedforwardGain* ...
+                commandAccelBody;
+        end
         % Ball-tracking through the same lean channel: relPos = rover -
         % ball.  A positive offset (rover ahead of the ball) means the
         % lean has pushed the chassis beyond the ball, which is the
@@ -363,9 +385,18 @@ if torqueDrive
     ballYawGain = p.controller.torqueDrive.ballYawGain;
     if ballYawGain ~= 0
         % +common torque accelerates the ball toward -z (measured), so
-        % braking a -z spin needs torque of the same sign as oBz.
-        rawWheelCommand = rawWheelCommand + ballYawGain*estimate(11)* ...
-            ones(3, 1);
+        % braking a -z spin needs torque of the same sign as oBz.  The
+        % term is capped: the brake is common-mode on all three wheels,
+        % so an uncapped request cancels the zero-sum tilt correction on
+        % the wheels where they disagree and starves the attitude loop
+        % exactly when a transition needs it most.
+        ballYawTorque = ballYawGain*estimate(11);
+        if isfield(p.controller.torqueDrive, "ballYawTorqueLimit")
+            ballYawTorque = min(max(ballYawTorque, ...
+                -p.controller.torqueDrive.ballYawTorqueLimit), ...
+                p.controller.torqueDrive.ballYawTorqueLimit);
+        end
+        rawWheelCommand = rawWheelCommand + ballYawTorque*ones(3, 1);
     end
     % Passive yaw damper during translation: the gated yaw channel is
     % off while a translation command is active, and ball z-spin drags

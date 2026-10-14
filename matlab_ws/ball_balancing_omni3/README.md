@@ -2,7 +2,7 @@
 
 > このブランチは MATLAB R2024b 対応版です。`ball_balancing_omni3_multibody_lqi_rev1.slx` は R2024b 形式で保存されており、R2024b (Update 9) で開いて利用できます。
 
-`ball_balancing_omni3_multibody_lqi_rev1.slx` は、直径100 mm、質量285 gの薄肉球、3個のNexus 14108オムニホイール、3個のDFRobot FIT0521エンコーダー付きDCモータ、2枚のCytron MDD3A、上部ペイロードで構成する閉ループSimscape Multibodyモデルです。本モデルをシステムの正本とします。
+`ball_balancing_omni3_multibody_lqi_rev1.slx` は、直径100 mm、質量285 gの薄肉球（ゴムスプレー被覆を想定）、3個のServoCity/goBILDA 48 mmオムニホイール（φ48 mm、32 g、全幅18 mm、50Aデュロメータのゴムローラー2列）、3個のDFRobot FIT0521エンコーダー付きDCモータ、2枚のCytron MDD3A、上部ペイロードで構成する閉ループSimscape Multibodyモデルです。本モデルをシステムの正本とします。
 
 ## 正本モデル
 
