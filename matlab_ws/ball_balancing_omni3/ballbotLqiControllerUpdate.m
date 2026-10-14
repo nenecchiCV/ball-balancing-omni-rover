@@ -510,6 +510,26 @@ if torqueDrive
     limit = min(p.driver.continuousTorqueLimit, ...
         p.controller.tractionLimitedWheelTorque)*ones(3, 1);
     wheelSpeedCommand = min(max(rawWheelCommand, -limit), limit);
+    % Torque slew limit: the LQI+bang-bang commands flip rail to rail
+    % in one sample at cruise, and the resulting torque square wave is
+    % what pumps the limit cycle past the ~0.13 m/s wall (raising the
+    % traction budget makes it worse -- the amplitude, not the
+    % resource, is the problem).  The real motor current cannot step
+    % anyway (winding inductance), so rate-limiting the command is a
+    % physically faithful damping of the relay.
+    if isfield(p.controller.torqueDrive, "torqueSlewLimit") && ...
+            p.controller.torqueDrive.torqueSlewLimit > 0 && mode == 1
+        persistent prevTorqueCommand
+        if isempty(prevTorqueCommand) || ~enable
+            prevTorqueCommand = zeros(3, 1);
+        end
+        torqueStep = p.controller.torqueDrive.torqueSlewLimit* ...
+            p.controller.sampleTime;
+        wheelSpeedCommand = prevTorqueCommand + ...
+            min(max(wheelSpeedCommand - prevTorqueCommand, ...
+                -torqueStep), torqueStep);
+        prevTorqueCommand = wheelSpeedCommand;
+    end
     if mode == 2
         rawWheelCommand = -p.controller.recoveryGainScale* ...
             lqi.stateGain*state - ...

@@ -404,7 +404,13 @@ p.controller.torqueDrive.propulsionRelVelGain = 0;
 % bleeds off smoothly (vB 0.24 -> 0.05 over the stop window) and the
 % stop phase survives; the residual failure moves into the next move
 % leg.  0 disables.
-p.controller.torqueDrive.stopFollowGain = 0.8;
+p.controller.torqueDrive.stopFollowGain = 0.75;
+% Torque slew rate limit [N*m/s] on the final wheel-torque command:
+% tried as a cure for the clamp-level bang-bang limit cycle that sets
+% the ~0.13 m/s cruise wall -- REJECTED, 1.5/3/6 N*m/s gave tFall
+% 7.8/14.5/11.6 s vs 12.7 s unlimited at 0.15 m/s (no gain, slower adds
+% lag).  Ships disabled; kept for future retuning hooks.
+p.controller.torqueDrive.torqueSlewLimit = 0;
 % Channel 2, station keeping: tau += W*(positionGain*s +
 % positionDampingGain*sDot).  The open-loop offset dynamics measure
 % s2 ~= -8.7*c [m/s^2 per N*m coefficient], but inside the tilt loop the
