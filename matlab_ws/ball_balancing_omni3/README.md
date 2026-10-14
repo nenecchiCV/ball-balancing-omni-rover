@@ -48,7 +48,7 @@ flowchart LR
 | サブシステム | 役割 | 主な内容 |
 |---|---|---|
 | `Environment` | 世界座標・ソルバー・床面 | `World`、`SolverConfig`、`MechanismConfig`、`GroundFrame`、`GroundPlane` |
-| `Ball` | 球剛体と球―床接触 | `BallFreeJoint`、`BallSolid`、`BallGroundContact`、位置・姿勢の物理信号計測 |
+| `Ball` | 球剛体と球―床接触 | `BallFreeJoint`、`BallSolid`、`BallGroundContact`、位置・姿勢の物理信号計測、実行時追加の転がり抵抗負荷（`ballbotRev1PlantAugment`） |
 | `RoverChassis` | 機体・ペイロード・モータハウジング | `RoverFreeJoint`、`ChassisSolid`、`PayloadRodMount`＋`PayloadRod500g`、`Motor1..3Solid`、位置・加速度・角速度・姿勢の物理信号計測 |
 | `WheelAssembly1..3` | 車輪回転自由度・車輪固体・輪―球接触 | `WheelNMount`、`WheelNJoint`、`WheelNSolid`、`WheelNBallContact`、回転変位・接触状態・法線力・すべりの計測変換 |
 
@@ -80,7 +80,9 @@ LQIゲインは `ballbotRobustTorqueGains` が設計します。実測トルク�
 | `ballbotReducedPlantDynamics.m` | `ballbotDesignLqi` から呼出し | 縮約10状態プラントの非線形動力学 |
 | `ballbotTorquePlantDynamics.m` | `ballbotDesignTorqueLqi` から呼出し | トルク入力縮約プラントの非線形動力学 |
 | `ballbotPayloadRoverProperties.m` | パラメーター初期化 | ペイロード→質量/重心/慣性の換算 |
-| `ballbotRev1CommandProfile.m` | `CommandSource` | 移動/停止繰り返し＋ヨー時間分離指令プロファイル |
+| `ballbotRev1CommandProfile.m` | `CommandSource` | 移動/停止繰り返し＋ヨー時間分離指令プロファイル（加減速別レート制限） |
+| `ballbotRev1PlantAugment.m` | `ballbotRev1Parameters` から呼出し（実行時） | 球―床転がり抵抗を `External Force and Torque` で実行時追加（.slx は R2024b 形式を維持） |
+| `ballbotRollingResistance.m` | `Ball/BallRollResFcn` | 球速度・球スピン・法線力から転がり抵抗の力/トルクを算出 |
 | `ballbotCustomFriction.m` | `WheelAssembly/WheelContact` | 駆動方向とローラー方向を分離した異方性接触摩擦 |
 | `ballbotIdealImu.m` / `ballbotImuFromJoint.m` | `MultibodyPlant/IdealIMU` | 6-DOF Joint真値から比力・角速度を生成 |
 | `ballbotWheelRateFromDisplacement.m` | `Controller/WheelSpeedSensing` | 車輪回転変位を5 ms後退差分して回転速度を算出 |
@@ -127,14 +129,14 @@ out = sim(in);
 | シナリオ | 結果 |
 |---|---|
 | シミュレーション速度 | `ballbotRev1SimConfig` 適用で実行時間 ~4倍改善（MDD3A 回生モードの方程式切替排除が主因） |
-| ゼロ指令直立保持（ペイロードなし） | 5 s 完走・転倒なし（tilt 最大 ~0.007 rad、機械静粛レベル） |
-| ペイロード 0.5–1.0 kg 保持 | 5 s 完走・転倒なし（0.5 kg: ~0.007 rad、1.0 kg: ~0.010 rad） |
-| 移動フェーズ（ペイロードなし） | 実効 ~0.10–0.16 m/s の加速・巡航は追従（~7.5 sまで傾斜 ~0.011 rad）。減速過渡でボール速度 ~0.2 m/s に達すると接触包絡を超えて転倒する既知限界は残る |
+| ゼロ指令直立保持（ペイロードなし） | 5 s 完走・転倒なし（tilt 最大 ~0.000 rad — 転がり抵抗が微小ドリフトまで吸収し完全静止） |
+| ペイロード 0.5–1.0 kg 保持 | 5 s 完走・転倒なし（0.5 kg: ~0.000 rad、1.0 kg: ~0.010 rad） |
+| 移動フェーズ（ペイロードなし） | 実効 ~0.10 m/s の加速・巡航は追従（傾斜 ~0.017 rad）。減速過渡でボール速度 ~0.2 m/s に達すると接触包絡を超えて転倒する既知限界は残る |
 | MATLAB単体試験 | `ballbotEstimatorStepTest` 16件、`ballbotParametersTest` 3件が合格 |
 
 既知の残課題:
 
-- 0.306 m/s 定速走行・移動/停止繰り返しは未達成。ボール速度 ~0.2 m/s が接触包絡の壁（1輪の脱輪→接触崩壊→転倒）で、加速は追従しても減速時の運動量移行（車体ピッチバック→ボール前射出）で壁へ到達する。プラント側にボール転がり抵抗がないため惰性走行を散逸する受動経路がなく、制動トルク反力がそのまま車体ピッチバックになる構造限界。真値フィードバック・接触プリロード増量・全補助チャネルoffでも同一の壁が出ることを確認済み。
-- 有効速度帯は狭い: 下はエンコーダー量子化ブラインド帯（輪速 ~4.4 rad/s未満＝ボール ~0.13 m/sでフィルタ済み静止判定が正規転動を潰し速度推定が止まる）、上は ~0.2 m/sの接触壁。
+- 0.306 m/s 定速走行・移動/停止繰り返しは未達成。ボール速度 ~0.2 m/s が接触包絡の壁（1輪の脱輪→接触崩壊→転倒）で、加速は追従しても減速時の運動量移行（車体ピッチバック→ボール前射出）で壁へ到達する。球―床転がり抵抗（μr=0.005、実機想定値域）を追加し惰行散逸経路を実装したが、減速コーナーでのボール追い越しは残る。転がり抵抗強化（0.007–0.01）は減速キックを一部抑えるがボール追従遅れが増して相殺されることを実測確認済み。真値フィードバック・接触プリロード増量・全補助チャネルoffでも同一の壁が出ることを確認済み。
+- 有効速度帯は狭い: 下はエンコーダー量子化由来の静止判定閾値（フィルタ済み輪速 0.8 rad/s＝ボール ~0.026 m/s未満で速度推定がドレインへ切替わる）、上は ~0.2 m/sの接触壁。
 - LQRの速度状態列は非最小位相経路（ボール逆蹴りで車体前傾）を選択するため既定で無効（`velocityStateFeedback=false`）。速度追従は外側リーンループと輪速サーボ推進が担当。
 - ボール鉛直スピンのポンプ機構はコモンモード残差除去＋スピンブレーキ（`ballYawGain=0.06`）で抑制済み（巡航中の傾斜歩行を消去）。

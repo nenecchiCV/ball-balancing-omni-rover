@@ -160,6 +160,25 @@ p.contact.ballGround.transitionWidth = 5.0e-4;
 p.contact.ballGround.staticFriction = 2.0;
 p.contact.ballGround.dynamicFriction = 2.0;
 p.contact.ballGround.criticalVelocity = 5.0e-3;
+% Ball-ground rolling resistance: a real hollow ball rolling on the
+% floor loses energy through contact-patch hysteresis and scrub -- a
+% horizontal drag opposing translation and a small torque on the
+% vertical spin.  The point contact above resists only sliding, so
+% without this term a coasting ball never sheds momentum.  Applied via
+% ballbotRev1PlantAugment + ballbotRollingResistance as an external
+% load scaled by the sensed normal force (vanishes when airborne).
+% rollingFriction is the effective drag coefficient: hollow
+% plastic/rubber balls sit around 0.005-0.02.  0.005 balances passive
+% surge absorption against tracking -- 0.01 over-damped the ball (it
+% lagged the command and the offset crept the contact envelope), 0.003
+% let the decel kick through.
+p.contact.ballGround.rollingFriction = 0.005;
+p.contact.ballGround.rollingCriticalVelocity = 5.0e-3;
+% spinScrubArm [m]: effective lever arm for the contact-patch scrubbing
+% torque on vertical ball spin.  The patch radius at nominal sag is
+% ~5 mm; half of it is a conservative arm.
+p.contact.ballGround.spinScrubArm = 1.0e-3;
+p.contact.ballGround.spinScrubCriticalRate = 0.5;
 
 geometry = ballbotWheelGeometry(p);
 p.wheel.normalLoadNominal = ...

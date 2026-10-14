@@ -19,12 +19,22 @@ if isfield(p.command, "cyclesEnabled") && p.command.cyclesEnabled
         yawTarget = p.command.profileYawRate;
     end
     speed = norm(target);
-    rampTime = min(speed/accel, p.command.cycleMoveDuration/2);
-    if speed <= 0 && abs(yawTarget) > 0
-        rampTime = min(abs(yawTarget)/accel, ...
-            p.command.cycleMoveDuration/2);
+    % Braking is asymmetric with acceleration: deceleration transfers
+    % chassis momentum into the ball and the braking torque margin is
+    % thinner than the drive margin, so a separate (gentler) limit keeps
+    % the stop transient inside the hold cone.
+    decel = accel;
+    if isfield(p.command, "decelerationLimit")
+        decel = p.command.decelerationLimit;
     end
-    if rampTime <= 0 || (speed <= 0 && yawTarget == 0)
+    rampUp = min(speed/accel, p.command.cycleMoveDuration/2);
+    rampDown = min(speed/decel, p.command.cycleMoveDuration/2);
+    if speed <= 0 && abs(yawTarget) > 0
+        rampUp = min(abs(yawTarget)/accel, ...
+            p.command.cycleMoveDuration/2);
+        rampDown = rampUp;
+    end
+    if rampUp <= 0 || (speed <= 0 && yawTarget == 0)
         command(1:2) = [0; 0];
         command(3) = 0;
         return
@@ -40,12 +50,12 @@ if isfield(p.command, "cyclesEnabled") && p.command.cyclesEnabled
     if time >= p.command.cycleStart && time < tEnd
         phase = mod(time - p.command.cycleStart, period);
         moveEnd = p.command.cycleMoveDuration;
-        if phase < rampTime
-            fraction = phase/rampTime;
-        elseif phase < moveEnd - rampTime
+        if phase < rampUp
+            fraction = phase/rampUp;
+        elseif phase < moveEnd - rampDown
             fraction = 1;
         elseif phase < moveEnd
-            fraction = (moveEnd - phase)/rampTime;
+            fraction = (moveEnd - phase)/rampDown;
         else
             fraction = 0;
         end

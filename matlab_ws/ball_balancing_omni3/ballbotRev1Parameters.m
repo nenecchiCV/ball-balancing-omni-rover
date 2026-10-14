@@ -14,6 +14,14 @@ function p = ballbotRev1Parameters(payloadMass)
 
 p = ballbotFullPlantParameters;
 
+% Plant augmentation (ball-ground rolling resistance) is applied at
+% runtime so the .slx stays in R2024b format.  InitFcn calls this
+% function at every simulation start, so augmenting here covers the
+% GUI-run path too; guarded for param builds with no model loaded.
+if bdIsLoaded('ball_balancing_omni3_multibody_lqi_rev1')
+    ballbotRev1PlantAugment('ball_balancing_omni3_multibody_lqi_rev1');
+end
+
 if nargin >= 1 && ~isempty(payloadMass)
     p.fullplant.payload.mass = payloadMass;
     [p.rover.mass, p.rover.comAboveBall, p.rover.tiltInertiaCom] = ...
@@ -129,6 +137,11 @@ p.command.cycleCount = 3;
 % to the ball, which surges ~+0.05 m/s and dies at the ~0.2 m/s contact
 % wall.  0.03 keeps the surge recoverable at the retargeted speed.
 p.command.accelerationLimit = 0.03;
+% Braking is asymmetric with acceleration on the real machine too: the
+% braking torque margin is thinner (decel drives the chassis pitch-back
+% that kicks the ball forward), so the ramp-down gets its own gentler
+% limit.  ballbotRev1CommandProfile applies it to the move-window tail.
+p.command.decelerationLimit = 0.02;
 
 % Slip-limit cruise speed: the wheel speed where the motor torque-speed
 % curve crosses the wheel-ball contact torque limit mu_d*N_nom*Rw.
@@ -365,6 +378,10 @@ p.controller.torqueDrive.propulsionMinShare = 0.25;
 % up by the wheels, so a chassis lead is corrected by spinning the
 % ball faster.  Lean-channel closure of the same loop was tried and
 % oscillated; the wheel rate path is faster and kinematically direct.
+% NOTE: with rolling resistance this term was re-tested and REJECTED --
+% it overdrives the wheels while the ball lags and the reaction slides
+% the chassis backwards through the accel phase (measured: x drifted
+% -0.15 m before the decel corner).  Ships at 0.
 p.controller.torqueDrive.propulsionRelPosGain = 0;
 p.controller.torqueDrive.propulsionRelVelGain = 0;
 % Channel 2, station keeping: tau += W*(positionGain*s +
