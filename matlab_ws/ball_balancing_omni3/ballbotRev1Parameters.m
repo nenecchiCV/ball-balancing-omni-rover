@@ -108,7 +108,10 @@ p.command.cycleStart = 0.5;
 % perturbation tipped it (~3 s in every experiment).  18 s allows the
 % 8.7 s ramp up + 8.7 s down at the designed 0.06 m/s^2, so the lean
 % demand stays inside the cap with margin instead of saturating.
-p.command.cycleMoveDuration = 18.0;
+% Move window sized to the retargeted 0.10 m/s-class profile: at
+% accelerationLimit the 0.167 m/s reference ramps in ~5.6 s, so 12 s
+% holds cruise ~0.8 s plus the symmetric ramp-down.
+p.command.cycleMoveDuration = 12.0;
 % Yaw control is fully separated from translation: the yaw-rate request
 % is issued as a trapezoid inside the stop window, starting cycleYawDelay
 % seconds after motion stops.  The stationary yaw gate in the controller
@@ -122,7 +125,10 @@ p.command.cycleCount = 3;
 % budget, and propulsion torque spends part of that budget during the
 % ramp.  Commanded acceleration is therefore capped well inside the
 % cone: 0.06 m/s^2 ~ lean 0.006 rad, about a quarter of the limit.
-p.command.accelerationLimit = 0.06;
+% Deceleration is the critical phase: braking transfers chassis momentum
+% to the ball, which surges ~+0.05 m/s and dies at the ~0.2 m/s contact
+% wall.  0.03 keeps the surge recoverable at the retargeted speed.
+p.command.accelerationLimit = 0.03;
 
 % Slip-limit cruise speed: the wheel speed where the motor torque-speed
 % curve crosses the wheel-ball contact torque limit mu_d*N_nom*Rw.
@@ -137,11 +143,15 @@ p.controller.maxSpeed = p.controller.slipLimitSpeed;
 % allow the command to reach the full motor speed envelope.
 p.controller.lqi.maximumWheelSpeedCommand = ...
     p.motor.speedCommandLimit*ones(3, 1);
-% Goal: cruise at 0.306 m/s, ramped trapezoidally at accelerationLimit.
-% commandScale derates the planar reference, so the profile requests the
-% value that leaves commandScale*command == target speed.
+% Cruise target: effective 0.10 m/s -- the demonstrated envelope is
+% bounded below by the encoder stillness blind band (~0.13 m/s ball
+% speed, where wheel rates fall inside the quantization flicker zone)
+% and above by the ~0.2 m/s contact wall where a wheel unloads.  The
+% requested 0.306 m/s lies beyond the wall; commandScale derates the
+% planar reference, so the profile requests the raw value that leaves
+% commandScale*command at the target speed.
 p.command.profileVelocityWorld = [ ...
-    0.306/p.controller.fullplant.commandScale; 0];
+    0.10/p.controller.fullplant.commandScale; 0];
 % Simultaneous yaw request, capped by the controller at maxYawRate.
 p.command.profileYawRate = p.controller.maxYawRate;
 
@@ -180,6 +190,18 @@ p.controller.torqueDrive.backEmfSpeedTimeConstant = 1.0e-3;
 % broadband floor down; kept short of the ~30 ms where the added phase
 % starts eating the restored damping margin.
 p.controller.torqueDrive.rateFilterTimeConstant = 0.02;
+% Wheel-rate LPF for the slip damper and propulsion servo only (the LQI
+% state still sees the raw rate): quantization flicker is ~3.7 rad/s
+% per sample versus a ~5-6 rad/s cruise rolling rate, so the raw rate
+% is mostly noise and thrashes these channels to the torque clamp.
+p.controller.torqueDrive.wheelRateFilterTimeConstant = 0.03;
+% Deadzone for the FILTERED wheel-rate channels (slip damper, propulsion
+% servo): with the flicker low-passed away, the raw flicker-sized
+% slipDeadzone (~4.4 rad/s) would hide real rate errors -- at cruise a
+% 4 rad/s error IS a ~0.13 m/s ball-velocity overrun that these channels
+% exist to correct.  ~1 rad/s keeps the residual filtered flicker out
+% while passing genuine slip/overshoot.
+p.controller.torqueDrive.filteredSlipDeadzone = 1.0;
 % Velocity-integral leak [1/s]: in torque mode a wound-up integral is a
 % constant torque bias that tips the chassis, so it must decay unless a
 % commanded velocity keeps feeding it.
@@ -288,7 +310,7 @@ p.controller.torqueDrive.leanRateLimit = 0.05;
 % tiltStiffenTilt-wide ramp, reaching near-full authority just inside
 % the cone edge.  Inside the commanded band small-signal torque stays
 % ~1/3 of the clamp, so gyro noise does not write into the wheels.
-p.controller.torqueDrive.tiltStiffenGain = 3.0;
+p.controller.torqueDrive.tiltStiffenGain = 4.0;
 p.controller.torqueDrive.tiltStiffenTilt = 0.006;
 % Slow tilt-error integrator [1/s scale on the tilt columns, rad*s
 % state limit, 1/s leak]: the fixed proportional gain sits only ~5%
@@ -300,8 +322,8 @@ p.controller.torqueDrive.tiltStiffenTilt = 0.006;
 % pulls the equilibrium back to the commanded lean; the leak keeps it
 % from winding up during saturation, and the state limit caps its
 % torque at ~Ki*Kt*limit -- well under the traction clamp.
-p.controller.torqueDrive.tiltIntegralGain = 0.5;
-p.controller.torqueDrive.tiltIntegralLimit = 0.01;
+p.controller.torqueDrive.tiltIntegralGain = 1.0;
+p.controller.torqueDrive.tiltIntegralLimit = 0.03;
 p.controller.torqueDrive.tiltIntegralLeak = 0.5;
 % Soft-start torque ramp [s]: the first ~0.3 s after enable is the
 % contact-settling transient (asymmetric wheel grabs kick tilt to
@@ -320,13 +342,17 @@ p.controller.torqueDrive.positionLeanDampingGain = 0;
 % Propulsion: P servo tracking the kinematic wheel rate W*v_cmd, in
 % N*m per rad/s of wheel-rate error.  The tilt loop handles attitude;
 % this term only drives the wheel/ball rolling state toward the command.
-p.controller.torqueDrive.propulsionGain = 0.005;
+% 0.02 gives real braking authority during deceleration: the same servo
+% is what drags a coasting ball down through the contact, and at 0.005
+% the brake force was a fraction of the momentum-transfer surge.
+p.controller.torqueDrive.propulsionGain = 0.02;
 % Propulsion torque share cap [N*m]: without a bound the initial rate
 % error (~20 rad/s for a 0.5 m/s command) saturates one wheel's duty to
-% ~0.95 while the tilt channel starves.  Half the traction limit leaves
-% headroom for attitude correction during acceleration.
-p.controller.torqueDrive.propulsionTorqueLimit = 0.5* ...
-    p.controller.tractionLimitedWheelTorque;
+% ~0.95 while the tilt channel starves.  0.045 (~75% of the traction
+% limit) gives the braking direction enough bite to hold the ball below
+% the ~0.2 m/s contact wall during decel, while leaving headroom for
+% attitude correction.
+p.controller.torqueDrive.propulsionTorqueLimit = 0.045;
 % Stall escape: when the tilt channel saturates the traction budget the
 % leftover-headroom policy gives propulsion zero torque forever -- the
 % rover wedges in a static lean (observed at high payload: ~0.14 rad
@@ -349,15 +375,21 @@ p.controller.torqueDrive.propulsionRelVelGain = 0;
 % design, so this channel ships disabled.
 p.controller.torqueDrive.positionGain = 0;
 p.controller.torqueDrive.positionDampingGain = 0;
-% Ball vertical-spin brake [N*m per rad/s of omegaBall_z]: the rover-yaw
-% damper sheds chassis angular momentum through common-mode wheel
-% torque, which lands on the ball's uncontrolled spin mode and spins it
-% up ~1 rad/s^2 until the contacts need lateral slip and let go.  The
-% brake was expected to damp that mode, but the A/B truth-feedback
-% experiment showed the yaw-damper + brake pair still pumps the
-% yaw/ball-spin mode to tip-over (~5 s), while disabling both holds
-% machine-zero tilt ~10.5 s -- so it ships at 0.
-p.controller.torqueDrive.ballYawGain = 0;
+% Ball vertical-spin brake [N*m per rad/s of omegaBall_z]: translation
+% pumps ball z-spin through the omni kinematics and through the
+% common-mode residual of saturated torque patterns; the accumulated
+% spin is what walked the cruise tilt into the cone (~0.01 -> 0.02 rad
+% per move leg) and unloads a wheel past ~0.2 m/s.  0.06 removed the
+% cruise tilt walk entirely in tests (tilt flat <=0.011 rad through the
+% whole leg); 0.02 let it resume, and larger gains saturate the traction
+% budget without extending the ~0.2 m/s envelope.
+p.controller.torqueDrive.ballYawGain = 0.06;
+% Passive yaw damper during translation [N*m common-mode per rad/s of
+% yaw rate]: the gated yaw channel is off while a translation command
+% is active and ball z-spin drags the chassis yaw, rotating the push
+% direction sideways.  Gated to commandSpeed > 0 so standstill sees no
+% yaw/gyro-noise limit cycle.
+p.controller.torqueDrive.yawDampingGain = 0.02;
 
 % Diagnostic: feed plant truth (roverPose/ballPose) through TruthGate
 % instead of the estimator output, to separate estimator error from
@@ -372,13 +404,16 @@ p.estimator.truthChannels = [];
 p.estimator.truthDelaySteps = 0;
 
 % =====================================================================
-% Cascaded architecture (MiaPURE-style, arXiv:2304.02887): a 6-state
-% LQR owns [tilt(2); tiltRate(2); ballVelocity(2)], the outer loop maps
-% ball-velocity error to a commanded lean, and a bounded leaky PI on the
-% ball-velocity tracking error compensates unmodeled stiction.  This
-% replaces the tilt-only torque LQI whose uncontrolled relPos degree of
-% freedom walked the tilt into the hold cone ~2-4 s into every move.
-p.controller.cascade.enabled = true;
+% Controller path selection.  The torque-input LQI (torqueDrive, below)
+% is the default: with the filtered-stillness estimator and velocity
+% drain it holds machine-quiet tilt (~0.007 rad over 5 s, payload
+% 0.5/1.0 kg included) and tracks commands to ~0.2 m/s with real,
+% saturated torque activity.  The optional cascade (MiaPURE-style,
+% arXiv:2304.02887: 6-state LQR on [tilt; tiltRate; ballVelocity] plus
+% an outer lean loop and bounded PI) measured worse on every axis --
+% noisier hold, earlier cone-edge runaway, payload falls -- so it is
+% kept available behind this flag but disabled by default.
+p.controller.cascade.enabled = false;
 p.controller.cascade.velocityStateFeedback = false;
 [p.controller.cascade.stateGain, p.controller.cascade.info] = ...
     ballbotCascadeGains(p, payloadForDesign);
@@ -459,6 +494,20 @@ p.controller.cascade.wheelRateDamping = 0.02;
 % Deadzone [rad/s] on the slip rate: encoder quantization/sampleTime
 % flicker is ~3.7 rad/s; the legacy value 4.42 is measured.
 p.controller.cascade.slipDeadzone = 4.42;
+% Ball-velocity governor: the plant model error that defeated the move
+% tests is torque->ball acceleration (~2x real vs Bvel, so the ball
+% outruns every command and the chassis separates).  Braking wheel
+% rate against the command cannot fix it -- recovery legitimately needs
+% wheel rates above the commanded rolling rate.  Instead the excess of
+% measured ball velocity over the command is braked through the
+% pinv(Bvel) allocation (m/s^2 -> N*m per wheel), so wheel rate stays
+% free for balance recovery.  One-sided per axis with a deadzone.
+% Gain 0.8 m/s^2 per m/s of excess: strong enough to cap the overrun
+% while sharing the traction cap with balance.
+p.controller.cascade.ballVelocityGovernanceGain = 0.8;
+% Deadzone [m/s] on the per-axis excess: estimator ball-rate flicker
+% residual is ~0.02-0.04 m/s, and hold-recovery motions must stay free.
+p.controller.cascade.ballVelocityGovernanceDeadzone = 0.06;
 % Ball vertical-spin brake gain [N*m per rad/s of omegaBz], applied as
 % common-mode torque (sign convention measured: +common torque gives
 % -z ball accel, so braking torque = +k*omegaBz).  Fills the encoder

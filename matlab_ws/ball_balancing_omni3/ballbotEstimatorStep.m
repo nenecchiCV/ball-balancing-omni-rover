@@ -143,8 +143,19 @@ anchorMinSpeed = 0.05;
 if isfield(p.estimator, "velocityAnchorMinSpeed")
     anchorMinSpeed = p.estimator.velocityAnchorMinSpeed;
 end
-if isfield(p.estimator, "velocityAnchorTimeConstant") && ...
-        p.estimator.velocityAnchorTimeConstant > 0 && ~assemblyStill && ...
+% Stillness drain: wheels at rest roll nothing, so a still assembly has
+% zero world velocity -- any nonzero velocityWorld while assemblyStill
+% holds is pure integrator bias (observed: -0.54 m/s phantom while the
+% rover sat parked).  Decay it fast; the filtered stillness test is
+% blind only below ~0.03 m/s, which this drain rate also caps.
+if assemblyStill
+    drainTau = 0.1;
+    if isfield(p.estimator, "stillVelocityDrainTimeConstant")
+        drainTau = p.estimator.stillVelocityDrainTimeConstant;
+    end
+    velocityWorld(1:2) = velocityWorld(1:2)*(drainTau/(drainTau + dt));
+elseif isfield(p.estimator, "velocityAnchorTimeConstant") && ...
+        p.estimator.velocityAnchorTimeConstant > 0 && ...
         norm(ballVelocityWorld) > anchorMinSpeed
     anchorWeight = dt/(p.estimator.velocityAnchorTimeConstant + dt);
     velocityWorld(1:2) = velocityWorld(1:2) + ...

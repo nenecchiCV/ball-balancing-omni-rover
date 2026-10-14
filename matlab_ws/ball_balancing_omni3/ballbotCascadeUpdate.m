@@ -274,6 +274,27 @@ if cc.ballSpinBrakeGain > 0
         cc.ballSpinBrakeGain*estimate(11)*ones(3, 1);
 end
 
+% Ball-velocity governor (plant-error suppression): the idealized
+% contact has no rolling resistance, so model error in the
+% torque->ball-acceleration map lets the ball overshoot every speed
+% command (measured ~2x).  A wheel-speed brake cannot fix that --
+% recovery legitimately needs wheel rates above the commanded rolling
+% rate.  Instead brake the BALL velocity directly where it exceeds the
+% command, allocated through pinv(Bvel) so the wheel pattern
+% decelerates the ball with minimum-norm torque while the tilt loop
+% keeps full freedom on wheel rate.  One-sided per axis: underspeed
+% stays on the lean/PI paths, and the deadzone keeps encoder flicker
+% and hold-recovery corrections out of the channel.
+if isfield(cc, "ballVelocityGovernanceGain") && ...
+        cc.ballVelocityGovernanceGain > 0 && mode == 1
+    governorExcess = ballVelocityBody - commandVelocityBody;
+    governorActive = sign(governorExcess).* ...
+        max(abs(governorExcess) - cc.ballVelocityGovernanceDeadzone, 0);
+    rawWheelCommand = rawWheelCommand - startupRamp( ...
+        cc.ballVelocityAllocation* ...
+        (cc.ballVelocityGovernanceGain*governorActive), enable, mode, p);
+end
+
 % Yaw: common-mode torque, gated to stationary yaw commands only.
 yawGate = cc.yawGate;
 stationary = norm(velocityBody) < yawGate.maxSpeed && ...

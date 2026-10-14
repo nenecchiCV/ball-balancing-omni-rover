@@ -228,8 +228,18 @@ p.estimator.velocityAnchorMinSpeed = 0.05;
 % coherent rate, shrinking the blind band to ~0.03 m/s.
 p.estimator.ballRateStillWheelRate = ...
     1.2*p.encoder.quantization/p.estimator.sampleTime;
-p.estimator.stillnessFilterTimeConstant = 0.080;
-p.estimator.ballRateStillWheelRateFiltered = 1.5;
+% Filtered-rate stillness test: the flicker residual through a 0.15 s
+% low-pass is ~+/-0.5 rad/s, so a 0.8 rad/s threshold separates rest
+% from genuine rolling above ~0.02 m/s of ball speed without blanking
+% slow commanded motion.
+p.estimator.stillnessFilterTimeConstant = 0.15;
+p.estimator.ballRateStillWheelRateFiltered = 0.8;
+% Stillness velocity drain [s]: while the assembly is still, wheels roll
+% nothing, so a nonzero velocityWorld is pure accelerometer-integrator
+% bias.  Decay it at this time constant -- short enough to erase the
+% ~0.3-0.5 m/s phantom drift that otherwise saturates the lean demand
+% mid-move, long enough to smooth the encoder flicker band.
+p.estimator.stillVelocityDrainTimeConstant = 0.1;
 p.estimator.ballRateStillGyroRate = 0.15;
 % Physical bound on rover-minus-ball offset [m]: ball radius scale.
 p.estimator.relativePositionLimit = 0.12;

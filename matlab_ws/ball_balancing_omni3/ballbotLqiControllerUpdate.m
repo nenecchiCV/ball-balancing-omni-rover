@@ -134,6 +134,28 @@ if torqueDrive
     end
     state(5:7) = [filteredBodyRate(2); -filteredBodyRate(1); ...
         filteredBodyRate(3)];
+    % Wheel-rate low-pass for the slip/propulsion channels: encoder
+    % quantization flicker is ~3.7 rad/s per sample, while cruise rolling
+    % rate is only ~5-6 rad/s, so the raw rate is >50% noise.  The raw
+    % measurement thrashes the servo/damper torque to saturation (~50%
+    % of samples at the clamp) and pumps ball z-spin through the
+    % common-mode residual.  A short lag keeps the sustained component
+    % these channels actually regulate.
+    filteredWheelRate = wheelRate(:);
+    if isfield(p.controller.torqueDrive, "wheelRateFilterTimeConstant") && ...
+            p.controller.torqueDrive.wheelRateFilterTimeConstant > 0
+        persistent wheelRateFilter
+        if isempty(wheelRateFilter) || mode ~= 1
+            wheelRateFilter = wheelRate(:);
+        else
+            wWheel = p.controller.sampleTime/ ...
+                (p.controller.torqueDrive.wheelRateFilterTimeConstant + ...
+                 p.controller.sampleTime);
+            wheelRateFilter = wheelRateFilter + ...
+                wWheel*(wheelRate(:) - wheelRateFilter);
+        end
+        filteredWheelRate = wheelRateFilter;
+    end
     yawGate = p.controller.torqueDrive.yawGate;
     stationary = norm(velocityBody) < yawGate.maxSpeed && ...
         tiltMagnitude < yawGate.maxTilt && commandSpeed == 0;
@@ -294,6 +316,15 @@ if torqueDrive
             [accelerationDemand(1); -accelerationDemand(2)]/p.gravity, ...
             enable, mode, p);
     end
+    if ~yawActive
+        % Common-mode removal: the tilt/balance channels are zero-sum
+        % by design, but their residual mean pumps the ball's vertical
+        % spin -- the unregulated mode whose accumulation ends every
+        % move leg (~0.2 m/s) by unloading a wheel.  Strip it while no
+        % yaw command is active; the intentional common-mode channels
+        % (ball-spin brake, translation yaw damper) are added below.
+        rawWheelCommand = rawWheelCommand - mean(rawWheelCommand);
+    end
     % Traction control: a wheel that spins faster than the kinematic
     % rolling rate is slipping, so its torque cannot reach the ball.
     % Damping the slip rate keeps the contact engaged.  The deadzone
@@ -336,8 +367,26 @@ if torqueDrive
         rawWheelCommand = rawWheelCommand + ballYawGain*estimate(11)* ...
             ones(3, 1);
     end
-    slipRate = wheelRate(:) - kinematicRate;
-    slipDeadzone = p.controller.torqueDrive.slipDeadzone;
+    % Passive yaw damper during translation: the gated yaw channel is
+    % off while a translation command is active, and ball z-spin drags
+    % the chassis yaw -- the drift rotates the commanded push direction
+    % into a sideways escape.  A common-mode rate damper holds heading
+    % while the ball-spin brake above absorbs the spin it pumps.  Gated
+    % to active translation commands: at rest the same gain excites a
+    % yaw/gyro-noise limit cycle.
+    if isfield(p.controller.torqueDrive, "yawDampingGain") && ...
+            p.controller.torqueDrive.yawDampingGain ~= 0 && ...
+            ~yawActive && commandSpeed > 0
+        rawWheelCommand = rawWheelCommand - ...
+            p.controller.torqueDrive.yawDampingGain* ...
+            filteredBodyRate(3)*ones(3, 1);
+    end
+    slipRate = filteredWheelRate - kinematicRate;
+    if isfield(p.controller.torqueDrive, "filteredSlipDeadzone")
+        slipDeadzone = p.controller.torqueDrive.filteredSlipDeadzone;
+    else
+        slipDeadzone = p.controller.torqueDrive.slipDeadzone;
+    end
     slipActive = sign(slipRate).*max(abs(slipRate) - slipDeadzone, 0);
     rawWheelCommand = rawWheelCommand - ...
         p.controller.torqueDrive.slipDampingGain*slipActive;
@@ -371,7 +420,7 @@ if torqueDrive
                 p.controller.lqi.wheelSpeedFromPlanarVelocity(:, 1:2)* ...
                 relCorrection;
         end
-        rateError = wheelRateCommand - wheelRate(:);
+        rateError = wheelRateCommand - filteredWheelRate;
         rateActive = sign(rateError).*max(abs(rateError) - ...
             slipDeadzone, 0);
         % Propulsion yields to attitude: the holdable lean is only
