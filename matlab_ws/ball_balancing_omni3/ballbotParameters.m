@@ -42,14 +42,33 @@ p.motor.timeConstant = 0.030;
 p.motor.equivalentInertia = p.motor.timeConstant* ...
     p.motor.stallTorque/p.motor.noLoadSpeed;
 
+% Onboard power source: Zeee 7.2 V 5000 mAh NiMH pack (6 sub-C cells,
+% TAMIYA plug), mounted at the centre of the first chassis layer.  Fully
+% charged ~8.4-8.7 V, discharged ~6.0 V; parameters use the nominal
+% point.  ~90 mOhm pack resistance sags ~0.3 V at 3 A; the H-bridge
+% supply is ideal, so sag is folded into the duty cap below.
+p.battery.nominalVoltage = 7.2;
+p.battery.chargedVoltage = 8.4;
+p.battery.cutoffVoltage = 6.0;
+p.battery.capacityAh = 5.0;
+p.battery.internalResistance = 0.09;
+p.battery.mass = 0.423;
+p.battery.dimensions = [0.140, 0.050, 0.025];
+
 % Two Cytron MDD3A boards provide the three required PWM/DIR channels.
 p.driver.boardCount = 2;
 p.driver.channelCountPerBoard = 2;
-p.driver.supplyVoltage = p.motor.nominalVoltage;
+p.driver.supplyVoltage = p.battery.nominalVoltage;
 p.driver.continuousCurrent = 3.0;
 p.driver.peakCurrent = 5.0;
 p.driver.pwmFrequency = 20e3;
-p.driver.maxDutyCycle = 0.95;
+% The pack's nominal 7.2 V exceeds the FIT0521's 6 V rating, so cap the
+% duty where the average winding voltage equals the rating (plus the
+% ~0.3 V worst-case pack sag already buys a little margin).  The motor
+% constants are still the 6 V datasheet measurements, so PWM peaks at
+% 7.2 V while the average stays inside spec.
+p.driver.maxDutyCycle = min(0.95, ...
+    p.motor.nominalVoltage/p.battery.nominalVoltage);
 p.driver.continuousTorqueLimit = p.motor.torqueConstant* ...
     min(p.driver.continuousCurrent, p.motor.stallCurrent);
 p.driver.peakTorqueLimit = p.motor.stallTorque;
@@ -90,7 +109,8 @@ p.servo.maxSpeed = p.motor.noLoadSpeed;
 % structure: three ABS frame plates (D160x3 at z = 148.5/201.5/254.5 mm
 % above ground), twelve M4x50 ABS spacers at r = 65 mm, three ABS
 % MotorMount_v9 brackets plus clamp straps below L1, and the L1/L2
-% electronics payload (battery, two MDD3A drivers, Nucleo+IKS4A1 stack).
+% electronics payload (Zeee 7.2 V NiMH pack centred on L1, two MDD3A
+% drivers, Nucleo+IKS4A1 stack).
 % Heights below are measured above the ball center (ground z = 50 mm).
 rhoABS = 1050;
 frameDiscMass = rhoABS*pi*0.080^2*0.003;
@@ -108,7 +128,7 @@ chassisParts = [ ...
     6*spacerMass    0.17825                     6*spacerInertia
     3*mountMass     0.0602                      3*mountMass*0.047^2/6
     3*strapMass     0.0617                      3*strapMass*0.02^2/12
-    0.120           0.106                       0.120*(0.070^2+0.035^2)/12
+    0.423           0.1125                      0.423*(0.140^2+0.025^2)/12
     0.030           0.103                       0.030*(0.050^2+0.030^2)/12
     0.090           0.156                       0.090*(0.133^2+0.080^2)/12
     0.010           0.110                       0];
@@ -168,11 +188,12 @@ p.contact.ballGround.criticalVelocity = 5.0e-3;
 % ballbotRev1PlantAugment + ballbotRollingResistance as an external
 % load scaled by the sensed normal force (vanishes when airborne).
 % rollingFriction is the effective drag coefficient: hollow
-% plastic/rubber balls sit around 0.005-0.02.  0.005 balances passive
-% surge absorption against tracking -- 0.01 over-damped the ball (it
-% lagged the command and the offset crept the contact envelope), 0.003
-% let the decel kick through.
-p.contact.ballGround.rollingFriction = 0.005;
+% plastic/rubber balls sit around 0.005-0.02.  With the NiMH pack
+% aboard, 0.008 is the value that carried a full move+stop window
+% cleanly -- 0.005 let the ball overrun the command at the cmd->0
+% corner (~0.08->0.24 m/s kick), 0.01 over-damped the ball (it lagged
+% the command and the offset crept the contact envelope).
+p.contact.ballGround.rollingFriction = 0.008;
 p.contact.ballGround.rollingCriticalVelocity = 5.0e-3;
 % spinScrubArm [m]: effective lever arm for the contact-patch scrubbing
 % torque on vertical ball spin.  The patch radius at nominal sag is
@@ -259,6 +280,12 @@ p.estimator.ballRateStillWheelRateFiltered = 0.8;
 % ~0.3-0.5 m/s phantom drift that otherwise saturates the lean demand
 % mid-move, long enough to smooth the encoder flicker band.
 p.estimator.stillVelocityDrainTimeConstant = 0.1;
+% The drain only engages after this much CONTINUOUS stillness [s]: a
+% creep inside the blind band's edge (~0.025 m/s, right at the filtered
+% rate threshold) flickers the flag and would otherwise have its real
+% velocity drained away -- observed as a payload build that crept for
+% seconds while the estimate read ~0.
+p.estimator.stillVelocityDrainHoldTime = 1.0;
 p.estimator.ballRateStillGyroRate = 0.15;
 % Physical bound on rover-minus-ball offset [m]: ball radius scale.
 p.estimator.relativePositionLimit = 0.12;

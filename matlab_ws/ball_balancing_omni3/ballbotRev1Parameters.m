@@ -156,15 +156,14 @@ p.controller.maxSpeed = p.controller.slipLimitSpeed;
 % allow the command to reach the full motor speed envelope.
 p.controller.lqi.maximumWheelSpeedCommand = ...
     p.motor.speedCommandLimit*ones(3, 1);
-% Cruise target: effective 0.10 m/s -- the demonstrated envelope is
-% bounded below by the encoder stillness blind band (~0.13 m/s ball
-% speed, where wheel rates fall inside the quantization flicker zone)
-% and above by the ~0.2 m/s contact wall where a wheel unloads.  The
-% requested 0.306 m/s lies beyond the wall; commandScale derates the
-% planar reference, so the profile requests the raw value that leaves
-% commandScale*command at the target speed.
-p.command.profileVelocityWorld = [ ...
-    0.10/p.controller.fullplant.commandScale; 0];
+% Cruise target: 0.12 m/s -- the demonstrated envelope is bounded below
+% by the encoder stillness blind band (ball speeds under ~0.03 m/s fall
+% inside the quantization flicker zone) and above by the ~0.2 m/s
+% contact wall where a wheel unloads.  The requested 0.306 m/s lies
+% beyond the wall.  NOTE: commandScale only applies in the legacy
+% fullplant hierarchy path; the torque-LQI path commands the raw
+% profile value, so profileVelocityWorld IS the physical setpoint.
+p.command.profileVelocityWorld = [0.12; 0];
 % Simultaneous yaw request, capped by the controller at maxYawRate.
 p.command.profileYawRate = p.controller.maxYawRate;
 

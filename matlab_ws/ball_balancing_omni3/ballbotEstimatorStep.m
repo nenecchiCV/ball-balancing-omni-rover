@@ -124,7 +124,25 @@ end
 assemblyStill = max(abs(filteredWheelRateForStill)) <= ...
     stillnessRateThreshold && ...
     norm(gyroBody) <= p.estimator.ballRateStillGyroRate;
+% Hold-time gate shared with the stillness drain below: flag flicker at
+% the blind-band edge (~0.025 m/s creep) must NOT zero the rate solve --
+% that hides real ball motion from the controller (observed: payload
+% build crept at ~0.02-0.04 m/s with estV ~0.005 until the lean walked
+% off).  Only sustained stillness proves the solved rate is phantom.
+persistent stillnessHold
 if assemblyStill
+    if isempty(stillnessHold)
+        stillnessHold = 0;
+    end
+    stillnessHold = stillnessHold + dt;
+else
+    stillnessHold = 0;
+end
+drainHoldTime = 1.0;
+if isfield(p.estimator, "stillVelocityDrainHoldTime")
+    drainHoldTime = p.estimator.stillVelocityDrainHoldTime;
+end
+if stillnessHold >= drainHoldTime
     ballRateKinematic(:) = 0;
 end
 filterWeight = dt/(p.estimator.ballRateTimeConstant + dt);
@@ -148,7 +166,16 @@ end
 % holds is pure integrator bias (observed: -0.54 m/s phantom while the
 % rover sat parked).  Decay it fast; the filtered stillness test is
 % blind only below ~0.03 m/s, which this drain rate also caps.
-if assemblyStill
+% Hold-time gate: the blind band's EDGE is exploitable -- the assembly
+% creeping at ~0.025 m/s sits exactly on the filtered-rate threshold,
+% flickers the stillness flag, and the drain then hides the real motion
+% (observed: a parked payload build crept for seconds with estV ~0.005
+% vs true 0.025 until the lean walked off).  Requiring ~1 s of
+% CONTINUOUS stillness keeps the phantom-bias cleanup intact while any
+% genuine creep keeps interrupting the timer and stays visible to the
+% velocity loop.  stillnessHold/drainHoldTime are maintained with the
+% ball-rate zeroing above.
+if stillnessHold >= drainHoldTime
     drainTau = 0.1;
     if isfield(p.estimator, "stillVelocityDrainTimeConstant")
         drainTau = p.estimator.stillVelocityDrainTimeConstant;
