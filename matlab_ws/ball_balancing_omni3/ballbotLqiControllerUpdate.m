@@ -53,6 +53,27 @@ if commandSpeed > p.controller.maxSpeed
     commandVelocityBody = commandVelocityBody* ...
         (p.controller.maxSpeed/commandSpeed);
 end
+% Follow-through braking: whenever the commanded speed is below a
+% fraction of the measured ball speed (deceleration overrun, or a stop
+% command on a still-rolling ball), follow the ball instead.  Locking
+% the wheel-rate servo at the slower command fights the rolling ball --
+% the contact drag kicks the chassis and diverges the roll channel --
+% and a saturating velocity error parks the lean at its cap.  Commanding
+% followGain*vBall makes the velocity error (followGain-1)*vBall: a
+% speed-proportional gravity brake that decays smoothly as the ball
+% sheds momentum, while the propulsion servo keeps rolling WITH the
+% ball.
+if torqueDrive && isfield(p.controller.torqueDrive, "stopFollowGain") ...
+        && p.controller.torqueDrive.stopFollowGain > 0
+    ballVelocityWorld0 = [p.ball.radius*estimate(10); ...
+        -p.ball.radius*estimate(9)];
+    ballSpeed0 = norm(ballVelocityWorld0);
+    if commandSpeed < p.controller.torqueDrive.stopFollowGain*ballSpeed0
+        commandVelocityBody = rotationBodyFromWorld* ...
+            (p.controller.torqueDrive.stopFollowGain*ballVelocityWorld0);
+        commandSpeed = norm(commandVelocityBody);
+    end
+end
 
 if mode == 1
     % Integrate the BALL velocity error, matching the lean channel: the

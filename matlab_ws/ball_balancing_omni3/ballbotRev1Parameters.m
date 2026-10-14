@@ -395,6 +395,16 @@ p.controller.torqueDrive.propulsionMinShare = 0.25;
 % -0.15 m before the decel corner).  Ships at 0.
 p.controller.torqueDrive.propulsionRelPosGain = 0;
 p.controller.torqueDrive.propulsionRelVelGain = 0;
+% Follow-through braking [dimensionless, <1]: whenever the commanded
+% speed drops below this fraction of the measured ball speed --
+% deceleration overrun or a stop command on a still-rolling ball -- the
+% command follows the ball instead.  Without it the wheel servo locks
+% against the rolling ball and the contact drag kicks the roll channel
+% over (first stop window fell at ~14 s every run).  With 0.8 the ball
+% bleeds off smoothly (vB 0.24 -> 0.05 over the stop window) and the
+% stop phase survives; the residual failure moves into the next move
+% leg.  0 disables.
+p.controller.torqueDrive.stopFollowGain = 0.8;
 % Channel 2, station keeping: tau += W*(positionGain*s +
 % positionDampingGain*sDot).  The open-loop offset dynamics measure
 % s2 ~= -8.7*c [m/s^2 per N*m coefficient], but inside the tilt loop the
