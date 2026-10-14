@@ -83,8 +83,16 @@ p.fullplant.linearSpringDeflection = supportedMass*p.gravity/ ...
 % empirical zero-search result for the old 3e5 N/m stiffness and does
 % not transfer after the contact softening.
 p.fullplant.groundStaticDeflection = p.fullplant.linearSpringDeflection;
+% The wheels also carry the rover through the wheel-ball penalty
+% contacts: with the chassis placed at the geometric (zero-penetration)
+% height, it free-drops ~N/k at t=0 and the asymmetric grab is the
+% startup tilt kick (~0.01-0.02 rad).  Sink the chassis by the static
+% wheel-ball deflection projected on the vertical.
+p.fullplant.wheelBallStaticDeflection = p.wheel.normalLoadNominal/ ...
+    p.contact.wheelBall.normalStiffness/sin(p.wheel.contactLatitude);
 p.rover.initialPositionWorld(3) = p.ball.radius + ...
-    p.rover.centerAboveBall - p.fullplant.groundStaticDeflection;
+    p.rover.centerAboveBall - p.fullplant.groundStaticDeflection - ...
+    p.fullplant.wheelBallStaticDeflection;
 p.command.velocityWorld = zeros(2, 1);
 p.command.yawRate = 0;
 p.command.profileEnabled = false;

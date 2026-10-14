@@ -136,8 +136,12 @@ p.rover.noseAxisBody = [1; 0; 0];
 % The wheel-slip acceleration limit the controller must respect is NOT
 % modeled here -- it lives in tractionLimitedWheelTorque below, which keeps
 % the physical mu=0.75 estimate even though the contact itself cannot slip.
-p.contact.wheelBall.normalStiffness = 2.0e4;
-p.contact.wheelBall.normalDamping = 200;   % ~critical for k=2e4, m~0.5 kg/wheel
+% The foam/rubber roller and thin-shell ball are far from rigid: 1e4 N/m
+% (~0.5 mm penetration per wheel at nominal load) is closer to the real
+% compliance than the earlier 2e4 value and keeps the contact-force
+% gradient inside a solver-friendly band.
+p.contact.wheelBall.normalStiffness = 1.0e4;
+p.contact.wheelBall.normalDamping = 140;   % ~critical for k=1e4, m~0.5 kg/wheel
 p.contact.wheelBall.transitionWidth = 5.0e-4;
 % Relaxed value used by the cascade model to reduce contact-state chatter.
 p.contact.wheelBall.relaxedTransitionWidth = 1.5e-3;
@@ -145,8 +149,13 @@ p.contact.wheelBall.staticFriction = 2.0;
 p.contact.wheelBall.dynamicFriction = 2.0;
 p.contact.wheelBall.rollerFriction = 0.02;
 p.contact.wheelBall.criticalVelocity = 5.0e-3;
-p.contact.ballGround.normalStiffness = 3.0e4;
-p.contact.ballGround.normalDamping = 500;  % ~critical for k=3e4, m~1.8 kg
+% 1e4 N/m gives ~1.8 mm ball sag at nominal load and ~2.3 mm at the 1 kg
+% payload -- small against the 50 mm radius and well inside the geometric
+% accuracy budget.  Stiffer values buy nothing for the solver: the
+% dominant step-size limiter in the Simscape rev1 plant is motor
+% electrical dynamics, not contact stiffness.
+p.contact.ballGround.normalStiffness = 1.0e4;
+p.contact.ballGround.normalDamping = 270;  % ~critical for k=1e4, m~1.8 kg
 p.contact.ballGround.transitionWidth = 5.0e-4;
 p.contact.ballGround.staticFriction = 2.0;
 p.contact.ballGround.dynamicFriction = 2.0;
@@ -194,12 +203,33 @@ p.estimator.ballRateTimeConstant = 0.080;
 % measured at tau=25 s); tau=1.5 s bounds the phantom near ~1 mm while
 % real ball-escape offsets (which persist for seconds) still pass.
 p.estimator.relativePositionLeak = 0.9967;
-% Stillness gate for the ball-rate kinematic solve: below the encoder
-% flicker bound (1.2*quantization/dt ~ 4.4 rad/s) with a quiescent
-% gyro, a resting ball cannot rotate, so the solve target is forced to
-% zero instead of amplifying quantization noise into phantom spin.
+% Velocity anchor [s]: the accel-integrated rover velocity has no
+% corrector during motion, so a small sustained accel bias integrates
+% into a large phantom velocity (observed ~-0.36 m/s while the rover
+% was nearly still).  Pull velocityWorld toward the wheel-derived
+% ballVelocityWorld with this time constant while the assembly is not
+% still; the rover-ball relative speed stays ~mm-scale while contacts
+% hold, so the anchor drains integrator bias without hiding real
+% relative motion.  0 disables it.
+p.estimator.velocityAnchorTimeConstant = 0.5;
+% The anchor only helps while genuinely translating; during the startup
+% rocking transient the kinematic solve output is phantom and dragging
+% velocityWorld toward it corrupted the estimate.  Require a clear
+% moving speed first.
+p.estimator.velocityAnchorMinSpeed = 0.05;
+% Stillness gate for the ball-rate kinematic solve: a resting ball
+% cannot rotate, so the solve target is forced to zero instead of
+% amplifying quantization noise into phantom spin.  The decision runs
+% on a low-passed wheel rate, not the raw flickery rate: raw rates
+% under ~4.4 rad/s are ambiguous between rest flicker and real rolling
+% (ball speeds below ~0.13 m/s read inside the flicker band), which
+% zeroed the velocity estimate during slow translation.  Filtering at
+% ~80 ms leaves rest flicker near zero while sustained rolling keeps a
+% coherent rate, shrinking the blind band to ~0.03 m/s.
 p.estimator.ballRateStillWheelRate = ...
     1.2*p.encoder.quantization/p.estimator.sampleTime;
+p.estimator.stillnessFilterTimeConstant = 0.080;
+p.estimator.ballRateStillWheelRateFiltered = 1.5;
 p.estimator.ballRateStillGyroRate = 0.15;
 % Physical bound on rover-minus-ball offset [m]: ball radius scale.
 p.estimator.relativePositionLimit = 0.12;

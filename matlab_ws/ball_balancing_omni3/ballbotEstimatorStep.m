@@ -96,15 +96,33 @@ end
 regularization = p.estimator.kinematicRegularization;
 ballRateKinematic = (kinematicMatrix'*kinematicMatrix + ...
     regularization*eye(3))\(kinematicMatrix'*kinematicRightSide);
-% Stillness gate: when every wheel rate sits inside the encoder
-% quantization flicker band and the gyro is quiescent the assembly is
-% at rest, and a ball resting on the ground cannot sustain rotation --
-% any nonzero solve at that point is quantization noise, not spin.
-% Without this the flicker (~3.7 rad/s per sample) writes ~1 rad/s of
-% phantom ball rate into every downstream channel (spin brake, ball
-% velocity, relPos).
-assemblyStill = max(abs(wheelRate)) <= ...
-    p.estimator.ballRateStillWheelRate && ...
+% Stillness gate: when the assembly is at rest a ball on the ground
+% cannot sustain rotation, so any nonzero solve at that point is
+% quantization noise, not spin.  The RAW rate cannot decide this: a
+% wheel rolling at ball speeds up to ~0.13 m/s turns slower than the
+% ~3.7 rad/s per-sample flicker bound, so the raw-rate test fired
+% during normal slow translation and halved the velocity estimate.
+% Decide on a low-passed rate instead: at rest the symmetric flicker
+% averages out to ~0, while sustained rolling keeps a coherent rate,
+% shrinking the blind band to ~0.03 m/s.
+persistent filteredWheelRateForStill
+stillnessFilterTau = 0.080;
+stillnessRateThreshold = 1.5;
+if isfield(p.estimator, "stillnessFilterTimeConstant")
+    stillnessFilterTau = p.estimator.stillnessFilterTimeConstant;
+end
+if isfield(p.estimator, "ballRateStillWheelRateFiltered")
+    stillnessRateThreshold = p.estimator.ballRateStillWheelRateFiltered;
+end
+if isempty(filteredWheelRateForStill)
+    filteredWheelRateForStill = wheelRate;
+else
+    wStill = dt/(stillnessFilterTau + dt);
+    filteredWheelRateForStill = filteredWheelRateForStill + ...
+        wStill*(wheelRate - filteredWheelRateForStill);
+end
+assemblyStill = max(abs(filteredWheelRateForStill)) <= ...
+    stillnessRateThreshold && ...
     norm(gyroBody) <= p.estimator.ballRateStillGyroRate;
 if assemblyStill
     ballRateKinematic(:) = 0;
@@ -114,6 +132,24 @@ ballRateWorld = ballRateWorldPrevious + ...
     filterWeight*(ballRateKinematic - ballRateWorldPrevious);
 
 ballVelocityWorld = groundRollingMatrix*ballRateWorld;
+% Velocity anchor: the accel-integrated rover velocity drifts because no
+% channel corrects it during motion (a small sustained accel bias
+% integrates to ~0.3 m/s over a move leg -- observed).  The
+% wheel-derived ball velocity is an independent physical measurement,
+% and the rover-ball relative speed is bounded to ~0.05 m/s while the
+% contacts hold, so pulling velocityWorld toward ballVelocityWorld
+% drains the integrator bias without hiding real relative motion.
+anchorMinSpeed = 0.05;
+if isfield(p.estimator, "velocityAnchorMinSpeed")
+    anchorMinSpeed = p.estimator.velocityAnchorMinSpeed;
+end
+if isfield(p.estimator, "velocityAnchorTimeConstant") && ...
+        p.estimator.velocityAnchorTimeConstant > 0 && ~assemblyStill && ...
+        norm(ballVelocityWorld) > anchorMinSpeed
+    anchorWeight = dt/(p.estimator.velocityAnchorTimeConstant + dt);
+    velocityWorld(1:2) = velocityWorld(1:2) + ...
+        anchorWeight*(ballVelocityWorld(1:2) - velocityWorld(1:2));
+end
 relativeVelocityWorld = velocityWorld - ballVelocityWorld;
 yaw = rotationToEuler(rotationWorldFromBody);
 rotationWorldFromYaw = [cos(yaw(3)), -sin(yaw(3)); ...

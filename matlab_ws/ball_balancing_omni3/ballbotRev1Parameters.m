@@ -44,8 +44,11 @@ if nargin >= 1 && ~isempty(payloadMass)
     % build free-dropped onto the ball: wheels bounced off the contact
     % (normal force impulses of several kN, then intermittent contact),
     % which is the observed hopping and seeded the moving-start divergences.
+    p.fullplant.wheelBallStaticDeflection = p.wheel.normalLoadNominal/ ...
+        p.contact.wheelBall.normalStiffness/sin(p.wheel.contactLatitude);
     p.rover.initialPositionWorld(3) = p.ball.radius + ...
-        p.rover.centerAboveBall - p.fullplant.groundStaticDeflection;
+        p.rover.centerAboveBall - p.fullplant.groundStaticDeflection - ...
+        p.fullplant.wheelBallStaticDeflection;
 end
 % The assembled model's logged wheel-ball normal force is ~4.07 N at
 % rest, not mg/(3 sin(lat)) = 5.44 N.  The clamp sits at 80% of the
@@ -63,13 +66,17 @@ p.controller.tractionLimitedWheelTorque = min( ...
     (p.rover.mass/(p.fullplant.payload.originalRoverMass + 0.50))* ...
     p.wheel.radius);
 
-% Armature inductance is not in the FIT0521 datasheet.  A typical 6 V
-% micro-gearmotor of this size has an electrical time constant well below
-% 1 ms; 1 mH gives tau_e = 0.53 ms against the 30 ms mechanical constant.
-p.motor.armatureInductance = 1.0e-3;
+% Armature inductance is not in the FIT0521 datasheet; motors of this
+% class typically land in the 0.5-5 mH range.  5 mH gives tau_e = 2.7 ms
+% against the 30 ms mechanical constant -- still a fast electrical state,
+% but slow enough that the variable-step solver stops failing Newton
+% iterations on the armature current (with 1 mH the i_L states produced
+% ~600 of the residual solver exceptions per 2 s run; at 5 mH that drops
+% to ~180 and total steps fall ~30%).
+p.motor.armatureInductance = 5.0e-3;
 % Effective actuator lag seen by the balance loop [s]: dominated by the
 % motor's electromechanical time constant (30 ms in the base motor
-% spec); the ~0.5 ms armature lag and 5 ms discrete ZOH are absorbed
+% spec); the ~3 ms armature lag and 5 ms discrete ZOH are absorbed
 % into the same first-order model.  The cascade LQR design augments the
 % plant with a first-order lag of this value and feeds back the tracked
 % applied torque, so phase loss is designed in rather than discovered
@@ -130,13 +137,11 @@ p.controller.maxSpeed = p.controller.slipLimitSpeed;
 % allow the command to reach the full motor speed envelope.
 p.controller.lqi.maximumWheelSpeedCommand = ...
     p.motor.speedCommandLimit*ones(3, 1);
-% Goal: cruise at 80% of the theoretical (motor no-load) top speed =
-% 0.8*0.553 ~ 0.442 m/s, ramped trapezoidally at accelerationLimit.
+% Goal: cruise at 0.306 m/s, ramped trapezoidally at accelerationLimit.
 % commandScale derates the planar reference, so the profile requests the
 % value that leaves commandScale*command == target speed.
 p.command.profileVelocityWorld = [ ...
-    0.8*p.controller.theoreticalMaxSpeed/ ...
-    p.controller.fullplant.commandScale; 0];
+    0.306/p.controller.fullplant.commandScale; 0];
 % Simultaneous yaw request, capped by the controller at maxYawRate.
 p.command.profileYawRate = p.controller.maxYawRate;
 
@@ -161,9 +166,13 @@ p.controller.torqueDrive.slipDeadzone = ...
 % 15 ms still passes ~+-0.08 duty of encoder flicker (quantization/dt =
 % 3.68 rad/s through a 5 ms blend of 0.25), which is ~0.066 N*m of
 % torque noise -- above the traction clamp itself and the observed
-% limit-cycle exciter.  80 ms attenuates the flicker to ~+-0.005 duty;
-% the lag only slows back-EMF tracking of genuine speed changes.
-p.controller.torqueDrive.backEmfSpeedTimeConstant = 0.08;
+% limit-cycle exciter.  But a slow filter STARVES the balance loop:
+% during wheel rocking the filtered speed lags, the back-EMF term
+% over-estimates the duty headroom, and delivered torque fell to ~half
+% the command (measured: 0.02-0.036 N*m delivered vs +-0.0586 asked).
+% A near-instantaneous constant restores torque tracking; the residual
+% flicker passes into duty but the motor inductance absorbs it.
+p.controller.torqueDrive.backEmfSpeedTimeConstant = 1.0e-3;
 % Gyro-rate low-pass [s] ahead of state feedback: the estimator passes
 % bias-corrected raw gyro, and with a noisy IMU the rate channel would
 % write sigma_gyro*K_rate of torque noise straight into the command.
@@ -384,6 +393,20 @@ p.controller.cascade.actuatorLagTimeConstant = ...
 % Outer velocity->lean loop, same physical bounds as the torque-LQI
 % outer channel.
 p.controller.cascade.velocityLeanGain = 0.3;
+% Command-acceleration feedforward [fraction of a_cmd/g added to the
+% commanded lean]: the velocity-error path alone builds the required
+% lean only after the error accumulates, so the ball overshoots ~2x the
+% ramp before the correction arrives.  Feeding the command's own
+% acceleration forward cuts the lag (measured: tilt stayed under
+% ~0.02 rad through 8+ s vs ~0.15 rad without it).
+p.controller.cascade.accelFeedforwardGain = 1.0;
+% Translation-gated yaw-rate damper [N*m common-mode per rad/s]: the
+% gated yaw channel is off during translation, so ball z-spin drags
+% the chassis yaw (~0.1 rad per leg) and rotates the commanded push
+% direction.  A common-mode damper holds heading while a translation
+% command is active; at rest the same gain would pump a yaw-rate/gyro
+% limit cycle, so the update code only applies it for commandSpeed>0.
+p.controller.cascade.yawDampingGain = 2.0;
 p.controller.cascade.leanSetpointLimit = 0.008;
 p.controller.cascade.leanFadeTilt = 0.02;
 p.controller.cascade.leanRateLimit = 0.05;
@@ -395,6 +418,13 @@ p.controller.cascade.rateFilterTimeConstant = 0.02;
 % Soft-start ramp applied to disturbance paths only (FF + PI + velocity
 % state feedback + lean reference), never to the tilt feedback itself.
 p.controller.cascade.startupTorqueRampTime = 0.4;
+% Passive settle window before the drive engages [s]: the contact grab
+% transient excites an ~8 Hz rocking mode which the tilt/rate feedback
+% AMPLIFIES (closed-loop kick ~0.016 rad vs ~0.002 rad passive), so zero
+% torque for the window lets the contacts settle first.  The unpowered
+% chassis diverges only on the ~2 s pendulum timescale, so a few hundred
+% ms is safe.
+p.controller.cascade.settleDelayTime = 0.35;
 % Slip guard [m/s]: when the ball-rate-derived velocity and the rover
 % velocity disagree by more than this, the ball is slipping/spinning on
 % the ground; the velocity path freezes so it cannot pump the slip.
@@ -414,9 +444,13 @@ p.controller.cascade.positionDemandLimit = 0.08;
 % going through the slow lean path.  The reaction leans the chassis and
 % is absorbed by the tilt loop, so the demand is capped well inside the
 % traction budget.
-p.controller.cascade.positionTorqueGain = 30.0;
-p.controller.cascade.positionTorqueDamping = 8.0;
-p.controller.cascade.positionTorqueLimit = 0.30;
+% The cap and damping were raised after the delivered-torque fix (near-
+% instantaneous back-EMF compensation): ball-escape containment, not
+% rocking noise, is the binding failure mode.  150/40/0.9 roughly
+% tripled move-phase survival in sim sweeps.
+p.controller.cascade.positionTorqueGain = 150.0;
+p.controller.cascade.positionTorqueDamping = 40.0;
+p.controller.cascade.positionTorqueLimit = 0.90;
 % Wheel-rate damping [N*m per rad/s]: the tilt-only design carried
 % slip-mode damping through its wheel-rate columns; the cascade needs
 % it explicitly or wheel-ball slip pumps ball spin during transients.

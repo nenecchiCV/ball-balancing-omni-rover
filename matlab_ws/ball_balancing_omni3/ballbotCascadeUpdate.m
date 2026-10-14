@@ -125,6 +125,22 @@ accelerationDemand = accelerationDemandSlew;
 commandedTilt = [accelerationDemand(1); -accelerationDemand(2)]/ ...
     p.gravity;
 
+% Command-acceleration feedforward: the lean required to accelerate at
+% a_cmd is ~a_cmd/g; waiting for velocity error to build the same lean
+% through velocityLeanGain lags the plant and lets the ball overshoot.
+if isfield(cc, "accelFeedforwardGain") && cc.accelFeedforwardGain ~= 0
+    persistent prevCommandBody
+    if isempty(prevCommandBody) || mode ~= 1
+        prevCommandBody = commandVelocityBody;
+    end
+    commandAccel = (commandVelocityBody - prevCommandBody)/ ...
+        p.controller.sampleTime;
+    prevCommandBody = commandVelocityBody;
+    commandedTilt = commandedTilt + cc.accelFeedforwardGain* ...
+        [commandAccel(1); -commandAccel(2)]/p.gravity;
+    commandedTilt = min(max(commandedTilt, -leanLimit), leanLimit);
+end
+
 % Cone guard: tilt beyond the commanded lean gets no additional lean
 % demand.
 excessTilt = max(tiltMagnitude - leanLimit, 0);
@@ -268,6 +284,17 @@ if yawActive && cc.yawRateGain ~= 0
     rawWheelCommand = rawWheelCommand + ...
         cc.yawAllocation*cc.yawRateGain*yawError;
 end
+% Passive yaw damper: during translation the gated yaw channel is off
+% and ball z-spin drags the chassis yaw (measured drift ~0.1 rad per
+% leg), which rotates the commanded push direction and drives the
+% sideways escape.  A common-mode rate damper holds heading, but only
+% while a translation command is active: at rest the same gain pumps a
+% yaw-rate/gyro-noise limit cycle (observed hold failure ~4 s).
+if isfield(cc, "yawDampingGain") && cc.yawDampingGain ~= 0 && ...
+        ~yawActive && commandSpeed > 0
+    rawWheelCommand = rawWheelCommand - ...
+        cc.yawAllocation*cc.yawDampingGain*filteredBodyRate(3);
+end
 
 limit = min(p.driver.continuousTorqueLimit, ...
     p.controller.tractionLimitedWheelTorque);
@@ -288,6 +315,26 @@ if mode == 1
         balanceTorque = balanceTorque*(headroom/peakBalance);
     end
     wheelSpeedCommand = commonTorque + balanceTorque;
+    % Startup settle window: the contact grab transient excites an ~8 Hz
+    % rocking mode between the wheel-1 and wheel-2/3 support lines, and
+    % closed-loop feedback AMPLIFIES it (measured: kick ~0.016 rad with
+    % torque active vs ~0.002 rad passive).  Zero torque for the first
+    % settleDelayTime lets the contacts settle; the unpowered chassis
+    % diverges only on the ~2 s pendulum timescale, so a few hundred ms
+    % is safe.
+    settling = false;
+    if isfield(cc, "settleDelayTime") && cc.settleDelayTime > 0
+        persistent settleClock
+        if isempty(settleClock) || ~enable || mode ~= 1
+            settleClock = 0;
+        else
+            settleClock = settleClock + p.controller.sampleTime;
+        end
+        if settleClock < cc.settleDelayTime
+            wheelSpeedCommand(:) = 0;
+            settling = true;
+        end
+    end
 elseif mode == 2
     wheelSpeedCommand = min(max(-p.controller.recoveryGainScale* ...
         cc.stateGain(:, 1:6)*tiltState, -limit), limit);
@@ -304,7 +351,7 @@ if isfield(cc, "appliedTorqueGain") && isfield(cc, "actuatorLagTimeConstant")
     appliedTorque = appliedTorque + lagWeight*(wheelSpeedCommand - appliedTorque);
 end
 
-if mode == 1
+if mode == 1 && ~settling
     massEffective = p.rover.mass + p.ball.mass + ...
         p.ball.inertia(1, 1)/p.ball.radius^2;
     accelerationResidual = ...
