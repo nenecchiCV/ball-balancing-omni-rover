@@ -308,7 +308,15 @@ p.controller.torqueDrive.slipDampingGain = 0.02;
 % widened cone and lifts the gravity-drive speed cap that throttled the
 % ball to ~0.13 m/s at the 0.008 rad setting.
 p.controller.torqueDrive.velocityLeanGain = 0.3;
-p.controller.torqueDrive.leanSetpointLimit = 0.016;
+% Saturation-aware re-derivation (limit-cycle redesign): the commanded
+% lean band is now derived from the tilt-column gain, not set
+% independently.  With K_tilt ~6.5 N*m/rad (R=4000 design) a 0.016 rad
+% edge demanded 0.104 N*m -- 133% of the 0.078 clamp -- so the loop ran
+% bang-bang precisely inside the cone it was supposed to hold.  Capping
+% the band at 0.009 rad bounds the edge demand at ~75% of the clamp;
+% the residual tracking lean for a 0.03 m/s^2 ramp is only ~0.003 rad,
+% so translation authority is unaffected.
+p.controller.torqueDrive.leanSetpointLimit = 0.009;
 % Command-acceleration feedforward gain on the lean demand: the ramped
 % command needs lean ~a_cmd/g (0.003 rad at 0.03 m/s^2), far below the
 % P-error saturation cap, so feedforward carries the nominal lean and
@@ -334,8 +342,28 @@ p.controller.torqueDrive.leanRateLimit = 0.05;
 % tiltStiffenTilt-wide ramp, reaching near-full authority just inside
 % the cone edge.  Inside the commanded band small-signal torque stays
 % ~1/3 of the clamp, so gyro noise does not write into the wheels.
-p.controller.torqueDrive.tiltStiffenGain = 4.0;
+% tiltStiffenGain halved (4.0 -> 2.0) in the same redesign: at x4 the
+% boosted tilt column (~26 N*m/rad) railed the clamp for any tilt only
+% 0.003 rad past the lean band, which IS the bang-bang limit cycle
+% observed at ~0.13 m/s.  x2 still stiffens past the band but keeps the
+% maximum tilt-channel demand at a recoverable level.
+p.controller.torqueDrive.tiltStiffenGain = 2.0;
 p.controller.torqueDrive.tiltStiffenTilt = 0.006;
+% Observer-based wheel-rate estimate (encoder-quantization fix for the
+% limit cycle): the raw 341.2-PPR backward difference injects +-3.7
+% rad/s flicker per 5 ms sample, which the tilt-rate column converts to
+% >2 N*m of torque noise -- the dominant saturation pump on the hold
+% and small-signal trajectory.  Model-aided filter: each control step
+% the estimate advances by the measured wheel-drive dynamics (last
+% torque command minus the compliance drag (wheelRate - kinematicRate))
+% and corrects toward the measured rate with gain observerGain.  On a
+% synthetic small-signal regime the observer cuts rate error ~6x vs
+% backward difference and ~3x vs the 30 ms lag filter it replaces.
+% 0 keeps the legacy lag-filtered backward difference.
+p.controller.torqueDrive.wheelRateObserverEnabled = true;
+p.controller.torqueDrive.wheelRateObserverGain = 0.15;
+p.controller.torqueDrive.wheelRateObserverDriveGain = 306;
+p.controller.torqueDrive.wheelRateObserverCompliance = 0.134;
 % Slow tilt-error integrator [1/s scale on the tilt columns, rad*s
 % state limit, 1/s leak]: the fixed proportional gain sits only ~5%
 % above the 1 kg static-hold floor, so the net tilt stiffness

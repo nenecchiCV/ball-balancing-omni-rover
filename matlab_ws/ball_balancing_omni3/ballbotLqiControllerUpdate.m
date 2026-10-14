@@ -163,7 +163,37 @@ if torqueDrive
     % common-mode residual.  A short lag keeps the sustained component
     % these channels actually regulate.
     filteredWheelRate = wheelRate(:);
-    if isfield(p.controller.torqueDrive, "wheelRateFilterTimeConstant") && ...
+    if isfield(p.controller.torqueDrive, "wheelRateObserverEnabled") && ...
+            p.controller.torqueDrive.wheelRateObserverEnabled && ...
+            isfield(p.controller.torqueDrive, "wheelRateObserverGain") && ...
+            p.controller.torqueDrive.wheelRateObserverGain > 0
+        % Model-aided wheel-rate observer: prediction advances the
+        % estimate with the measured wheel-drive dynamics (previous
+        % torque command through driveGain, minus the compliance drag
+        % toward the kinematic rolling rate), and the correction only
+        % trims toward the quantized measurement.  Encoder flicker then
+        % enters at observerGain (~0.15x) instead of at the lag filter's
+        % pass-through (~0.17x but with no model prediction), so the
+        % slip/propulsion/servo channels see the sustained rate without
+        % either the flicker or the lag.
+        persistent wheelRateObs prevObserverTorque prevObserverKinRate
+        if isempty(wheelRateObs) || mode ~= 1
+            wheelRateObs = wheelRate(:);
+            prevObserverTorque = zeros(3, 1);
+            prevObserverKinRate = wheelRate(:);
+        else
+            wheelRateObs = wheelRateObs + ...
+                (p.controller.torqueDrive.wheelRateObserverDriveGain* ...
+                 prevObserverTorque - ...
+                 p.controller.torqueDrive.wheelRateObserverCompliance* ...
+                 (wheelRateObs - prevObserverKinRate))* ...
+                p.controller.sampleTime;
+            wheelRateObs = wheelRateObs + ...
+                p.controller.torqueDrive.wheelRateObserverGain* ...
+                (wheelRate(:) - wheelRateObs);
+        end
+        filteredWheelRate = wheelRateObs;
+    elseif isfield(p.controller.torqueDrive, "wheelRateFilterTimeConstant") && ...
             p.controller.torqueDrive.wheelRateFilterTimeConstant > 0
         persistent wheelRateFilter
         if isempty(wheelRateFilter) || mode ~= 1
@@ -539,6 +569,14 @@ if torqueDrive
         wheelSpeedCommand(:) = 0;
     end
 
+    if mode == 1 && isfield(p.controller.torqueDrive, ...
+            "wheelRateObserverEnabled") && ...
+            p.controller.torqueDrive.wheelRateObserverEnabled
+        % Feed the finalized command back to the wheel-rate observer's
+        % prediction input (see filteredWheelRate above).
+        prevObserverTorque = wheelSpeedCommand;
+        prevObserverKinRate = kinematicRate;
+    end
     if mode == 1
         % Torque residual deflects planar acceleration; the equivalent
         % velocity correction leaks into the velocity integrators.
