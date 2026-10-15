@@ -65,6 +65,8 @@ LQIゲインは `ballbotRobustTorqueGains` が設計します。実測トルク�
 
 `p.controller.cascade.enabled = true` の構成ではカスケード経路（MiaPURE方式準拠の速度→リーン外層＋6状態LQR＋ボール速度PI、`ballbotCascadeGains` 設計）へ切り替わります。保持性能はトルクLQI経路が優位（5 s保持の最大傾斜 ~0.007 rad対 ~0.04 rad）なためトルクLQIを既定としています。
 
+`p.controller.ballforce.enabled = true` の構成ではボールフォース経路（`ballbotBallforceUpdate`）へ切り替わります。姿勢・モード管理・滑り/スピン/ヨーの各レールはトルクLQIと同一で、並進チャネルだけを輪速Pサーボから「ボール速度PI → 平面力要求 → `pinv(Bvel)` で最小ノルム輪トルクへ配分」へ置き換えます。輪速サーボは接触拘束で輪速=ボール転動速度にピンされるため到達不能なレート目標に飽和して失速しますが、力配分は実ボール速度誤差に比例する要求なのでその失速が起きません。静止摩擦のプリロードとして指令輪速方向への Coulomb フィードフォワードを持ちます。実測ではトルクLQIが全く動かせなかった 0.10 m/s ステップへボールを実際に追従させます（整定誤差 +0.011 m/s）。サイクル耐久はトルクLQIのほうが長いため既定はトルクLQIのままです。
+
 ## MATLAB関数
 
 | ファイル | モデル内の呼出元 | 役割 |
@@ -81,7 +83,8 @@ LQIゲインは `ballbotRobustTorqueGains` が設計します。実測トルク�
 | `ballbotTorquePlantDynamics.m` | `ballbotDesignTorqueLqi` から呼出し | トルク入力縮約プラントの非線形動力学 |
 | `ballbotPayloadRoverProperties.m` | パラメーター初期化 | ペイロード→質量/重心/慣性の換算 |
 | `ballbotRev1CommandProfile.m` | `CommandSource` | 移動/停止繰り返し＋ヨー時間分離指令プロファイル（加減速別レート制限） |
-| `ballbotRev1PlantAugment.m` | `ballbotRev1Parameters` から呼出し（実行時） | 球―床転がり抵抗を `External Force and Torque` で実行時追加（.slx は R2024b 形式を維持） |
+| `ballbotRev1PlantAugment.m` | `ballbotRev1Parameters` から呼出し（実行時） | 球―床転がり抵抗（`External Force and Torque`）と輪軸 Coulomb/静摩擦（`Ideal Torque Source`＋`ballbotShaftFrictionTorque`）を実行時追加（.slx は R2024b 形式を維持・冪等・フラグoffで生成ブロック除去と粘性係数復元） |
+| `ballbotShaftFrictionTorque.m` | augment 生成の `WheelShaftFricFcn` から呼出し | 輪軸速度→滑らかな Coulomb/breakaway 摩擦トルク |
 | `ballbotRollingResistance.m` | `Ball/BallRollResFcn` | 球速度・球スピン・法線力から転がり抵抗の力/トルクを算出 |
 | `ballbotCustomFriction.m` | `WheelAssembly/WheelContact` | 駆動方向とローラー方向を分離した異方性接触摩擦 |
 | `ballbotIdealImu.m` / `ballbotImuFromJoint.m` | `MultibodyPlant/IdealIMU` | 6-DOF Joint真値から比力・角速度を生成 |
@@ -90,7 +93,8 @@ LQIゲインは `ballbotRobustTorqueGains` が設計します。実測トルク�
 | `ballbotEstimatorInitialState.m` | 初期値式 | 推定器14状態の初期値 |
 | `ballbotTruthGate.m` | `Controller/TruthGate`（診断用） | `p.estimator.truthFeedbackEnabled` 時に推定値をプラント真値で置換 |
 | `ballbotYawBiasStartupGuard.m` | `BalanceController` 内関数から呼出し | バイアス収束までヨー制御だけを抑止する準備完了ラッチ |
-| `ballbotLqiControllerUpdate.m` | `Controller/BalanceController/LqiController` | モード管理・カスケード/旧経路のディスパッチ |
+| `ballbotLqiControllerUpdate.m` | `Controller/BalanceController/LqiController` | モード管理・トルクLQI本体・fullplant/カスケード/ボールフォース経路のディスパッチ |
+| `ballbotBallforceUpdate.m` | `ballbotLqiControllerUpdate` から呼出し | ボールフォース制御器（ボール速度PI→力配分の新規並進チャネル＋LQI姿勢レール共有） |
 | `ballbotFullPlantHierarchyUpdate.m` | `ballbotLqiControllerUpdate` から呼出し | 旧階層制御（速度外側ループ＋傾斜安定化＋輪速変換） |
 | `ballbotCascadeUpdate.m` | `ballbotLqiControllerUpdate` から呼出し | カスケード制御器本体 |
 | `ballbotLqiFeedbackState.m` | `Controller/BalanceController` | LQIフィードバック状態ベクトルの組立て |
@@ -102,6 +106,7 @@ LQIゲインは `ballbotRobustTorqueGains` が設計します。実測トルク�
 | `ballbotPoseFromJoint.m` | `Logging` | 位置・クォータニオンからxyz/RPY真値を生成 |
 | `ballbotEulerToQuaternion.m` | 補助 | オイラー角からクォータニオン変換 |
 | `scratch_cycle.m` | 検証用エントリポイント | サイクルシミュレーション実行と `cycle_result_<tag>.mat` 保存 |
+| `ballbotBenchmark.m` | 検証用エントリポイント | シナリオ（hold/stepX/yaw/cycle/bias）を実行し G-01〜G-11 指標を採点・要約行を出力 |
 
 推定器の内部状態は14要素で、末尾にヨー軸ジャイロバイアス推定値と低運動継続時間を保持します。制御器へ渡す`estimate(14)`の幅と順序は維持し、4～6番目をバイアス補正後の機体角速度とします。バイアス推定値、学習許可、継続時間は診断信号として扱います。起動時はバイアス収束までヨートルクだけを抑止し、明示的なヨー指令は抑止をバイパスします。
 
@@ -134,6 +139,7 @@ out = sim(in);
 | 移動フェーズ（ペイロードなし） | 指令 0.12 m/s・μr=0.008 で移動＋停止ウィンドウを完走した実績あり（傾斜 ≤0.011 rad）。実行差で減速コーナー（指令 → 0 近傍）のボール追い越しが ~0.2 m/s 接触壁に達して転倒する既知限界は残る |
 | LQI再設計（飽和織り込み lean 帯域・R=4000・輪速オブザーバ）後のサイクル試験 | 指令 0.12 m/s の移動/停止繰り返しで t=25.6 s（cycle 2 減速区間の脱輪）まで生存。旧値への単独復旧はいずれも早期転倒（`tiltStiffenGain=4.0`: 23.9 s、`leanSetpointLimit=0.016`: 21.6 s、輪速オブザーバ無効: 23.2 s）で、再設計3要素が揃った構成が最長。回復モード（mode 2）は各ランで複数回作動し一部復帰。duty は ~0.83 クランプに対し p99≈0.35 で飽和型 bang-bang は解消済み |
 | 0.306 m/s 指令サイクル | t=9.3 s で転倒。ボール速度が接触壁を超えて伸びるため、`leanSetpointLimit` ではなく脱輪が限界を支配 |
+| プラント実機化（IMUノイズ・量子化・輪軸静/Coulomb摩擦）＋制御器A/B | 同一プラント・同一シナリオで `ballbotBenchmark` 比較。保持: LQI 0.780° vs ballforce 0.754°（同等）。stepX（0.10 m/s）: LQI は整定誤差 -0.105 m/s で全く動かず（輪速サーボが接触拘束に失速）、ballforce は +0.011 m/s へ追従（ボールが実際に指令速度へ到達）。yaw: ballforce 7/8、LQI 6/8。cycle（0.12 m/s 移動/停止）: LQI t=36.6 s、ballforce t=14.9 s でともに転倒。トラクション上限 0.078→0.10 N・m で ballforce は 22.9 s まで改善するが LQI は 13.1 s へ悪化（追加トルクがリミットサイクルを増幅）。ballforce は追従力で優位・cycle 耐久で劣後のため実験経路として保持し、既定はトルクLQI |
 | MATLAB単体試験 | `ballbotEstimatorStepTest` 16件、`ballbotParametersTest` 3件が合格 |
 
 既知の残課題:

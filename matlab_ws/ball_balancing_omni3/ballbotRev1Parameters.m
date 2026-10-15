@@ -650,6 +650,89 @@ yawRow = [22.7010, 22.6692, 22.7372];   % measuredB0 yaw row (nominal)
 p.controller.cascade.yawAllocation = pinv(yawRow);
 p.controller.cascade.yawRateGain = 0.2;
 
+% ------------------------------------------------------------------
+% ballforce: alternative architecture -- attitude stays on the proven
+% torque-LQI tilt/rate block, but translation is driven by a PI on the
+% BALL velocity allocated through pinv(Bvel) (minimum-norm wheel torque
+% for pure planar acceleration) instead of the wheel-rate servo that
+% stalls against the contact-coupled wheel rate.  A Coulomb feedforward
+% in the commanded wheel-rate direction pre-loads the gear-shaft
+% stiction the augmented plant adds.
+p.controller.ballforce.enabled = false;
+p.controller.ballforce.rateFilterTimeConstant = 0.02;
+p.controller.ballforce.startupTorqueRampTime = 0.4;
+p.controller.ballforce.leanHoldTorque = ...
+    p.controller.torqueLqi.robustness.leanHoldTorque;
+% Lean channel: velocity error + velocity integral -> demanded lean.
+% Gain 0.8 (vs 0.3 in the rate-servo path): the force servo covers the
+% torque deficit, so the lean only needs to supply the gravity share.
+p.controller.ballforce.velocityLeanGain = 0.8;
+p.controller.ballforce.accelFeedforwardGain = 1.0;
+p.controller.ballforce.leanSetpointLimit = 0.009;
+p.controller.ballforce.leanRateLimit = 0.05;
+p.controller.ballforce.leanFadeTilt = 0.02;
+p.controller.ballforce.tiltIntegralGain = 1.0;
+p.controller.ballforce.tiltIntegralLimit = 0.03;
+p.controller.ballforce.tiltIntegralLeak = 0.5;
+% Ball-velocity PI [m/s^2 per m/s, per m*s integral]: the direct force
+% path that the rate-servo propulsion could not deliver.
+p.controller.ballforce.propulsionKp = 2.0;
+p.controller.ballforce.propulsionKi = 0.8;
+p.controller.ballforce.propulsionKd = 0.2;
+p.controller.ballforce.propulsionForceLimit = 1.0;
+% Force-channel torque budget: the shaft stiction is ~0.02 N*m per
+% wheel, so a 0.045 cap leaves ~0.025 of effective drive -- barely above
+% breakaway.  The force servo needs a bigger guaranteed share while a
+% translation command is active; the tilt loop keeps whatever is left.
+p.controller.ballforce.forceTorqueLimit = 0.05;
+p.controller.ballforce.propulsionMinShare = 0.5;
+% Command-accel feedforward hurt more than it helped: the step-edge
+% kick knocks the contact pair off the recoverable trajectory (measured
+% A/B: ff off settles +0.011 m/s, ff on diverges to -0.1..+0.2 m/s).
+p.controller.ballforce.forceFeedforwardGain = 0;
+% The command differentiator spikes on step edges; cap the feedforward
+% to the force range it is meant to cover.
+p.controller.ballforce.forceFeedforwardLimit = 0.5;
+p.controller.ballforce.ballVelocityKi = 0.8;
+p.controller.ballforce.ballVelocityLeak = 0.5;
+p.controller.ballforce.ballVelocityIntegralLimit = 0.5;
+% Integral leak for the translation integrator: slow enough to build
+% the sustained force preload that beats shaft stiction (the LQI leak
+% of 2/s bleeds it before it can act -- there it only guarded a gain-0
+% path).
+p.controller.ballforce.integralLeak = 0.15;
+% Integral channel left disabled: enabled, it oscillates between the
+% velocity-integral limit and the anti-windup residual (a ~2 s limit
+% cycle around the saturation rail) and NET tracking got worse.
+p.controller.ballforce.integralEnabled = false;
+% Noise hygiene: the ball-velocity estimate carries >0.15 m/s of
+% flicker at rest; the LQI path smothers it in a slew-limited 9 mrad
+% lean cap while this servo would drive it straight to the wheels.
+% Filter it and open the force servo only on a real translation demand.
+p.controller.ballforce.velErrFilterTimeConstant = 0.15;
+p.controller.ballforce.servoDeadzone = 0.04;
+p.controller.ballforce.ballVelocityAllocation = ...
+    pinv(p.controller.cascade.info.BvelNominal);
+% RelPos centering PD through the same force allocation.
+p.controller.ballforce.positionForceGain = 50.0;
+p.controller.ballforce.positionForceDamping = 10.0;
+p.controller.ballforce.positionForceLimit = 0.6;
+% Stiction feedforward: sign-on-commanded-rate torque cancels the
+% output-shaft Coulomb deadzone (kept slightly under unity so a wrong
+% sign near rest cannot self-excite).
+p.controller.ballforce.stictionFeedforwardGain = 0.8;
+p.controller.ballforce.stictionRateWindow = 0.5;
+% Retained rails.
+p.controller.ballforce.slipDampingGain = 0.02;
+p.controller.ballforce.slipDeadzone = 4.42;
+p.controller.ballforce.ballSpinBrakeGain = 0.12;
+p.controller.ballforce.ballSpinTorqueLimit = 0.025;
+p.controller.ballforce.yawRateGain = 0.2;
+p.controller.ballforce.yawAllocation = pinv(yawRow);
+p.controller.ballforce.yawDampingGain = 2.0;
+p.controller.ballforce.antiWindupGain = ...
+    p.controller.lqi.antiWindupGain;
+
 % Identifies which builder produced this set so the rev1 model InitFcn
 % can regenerate ballbotParams when a stale variant (which lacks the
 % electrical actuator fields the Simscape network requires) is left in
