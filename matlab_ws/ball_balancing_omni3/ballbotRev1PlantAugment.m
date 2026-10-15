@@ -1,15 +1,18 @@
-function ballbotRev1PlantAugment(model)
+function ballbotRev1PlantAugment(model, p)
 %BALLBOTREV1PLANTAUGMENT Runtime plant augmentation for the rev1 model.
-%   Adds the ball-ground rolling-resistance load: an External Force and
-%   Torque block on the ball frame, driven by the 6-DOF joint's sensed
-%   velocities and the ball-ground contact normal force, computed by
-%   ballbotRollingResistance.
+%   Adds the ball-ground rolling-resistance load (External Force and
+%   Torque on the ball frame driven by joint velocities and the sensed
+%   normal force) and, when p.motor.outputShaftFrictionEnabled is set,
+%   per-wheel smooth-Coulomb shaft friction via Ideal Torque Sources
+%   across the DriveMotor rotor/case nets plus the matching DC-motor
+%   viscous rebalance.
 %
 %   The change is applied at runtime instead of editing the .slx so the
 %   file stays in R2024b format (saving from a newer MATLAB breaks the
 %   Simscape Electrical driver blocks for R2024b).  Idempotent: returns
-%   immediately once BallRollingLoad exists.  Do not save the model from
-%   a MATLAB newer than R2024b.
+%   immediately once the rolling load exists (the friction additions
+%   check their own block marker).  Do not save the model from a MATLAB
+%   newer than R2024b.
 
 if nargin < 1
     model = 'ball_balancing_omni3_multibody_lqi_rev1';
@@ -17,11 +20,17 @@ end
 if ~bdIsLoaded(model)
     return;
 end
+frictionEnabled = nargin >= 2 && ~isempty(p) && ...
+    isfield(p, 'motor') && isfield(p.motor, 'outputShaftFrictionEnabled') && ...
+    p.motor.outputShaftFrictionEnabled;
 ballSys = [model '/MultibodyPlant/Ball'];
 if ~isempty(find_system(ballSys, 'SearchDepth', 1, ...
         'Name', 'BallRollingLoad'))
-    return;
+    rollingLoadDone = true;
+else
+    rollingLoadDone = false;
 end
+if ~rollingLoadDone
 joint = [ballSys '/BallFreeJoint'];
 contact = [ballSys '/BallGroundContact'];
 
@@ -102,5 +111,103 @@ set_param(fcn, 'Position', [300 210 340 260]);
 set_param(mux, 'Position', [240 200 250 270]);
 for i = 1:5
     set_param(cv{i}, 'Position', [140 190+22*i 170 208+22*i]);
+end
+end
+
+% Gearmotor output-shaft stiction: an Ideal Torque Source across the
+% DriveMotor's rotor/case nets (which land on the RMI rod/case ports)
+% applies a smooth Coulomb law of the sensed shaft velocity, giving the
+% geartrain the breakaway deadzone the pure-viscous DC-motor model
+% lacks.  A passive Rotational Friction element in this net leaves the
+% RMI torque underdetermined at init (Simscape reports a configuration
+% singularity), so the torque is imposed as a source instead; tanh
+% keeps the transition continuous for the solver.  The DC Motor viscous
+% coefficient is reduced to viscousShare of its value so the combined
+% loss still matches the no-load-current measurement.  Idempotent via
+% WheelShaftFricSrc.  Port map (probed): joint RConn3 is the velocity
+% sense output that also feeds RMI.w; the torque source exposes
+% LConn1=C(case), RConn1=S(signal in), RConn2=R(shaft).
+if frictionEnabled
+for wheelIndex = 1:3
+    assy = sprintf('%s/MultibodyPlant/WheelAssembly%d', model, ...
+        wheelIndex);
+    if isempty(find_system(assy, 'SearchDepth', 1, ...
+            'Name', 'WheelShaftFricSrc'))
+        legacy = find_system(assy, 'SearchDepth', 1, ...
+            'Name', 'WheelShaftFriction');
+        for k = 1:numel(legacy)
+            pho = get_param(legacy{k}, 'PortHandles');
+            for f = fieldnames(pho)'
+                for j = 1:numel(pho.(f{1}))
+                    lh = get_param(pho.(f{1})(j), 'Line');
+                    if ishandle(lh)
+                        delete_line(lh);
+                    end
+                end
+            end
+            delete_block(legacy{k});
+        end
+        jph = get_param([assy sprintf('/Wheel%dJoint', wheelIndex)], ...
+            'PortHandles');
+        rph = get_param([assy '/RMI'], 'PortHandles');
+        cph = get_param([assy '/CaseRef'], 'PortHandles');
+        vin = add_block('nesl_utility/PS-Simulink Converter', ...
+            [assy '/WheelShaftFricIn'], 'Unit', 'rad/s');
+        fcn = add_block( ...
+            'simulink/User-Defined Functions/MATLAB Fcn', ...
+            [assy '/WheelShaftFricFcn'], ...
+            'MATLABFcn', 'ballbotShaftFrictionTorque(u,ballbotParams)');
+        t2p = add_block('nesl_utility/Simulink-PS Converter', ...
+            [assy '/WheelShaftFricToPS'], 'Unit', 'N*m');
+        src = add_block( ...
+            'fl_lib/Mechanical/Mechanical Sources/Ideal Torque Source', ...
+            [assy '/WheelShaftFricSrc']);
+        vph = get_param(vin, 'PortHandles');
+        fph = get_param(fcn, 'PortHandles');
+        tph = get_param(t2p, 'PortHandles');
+        sph = get_param(src, 'PortHandles');
+        add_line(assy, jph.RConn(3), vph.LConn(1), ...
+            'autorouting', 'on');
+        add_line(assy, vph.Outport(1), fph.Inport(1), ...
+            'autorouting', 'on');
+        add_line(assy, fph.Outport(1), tph.Inport(1), ...
+            'autorouting', 'on');
+        add_line(assy, tph.RConn(1), sph.RConn(1), ...
+            'autorouting', 'on');
+        add_line(assy, rph.RConn(2), sph.RConn(2), ...
+            'autorouting', 'on');
+        add_line(assy, cph.LConn(1), sph.LConn(1), ...
+            'autorouting', 'on');
+        set_param(src, 'Position', [560 400 600 440]);
+        set_param(t2p, 'Position', [470 400 500 420]);
+        set_param(fcn, 'Position', [380 395 430 435]);
+        set_param(vin, 'Position', [290 400 320 420]);
+    end
+    set_param([assy '/DriveMotor'], 'lam', ...
+        'ballbotParams.motor.viscousFriction*ballbotParams.motor.viscousShare');
+end
+else
+% Disabled mid-session: strip the torque-source chain and restore the
+% full motor viscous coefficient.
+for wheelIndex = 1:3
+    assy = sprintf('%s/MultibodyPlant/WheelAssembly%d', model, ...
+        wheelIndex);
+    stale = find_system(assy, 'SearchDepth', 1, 'RegExp', 'on', ...
+        'Name', 'WheelShaftFric.*');
+    for k = 1:numel(stale)
+        pho = get_param(stale{k}, 'PortHandles');
+        for f = fieldnames(pho)'
+            for j = 1:numel(pho.(f{1}))
+                lh = get_param(pho.(f{1})(j), 'Line');
+                if ishandle(lh)
+                    delete_line(lh);
+                end
+            end
+        end
+        delete_block(stale{k});
+    end
+    set_param([assy '/DriveMotor'], 'lam', ...
+        'ballbotParams.motor.viscousFriction');
+end
 end
 end

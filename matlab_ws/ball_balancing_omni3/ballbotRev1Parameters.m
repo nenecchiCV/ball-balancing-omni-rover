@@ -14,13 +14,12 @@ function p = ballbotRev1Parameters(payloadMass)
 
 p = ballbotFullPlantParameters;
 
-% Plant augmentation (ball-ground rolling resistance) is applied at
-% runtime so the .slx stays in R2024b format.  InitFcn calls this
-% function at every simulation start, so augmenting here covers the
-% GUI-run path too; guarded for param builds with no model loaded.
-if bdIsLoaded('ball_balancing_omni3_multibody_lqi_rev1')
-    ballbotRev1PlantAugment('ball_balancing_omni3_multibody_lqi_rev1');
-end
+% Plant augmentation (ball-ground rolling resistance, wheel-shaft
+% friction) is applied at runtime so the .slx stays in R2024b format.
+% InitFcn calls this function at every simulation start, so augmenting
+% here covers the GUI-run path too; guarded for param builds with no
+% model loaded.  Runs at the END of this builder so flag fields the
+% augmentation consumes are already populated.
 
 if nargin >= 1 && ~isempty(payloadMass)
     p.fullplant.payload.mass = payloadMass;
@@ -475,6 +474,41 @@ p.controller.torqueDrive.ballYawTorqueLimit = 0.025;
 % keeps the drift fully damped without measurable budget cost.
 p.controller.torqueDrive.yawDampingGain = 0.30;
 
+% Mounted-IMU realism (LSM6DSV16X on X-NUCLEO-IKS4A1, sampled at the
+% 200 Hz estimator rate).  ballbotImuFromJoint applies these when
+% enabled: datasheet noise densities (gyro 2.8 mdps/sqrt(Hz), accel
+% 60 ug/sqrt(Hz)) converted to per-sample sigma by ND/sqrt(2*Ts), and
+% 16-bit word quantization at the selected full scales (+/-2000 dps,
+% +/-4 g).  Bias vectors carry the constant zero-rate offsets; the yaw
+% bias test injection remains on p.simulation.imuYawBias and adds on
+% top.  vibration* injects a sinusoidal specific-force disturbance for
+% the vibration scenario (C-12); amplitude 0 disables.  noiseSeed fixes
+% the noise stream so runs are reproducible (reset via clear functions,
+% which the scratch scripts already do).
+p.imu.enabled = true;
+p.imu.noiseSeed = 20261015;
+p.imu.gyroNoiseDensity = 2.8e-3*pi/180;          % rad/s/sqrt(Hz)
+p.imu.accelNoiseDensity = 60e-6*p.gravity;       % m/s^2/sqrt(Hz)
+p.imu.gyroQuantum = 4000*(pi/180)/65536;         % +/-2000 dps, 16 bit
+p.imu.accelQuantum = 8*p.gravity/65536;          % +/-4 g, 16 bit
+p.imu.gyroBias = [0; 0; 0];
+p.imu.accelBias = [0; 0; 0];
+p.imu.vibrationAmplitude = 0;                    % m/s^2
+p.imu.vibrationFrequencyHz = 37;                 % < Nyquist of 200 Hz
+p.imu.vibrationAxis = [1; 0; 0];
+% Gearmotor output-shaft friction (FIT0521, gear ratio 34.02): the
+% datasheet's no-load current (0.13 A) is the total loss current, of
+% which roughly half is speed-independent gear stiction.  The DC Motor
+% block's lam (viscous) alone already equals the no-load loss at no-load
+% speed, so the stiction share is carved out: lam is halved and an
+% Ideal Torque Source applies a smooth-Coulomb torque at the output
+% shaft in ballbotRev1PlantAugment (runtime; keeps the .slx at R2024b).
+p.motor.viscousShare = 0.5;
+p.motor.outputCoulombTorque = (1 - p.motor.viscousShare)* ...
+    p.motor.torqueConstant*p.motor.noLoadCurrent;
+p.motor.outputBreakawayTorque = 1.2*p.motor.outputCoulombTorque;
+p.motor.outputShaftFrictionEnabled = true;
+
 % Diagnostic: feed plant truth (roverPose/ballPose) through TruthGate
 % instead of the estimator output, to separate estimator error from
 % plant/controller physics in divergence analysis.  truthChannels
@@ -621,4 +655,8 @@ p.controller.cascade.yawRateGain = 0.2;
 % electrical actuator fields the Simscape network requires) is left in
 % the workspace.
 p.parameterSource = "ballbotRev1Parameters";
+
+if bdIsLoaded('ball_balancing_omni3_multibody_lqi_rev1')
+    ballbotRev1PlantAugment('ball_balancing_omni3_multibody_lqi_rev1', p);
+end
 end
