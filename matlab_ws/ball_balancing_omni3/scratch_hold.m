@@ -24,6 +24,9 @@ assignin('base','ballbotParams',p);
 in = Simulink.SimulationInput(model);
 in = in.setModelParameter('StopTime', '5');
 in = in.setVariable('ballbotParams', p);
+% See scratch_cycle.m: interpreted MATLAB Fcn persistents leak across
+% sims in the same session; reset for reproducible runs.
+clear functions
 out = sim(in);
 ti = out.SimulationMetadata.TimingInfo;
 

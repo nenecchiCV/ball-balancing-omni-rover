@@ -122,7 +122,7 @@ in = in.setModelParameter("StopTime", "4");
 out = sim(in);
 ```
 
-`.slx` は R2024b 形式を維持する必要があるため（新しい MATLAB では Simscape Electrical ブロックを旧形式へエクスポートできない）、ソルバー・ドライバ設定は `ballbotRev1SimConfig` で適用します。検証スクリプトは `scratch_cycle.m`（ペイロードとフィールドオーバーライドを受理）、`scratch_hold.m`（ゼロ指令保持）、`scratch_move.m`（移動ランプ）、`scratch_perf.m`（実行時間計測）です。`p.command.cyclesEnabled` の移動/停止繰り返しプロファイルが既定で有効です。
+`.slx` は R2024b 形式を維持する必要があるため（新しい MATLAB では Simscape Electrical ブロックを旧形式へエクスポートできない）、ソルバー・ドライバ設定は `ballbotRev1SimConfig` で適用します。検証スクリプトは `scratch_cycle.m`（ペイロードとフィールドオーバーライドを受理）、`scratch_hold.m`（ゼロ指令保持）、`scratch_move.m`（移動ランプ）、`scratch_perf.m`（実行時間計測）です。`p.command.cyclesEnabled` の移動/停止繰り返しプロファイルが既定で有効です。各スクリプトは `sim` 前に `clear functions` を実行します。モデル内の解釈実行 MATLAB Fcn ブロックの `persistent` 状態は同一 MATLAB セッションのシミュレーション間で残留し、同一パラメーターでも転倒時刻が変わることを確認したためです。
 
 ## 検証状態
 
@@ -132,6 +132,8 @@ out = sim(in);
 | ゼロ指令直立保持（バッテリー搭載・ペイロードなし） | 8 s 完走・転倒なし（tilt 最大 ~0.000 rad — 転がり抵抗が微小ドリフトまで吸収し完全静止） |
 | ペイロード 0.5–1.0 kg 保持 | 8 s 完走・転倒なし（0.5 kg: ~0.000 rad、1.0 kg: ~0.010 rad）。静止判定に ~1 s 連続保持の滞留ゲートを追加し、ブラインド帯境界の低速クリープ（~0.025 m/s）を実運動として制御へ残すように改善 |
 | 移動フェーズ（ペイロードなし） | 指令 0.12 m/s・μr=0.008 で移動＋停止ウィンドウを完走した実績あり（傾斜 ≤0.011 rad）。実行差で減速コーナー（指令 → 0 近傍）のボール追い越しが ~0.2 m/s 接触壁に達して転倒する既知限界は残る |
+| LQI再設計（飽和織り込み lean 帯域・R=4000・輪速オブザーバ）後のサイクル試験 | 指令 0.12 m/s の移動/停止繰り返しで t=25.6 s（cycle 2 減速区間の脱輪）まで生存。旧値への単独復旧はいずれも早期転倒（`tiltStiffenGain=4.0`: 23.9 s、`leanSetpointLimit=0.016`: 21.6 s、輪速オブザーバ無効: 23.2 s）で、再設計3要素が揃った構成が最長。回復モード（mode 2）は各ランで複数回作動し一部復帰。duty は ~0.83 クランプに対し p99≈0.35 で飽和型 bang-bang は解消済み |
+| 0.306 m/s 指令サイクル | t=9.3 s で転倒。ボール速度が接触壁を超えて伸びるため、`leanSetpointLimit` ではなく脱輪が限界を支配 |
 | MATLAB単体試験 | `ballbotEstimatorStepTest` 16件、`ballbotParametersTest` 3件が合格 |
 
 既知の残課題:

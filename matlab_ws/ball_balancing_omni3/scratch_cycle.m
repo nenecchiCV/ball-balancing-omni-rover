@@ -32,6 +32,13 @@ if nargin >= 3 && ~isempty(ov)
 end
 assignin('base', 'ballbotParams', ballbotParams);
 set_param(mdl, 'StopTime', num2str(stopTime));
+% Reset interpreted-function state: the model's MATLAB Fcn blocks keep
+% `persistent` variables in the MATLAB session across sims, so a run
+% otherwise inherits the previous run's controller/estimator tail (stale
+% wheel-rate observer, tilt integrator, startup ramp clock).  Observed
+% effect: identical parameters either survived to 28 s or tipped at
+% 25.6 s depending on the inherited ramp/integrator state.
+clear functions
 out = sim(mdl, 'SimulationMode', 'normal');
 
 res = struct();
