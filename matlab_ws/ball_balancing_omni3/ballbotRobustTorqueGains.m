@@ -47,7 +47,12 @@ IpivotRef = tiltRef + massRef*comRef^2;
 IyawRef = p.rover.bodyInertia(3) + 0.5*p.fullplant.payload.width^2/12;
 
 Q = diag([200, 200, 20, 20, 5, 0.2, 0.2, 0.2]);
-R = 2000*eye(3);
+% R doubled (2000 -> 4000) as the bandwidth-reduction half of the
+% limit-cycle redesign: the closed-loop effort drops ~10% across every
+% column (tilt ~6.5 N*m/rad, rate ~0.59 N*m*s) while the worst-case
+% pole radius over the payload family stays ~0.9971 -- the robustness
+% margin the fixed gain was designed around is unchanged.
+R = 4000*eye(3);
 
 plants = cell(1, plantCount);
 gains = cell(1, plantCount);
