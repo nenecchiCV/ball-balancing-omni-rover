@@ -89,6 +89,7 @@ LQIゲインは `ballbotRobustTorqueGains` が設計します。実測トルク�
 | `ballbotCustomFriction.m` | `WheelAssembly/WheelContact` | 駆動方向とローラー方向を分離した異方性接触摩擦 |
 | `ballbotIdealImu.m` / `ballbotImuFromJoint.m` | `MultibodyPlant/IdealIMU` | 6-DOF Joint真値から比力・角速度を生成 |
 | `ballbotWheelRateFromDisplacement.m` | `Controller/WheelSpeedSensing` | 車輪回転変位を5 ms後退差分して回転速度を算出 |
+| `ballbotTimedEncoderRate.m` | `WheelRateCalculation`（augmentで差替、実験経路） | T法エンコーダ模擬: カウント境界の補間時刻から `quant/dtEdge`、無エッジ時は `quant/経過時間` 下限へ減衰。`encoder.timedRateEnabled` で有効化（保持でバイアス化が観測され既定はoff） |
 | `ballbotEstimatorStep.m` / `ballbotEstimatorUpdate.m` | `Controller/StateEstimator` | IMU・エンコーダー融合、ボール回転・相対位置・ヨー軸ジャイロバイアス推定 |
 | `ballbotEstimatorInitialState.m` | 初期値式 | 推定器14状態の初期値 |
 | `ballbotTruthGate.m` | `Controller/TruthGate`（診断用） | `p.estimator.truthFeedbackEnabled` 時に推定値をプラント真値で置換 |
@@ -143,6 +144,7 @@ out = sim(in);
 | MATLAB単体試験 | `ballbotEstimatorStepTest` 16件、`ballbotParametersTest` 3件が合格 |
 | 制御周期スイープ（`ballbotRev1Parameters([], Ts)` で Ts 一貫再構築） | LQI・リアル化プラント。Ts=5ms: cycle t=36.6s 転倒。Ts=2.5ms: 24.4s、Ts=3ms: 29.5s、Ts=1ms: 22.3s と単調ではない。Ts=2ms(500Hz) は既定シードで cycle 52s完走（tilt 1.41°、contact=1.0、5/9合格・残は追従精度系）、再実行で完全一致を確認。ただしノイズシード7では t=33.2s 転倒・シード42では完走と、生存は境界上でノイズ実現値依存。hold（0.786°, 7/7）・stepX（-0.104 m/s 失速）は200Hzと同等、yaw 5/8・bias は量子化ゲート既知課題。1kHzはセンサノイズ増幅で全指標悪化（hold 1.155°, cycle 22.3s）— 周期短縮は遅延低減より量子化/ノイズ増幅が支配する系 |
 | CGオフセット頑健性（`p.fullplant.payload.lateralOffset`、実行時にPayloadRodMountへ適用） | ロッド横オフセット10mm（CG横ずれ2.8mm・平衡リーン~1.0°）・15mm（~1.5°）は5s保持成立（平衡リーンへ整定）。20mm（CG 5.6mm・平衡リーン~2.1°）は t=4.1s で転倒: 制御器は tilt=0 を保持しようとして一定重力トルクを輪トルクで相殺→系がオフセット方向へ加速しボールが脱輪する。静的リーン整定点を学習する機構（ヨーバイアス相当のロール/ピッチ版）がなく、~1.5°を超える平衡リーン要求に未対応 |
+| 速度推定改善3案の実装・A/B（量子化フリッカー対策、5ms・LQI） | ①窓積算輪速（`estimator.wheelRateWindowTime`、Nサンプル変位差でフリッカー振幅1/N）②T法エンコーダ模擬（`encoder.timedRateEnabled` → `ballbotTimedEncoderRate`、augmentでWheelRateCalculation差替）③速度融合Kalman化（`estimator.velocityFusion='kalman'`、contactConfidenceを観測ノイズ重みに使用）。実測: ①hold 0.670°に改善（現行 0.875°）するが cycle 悪化（窓が減速を抱えたまま遅延推定を注入し t~15s級、ブレンド帯域・持続静止ゲートのいずれでも同じ壁）②停止後の最終方向減衰がレートにバイアス化して保持悪化③hold 0.801°同等・cycle 25.7sで現行 36.6s に及ばず。**全案不採用・既定は従来経路のまま**（全フラグoffで無効時経路は完全一致を確認済み）。エンコーダ量子化のx4係数はデータシート表記が曖昧のため `encoder.quadratureFactor=1` 保留（実機計測待ち） |
 
 既知の残課題:
 

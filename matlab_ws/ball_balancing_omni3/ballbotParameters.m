@@ -89,6 +89,20 @@ p.driver.peakTorqueLimit = p.motor.stallTorque;
 p.encoder.supplyVoltage = 3.3;
 p.encoder.pulsesPerOutputRevolution = 341.2;
 p.encoder.quantization = 2*pi/p.encoder.pulsesPerOutputRevolution;
+% Datasheet wording ("11 counts/rev motor shaft -> 341.2 PPR output
+% shaft") is ambiguous about whether the 11 are quadrature counts or
+% single-channel cycles.  If the firmware decoder counts x4 edges and
+% the PPR is per-cycle, the effective quantum is 4x smaller; left at 1
+% until bench-verified (conservative = more flicker modeled).
+p.encoder.quadratureFactor = 1;
+% Wheel-rate measurement model.  'diff' = per-sample backward
+% difference of the quantized displacement (flicker quant/Ts).
+% 'timed' = input-capture emulation (T-method hybrid): interpolated
+% edge-crossing times give dc*quant/dtEdge when edges cross, and a
+% decaying quant/(t - t_lastEdge) lower bound when none do.  Ballbot
+% rev1 swaps the model's WheelRateCalculation block to
+% ballbotTimedEncoderRate via the runtime augment.
+p.encoder.timedRateEnabled = false;
 
 % Output-shaft-equivalent speed loop.  The 30 ms time constant is
 % provisional until a FIT0521 step response is measured under load.
@@ -308,6 +322,27 @@ p.estimator.ballRateStillGyroRate = 0.15;
 p.estimator.relativePositionLimit = 0.12;
 p.estimator.kinematicRegularization = 1.0e-8;
 p.estimator.contactResidualScale = 0.25;
+% Windowed wheel-rate for the estimator inputs [s]: the per-sample
+% backward difference flickers by quantization/Ts, but a boxcar mean
+% over N samples equals (theta[k]-theta[k-N])/(N*Ts), shrinking the
+% flicker amplitude by N.  Applied to the kinematic solve, the
+% stillness gate, and the bias wheel-rate gate; ~40 ms keeps the group
+% delay inside the existing 80-150 ms filter chain.  0 disables.
+p.estimator.wheelRateWindowTime = 0;
+% Velocity fusion law: 'legacy' = accel integral + anchor/drain gates;
+% 'kalman' = per-axis Kalman filter fusing the accel-integrated
+% prediction with the wheel-derived ball velocity, with the existing
+% contactConfidence as the measurement-noise weight.  The stillness
+% case becomes a strong zero-measurement instead of a hard drain.
+p.estimator.velocityFusion = 'legacy';
+% Kalman tunables: process noise density [m/s^2/sqrt(Hz)] is anchored
+% on the IMU accel noise density; measurement sigma bounds the
+% wheel-derived velocity trust band [m/s] and stillZeroSigma is the
+% sigma used for the implicit z=0 measurement while stillness holds.
+p.estimator.kfAccelNoiseDensity = 60e-6*p.gravity;
+p.estimator.kfMeasSigma = 0.03;
+p.estimator.kfStillSigma = 0.004;
+p.estimator.kfInitialCovariance = 0.25;
 
 % Provisional yaw-gyro bias observer settings. These values must be tuned
 % against the selected IMU noise, in-run bias stability, vibration, and

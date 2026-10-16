@@ -226,4 +226,23 @@ if ~isempty(mount) && nargin >= 2 && ~isempty(p) && ...
     set_param(mount{1}, 'TranslationCartesianOffset', ...
         sprintf('[%.6g %.6g %.6g]', off(1), off(2), z));
 end
+
+% Wheel-rate measurement model: swap the encoder MATLAB Fcn between the
+% per-sample backward difference and the input-capture (T-method)
+% emulation.  Unconditional set so toggling the flag restores 'diff'.
+rateBlock = find_system(model, 'LookUnderMasks', 'all', ...
+    'FollowLinks', 'on', 'Name', 'WheelRateCalculation');
+if ~isempty(rateBlock) && nargin >= 2 && ~isempty(p) && ...
+        isfield(p, 'encoder')
+    timed = isfield(p.encoder, 'timedRateEnabled') && ...
+        p.encoder.timedRateEnabled;
+    if timed
+        fcnName = 'ballbotTimedEncoderRate';
+    else
+        fcnName = 'ballbotWheelRateFromDisplacement';
+    end
+    set_param(rateBlock{1}, 'MATLABFcn', sprintf( ...
+        '%s(u(1:3),u(4:6),ballbotParams.estimator.sampleTime,ballbotParams.encoder.quantization)', ...
+        fcnName));
+end
 end
