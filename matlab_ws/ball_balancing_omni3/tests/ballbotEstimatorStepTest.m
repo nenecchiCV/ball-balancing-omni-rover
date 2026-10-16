@@ -9,6 +9,15 @@ classdef ballbotEstimatorStepTest < matlab.unittest.TestCase
         end
     end
 
+    methods (TestMethodSetup)
+        function resetEstimatorPersistents(~)
+            % The estimator keeps internal persistent state (window
+            % buffer, rest timers, filters) across steps -- correct for
+            % one continuous run, but each test is an independent run.
+            clear ballbotEstimatorStep ballbotEstimatorUpdate
+        end
+    end
+
     methods (Test)
         function testWheelRateBackwardDifference(testCase)
             wheelDisplacement = [0.01; -0.02; 0.03];

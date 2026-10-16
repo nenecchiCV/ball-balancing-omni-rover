@@ -325,9 +325,11 @@ p.estimator.contactResidualScale = 0.25;
 % Windowed wheel-rate for the estimator inputs [s]: the per-sample
 % backward difference flickers by quantization/Ts, but a boxcar mean
 % over N samples equals (theta[k]-theta[k-N])/(N*Ts), shrinking the
-% flicker amplitude by N.  Applied to the kinematic solve, the
-% stillness gate, and the bias wheel-rate gate; ~40 ms keeps the group
-% delay inside the existing 80-150 ms filter chain.  0 disables.
+% flicker amplitude by N.  Applied to the kinematic solve (through a
+% filtered-rate rest gate -- a lagged input during deceleration was
+% measured to halve cycle survival), the stillness gate, and the bias
+% wheel-rate gate; ~40 ms keeps the group delay inside the existing
+% 80-150 ms filter chain.  0 disables.
 p.estimator.wheelRateWindowTime = 0;
 % Velocity fusion law: 'legacy' = accel integral + anchor/drain gates;
 % 'kalman' = per-axis Kalman filter fusing the accel-integrated

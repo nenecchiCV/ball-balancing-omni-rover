@@ -26,9 +26,11 @@ rotationWorldFromBody = quaternionToRotation(quaternion);
 % N-sample displacement difference /(N*Ts), so the encoder flicker
 % amplitude (quant/Ts on the per-sample difference) shrinks by N while
 % the group delay (~window/2) stays inside the downstream 80-150 ms
-% filter chain.  Feeds the quasi-static gate, the bias wheel-rate
-% gate, and -- blended against the raw rate on the filtered-rate
-% magnitude (see the solve-rate blend below) -- the kinematic solve.
+% filter chain.  Feeds ONLY the kinematic solve, through the rest gate
+% below -- the bias/quasi-static gates must keep the raw rate: during
+% the window fill after motion onset the windowed value under-reports
+% and would briefly leak false stillness into bias learning (caught by
+% testLearningResumesAfterMotion).
 persistent rateWindow rateWindowIndex rateWindowCount
 winN = 1;
 if isfield(p.estimator, "wheelRateWindowTime") && ...
@@ -65,7 +67,7 @@ accelerationNorm = norm(specificForceBody);
 % gravity really is the only specific force.  During motion the
 % attitude integrates gyro only; the move/stop cycle re-corrects at
 % every stop, bounding the drift a noisy IMU accumulates per leg.
-quasiStatic = max(abs(wheelRateEst)) <= p.estimator.biasWheelRateThreshold && ...
+quasiStatic = max(abs(wheelRate)) <= p.estimator.biasWheelRateThreshold && ...
     hypot(gyroBody(1), gyroBody(2)) <= p.estimator.biasRollPitchRateThreshold && ...
     abs(gyroBody(3)) <= p.estimator.biasYawRateThreshold;
 if abs(accelerationNorm - p.gravity) <= p.estimator.accelNormGate && ...
@@ -144,22 +146,32 @@ else
         wStill*(wheelRate - filteredWheelRateForStill);
 end
 
-% Solve-rate gate: after SUSTAINED rest the windowed rate (lagged but
-% flicker-free) is the better solve input -- the lag is harmless while
-% nothing moves and the flicker otherwise drives phantom ball rates.
-% During motion, and for a while after it stops, the raw per-sample
-% rate is kept: a window still containing deceleration injects a
-% lagged ball-velocity error and was measured to halve cycle survival
-% even when blended only inside the stillness band.  stillnessHold is
-% the sustained-rest timer maintained below (persistent, so the
-% previous step's value is readable here).  With the window disabled
-% the two inputs are identical and the gate is a no-op.
-persistent stillnessHold
-sustainedRestTime = 0.8;
+% Solve-rate gate: after a short standstill the windowed rate (lagged
+% but flicker-free) is the better solve input -- the lag is harmless
+% while nothing moves and the flicker otherwise drives phantom ball
+% rates.  During any motion the raw per-sample rate is kept: a window
+% still containing deceleration injects a lagged ball-velocity error
+% and was measured to halve cycle survival.  The gate needs its OWN
+% rest timer, not the drain's stillnessHold: the drain's criterion
+% also demands gyro quiescence (norm < 0.15 rad/s), which IMU noise
+% flickers constantly at rest and would keep the gate shut.  A
+% filtered-rate-only timer opens reliably during hold.  With the
+% window disabled the two inputs are identical and the gate is a
+% no-op.
+persistent solveRestHold
+solveRestHoldTime = 0.3;
 if isfield(p.estimator, "windowedSolveSustainedRestTime")
-    sustainedRestTime = p.estimator.windowedSolveSustainedRestTime;
+    solveRestHoldTime = p.estimator.windowedSolveSustainedRestTime;
 end
-if ~isempty(stillnessHold) && stillnessHold >= sustainedRestTime
+if isempty(solveRestHold)
+    solveRestHold = 0;
+end
+if max(abs(filteredWheelRateForStill)) <= stillnessRateThreshold
+    solveRestHold = solveRestHold + dt;
+else
+    solveRestHold = 0;
+end
+if solveRestHold >= solveRestHoldTime
     solveRate = wheelRateEst;
 else
     solveRate = wheelRate;
@@ -193,6 +205,7 @@ assemblyStill = max(abs(filteredWheelRateForStill)) <= ...
 % that hides real ball motion from the controller (observed: payload
 % build crept at ~0.02-0.04 m/s with estV ~0.005 until the lean walked
 % off).  Only sustained stillness proves the solved rate is phantom.
+persistent stillnessHold
 if assemblyStill
     if isempty(stillnessHold)
         stillnessHold = 0;
@@ -308,7 +321,7 @@ else
         p.estimator.biasContactConfidenceThreshold;
 end
 
-wheelRateLow = max(abs(wheelRateEst)) <= thresholdScale* ...
+wheelRateLow = max(abs(wheelRate)) <= thresholdScale* ...
     p.estimator.biasWheelRateThreshold;
 accelerationNormNominal = abs(accelerationNorm - p.gravity) <= ...
     thresholdScale*p.estimator.biasAccelNormThreshold;
