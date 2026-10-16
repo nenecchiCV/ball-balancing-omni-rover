@@ -210,4 +210,20 @@ for wheelIndex = 1:3
         'ballbotParams.motor.viscousFriction');
 end
 end
+
+% Payload lateral offset (CG-offset robustness test): slide the
+% payload-rod mount in the chassis frame.  set_param is unconditional
+% so toggling the offset back to zero restores the centered mount on
+% the next parameter build.  The rod's vertical mount offset stays at
+% centerOffset.
+mount = find_system(model, 'LookUnderMasks', 'all', ...
+    'FollowLinks', 'on', 'Name', 'PayloadRodMount');
+if ~isempty(mount) && nargin >= 2 && ~isempty(p) && ...
+        isfield(p, 'fullplant') && isfield(p.fullplant, 'payload') && ...
+        isfield(p.fullplant.payload, 'lateralOffset')
+    off = p.fullplant.payload.lateralOffset;
+    z = p.fullplant.payload.centerOffset;
+    set_param(mount{1}, 'TranslationCartesianOffset', ...
+        sprintf('[%.6g %.6g %.6g]', off(1), off(2), z));
+end
 end

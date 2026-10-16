@@ -1,4 +1,4 @@
-function result = ballbotBenchmark(scenario, tag, ov)
+function result = ballbotBenchmark(scenario, tag, ov, sampleTime)
 %BALLBOTBENCHMARK Run a benchmark scenario on the rev1 model and score
 %   the G-01..G-11 specification metrics.
 %   result = ballbotBenchmark(scenario, tag, ov)
@@ -7,6 +7,10 @@ function result = ballbotBenchmark(scenario, tag, ov)
 %     ov:       cell of {dottedPath, value} parameter overrides applied
 %               after the scenario preset (same convention as
 %               scratch_move)
+%     sampleTime: optional estimator/controller rate [s]; forwarded to
+%               ballbotRev1Parameters BEFORE the scenario preset and ov
+%               so every Ts-derived quantity is rebuilt consistently
+%               (default [] = 5 ms / 200 Hz)
 %
 %   The returned struct carries every measured metric plus a pass flag
 %   per applicable spec item; metrics whose signals are unavailable are
@@ -26,10 +30,11 @@ function result = ballbotBenchmark(scenario, tag, ov)
 if nargin < 1, scenario = 'hold'; end
 if nargin < 2, tag = scenario; end
 if nargin < 3, ov = {}; end
+if nargin < 4, sampleTime = []; end
 
 model = 'ball_balancing_omni3_multibody_lqi_rev1';
 ballbotRev1SimConfig(model);
-p = ballbotRev1Parameters;
+p = ballbotRev1Parameters([], sampleTime);
 
 stopTime = 5;
 switch scenario
@@ -74,6 +79,11 @@ for i = 1:numel(ov)
         otherwise, error('override path too deep: %s', pair{1});
     end
 end
+% Re-apply the runtime plant augmentation AFTER overrides: ov can touch
+% augment-consumed fields (payload.lateralOffset, friction flags) that
+% the param build already consumed, and InitFcn will not re-run the
+% augmentation when the workspace parameter set is already fresh.
+ballbotRev1PlantAugment(model, p);
 assignin('base', 'ballbotParams', p);
 in = Simulink.SimulationInput(model);
 in = in.setModelParameter('StopTime', num2str(stopTime));

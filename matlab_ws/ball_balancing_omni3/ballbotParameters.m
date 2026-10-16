@@ -1,5 +1,14 @@
-function p = ballbotParameters
+function p = ballbotParameters(sampleTime)
 %BALLBOTPARAMETERS Nominal plant, estimator, and controller parameters.
+%   p = BALLBOTPARAMETERS uses the 5 ms (200 Hz) estimator/controller
+%   discrete rate the NUCLEO deployment was sized for.
+%   p = BALLBOTPARAMETERS(sampleTime) overrides that rate [s]; every
+%   Ts-derived quantity (encoder flicker thresholds, filter weights,
+%   discrete gain redesign) is built from it consistently.
+
+if nargin < 1 || isempty(sampleTime)
+    sampleTime = 0.005;
+end
 
 p.gravity = 9.80665;
 
@@ -228,7 +237,7 @@ p.wheel.geometry = geometry;
 
 % IMU/wheel estimator. State is [q_WB(4); v_WB(3); omegaBall_W(3);
 % roverMinusBall_B_xy(2); gyroBiasZ; qualificationTime].
-p.estimator.sampleTime = 0.005;
+p.estimator.sampleTime = sampleTime;
 p.estimator.attitudeCorrectionGain = 2.5;
 p.estimator.accelNormGate = 0.25*p.gravity;
 % Reject the accelerometer up-vector correction while the body accelerates

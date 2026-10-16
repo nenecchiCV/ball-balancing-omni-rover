@@ -1,4 +1,4 @@
-function p = ballbotRev1Parameters(payloadMass)
+function p = ballbotRev1Parameters(payloadMass, sampleTime)
 %BALLBOTREV1PARAMETERS Parameters for the rev1 Simscape-actuator model.
 %   p = BALLBOTREV1PARAMETERS returns the parameters for
 %   ball_balancing_omni3_multibody_lqi_rev1.slx: the full-plant parameter
@@ -11,8 +11,17 @@ function p = ballbotRev1Parameters(payloadMass)
 %   cascade LQR is payload-SCHEDULED instead (its hold floor and the
 %   traction saturation cone do not intersect for a single gain across
 %   the family, and the mounted payload is physically known anyway).
+%
+%   p = BALLBOTREV1PARAMETERS(payloadMass, sampleTime) also overrides
+%   the estimator/controller discrete rate [s] (default 5 ms); every
+%   Ts-derived quantity (encoder flicker thresholds, IMU noise sigma,
+%   discrete gain redesign via c2d) is rebuilt consistently.
 
-p = ballbotFullPlantParameters;
+if nargin < 2
+    sampleTime = [];
+end
+
+p = ballbotFullPlantParameters(sampleTime);
 
 % Plant augmentation (ball-ground rolling resistance, wheel-shaft
 % friction) is applied at runtime so the .slx stays in R2024b format.

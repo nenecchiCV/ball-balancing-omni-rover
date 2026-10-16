@@ -1,7 +1,12 @@
-function p = ballbotFullPlantParameters
+function p = ballbotFullPlantParameters(sampleTime)
 %BALLBOTFULLPLANTPARAMETERS Parameters for the Full Multibody LQI model.
+%   Optional SAMPLETIME [s] overrides the default 5 ms estimator/
+%   controller rate (see ballbotParameters).
 
-p = ballbotParameters;
+if nargin < 1
+    sampleTime = [];
+end
+p = ballbotParameters(sampleTime);
 
 % The nominal speed PI is too aggressive for compliant wheel/ball contact.
 p.fullplant.speedPiGainScale = 0.25;
@@ -20,6 +25,12 @@ p.fullplant.payload.length = 0.30;
 p.fullplant.payload.width = 0.020;
 p.fullplant.payload.centerOffset = p.rover.chassisHeight/2 + ...
     p.fullplant.payload.length/2;
+% Lateral mount offset [m] of the payload rod in the chassis frame
+% (x/y).  Zero keeps the rod on-axis; nonzero shifts the assembled
+% rover center of mass by payload.mass/rover.mass*offset and is applied
+% to PayloadRodMount at runtime by ballbotRev1PlantAugment.  Used to
+% test controller robustness against an off-center payload.
+p.fullplant.payload.lateralOffset = [0; 0];
 p.fullplant.payload.originalRoverMass = p.rover.mass;
 % Combine the chassis lump (frame stack, mounts, electronics), the three
 % motor/wheel pods at wheel-center height, and the payload rod.

@@ -71,9 +71,9 @@ LQIゲインは `ballbotRobustTorqueGains` が設計します。実測トルク�
 
 | ファイル | モデル内の呼出元 | 役割 |
 |---|---|---|
-| `ballbotRev1Parameters.m` | rev1モデルのパラメーター初期化 | rev1モデル用パラメーター `ballbotParams` を生成 |
-| `ballbotFullPlantParameters.m` | `ballbotRev1Parameters` から呼出し | ペイロード・接触・幾何の共通パラメーター |
-| `ballbotParameters.m` | `ballbotFullPlantParameters` から呼出し | 幾何・モータ・接触・推定・制御の基礎パラメーター |
+| `ballbotRev1Parameters.m` | rev1モデルのパラメーター初期化 | rev1モデル用パラメーター `ballbotParams` を生成。`ballbotRev1Parameters(payloadMass, sampleTime)` でペイロードと離散周期（既定 5ms）を一貫再構築可能 |
+| `ballbotFullPlantParameters.m` | `ballbotRev1Parameters` から呼出し | ペイロード・接触・幾何の共通パラメーター。`p.fullplant.payload.lateralOffset` でペイロードロッドの横オフセット（CGずれ試験用）を指定 |
+| `ballbotParameters.m` | `ballbotFullPlantParameters` から呼出し | 幾何・モータ・接触・推定・制御の基礎パラメーター。`ballbotParameters(sampleTime)` で周期を変更可能 |
 | `ballbotWheelGeometry.m` | パラメーター初期化 | 球面接触点、転動方向、車軸方向、輪速変換行列 |
 | `ballbotDesignLqi.m` | パラメーター初期化 | 縮約10状態プラントのLQIゲイン設計 |
 | `ballbotDesignTorqueLqi.m` | `ballbotRev1Parameters` から呼出し | トルク入力プラントのLQR設計 |
@@ -141,6 +141,8 @@ out = sim(in);
 | 0.306 m/s 指令サイクル | t=9.3 s で転倒。ボール速度が接触壁を超えて伸びるため、`leanSetpointLimit` ではなく脱輪が限界を支配 |
 | プラント実機化（IMUノイズ・量子化・輪軸静/Coulomb摩擦）＋制御器A/B | 同一プラント・同一シナリオで `ballbotBenchmark` 比較。保持: LQI 0.780° vs ballforce 0.754°（同等）。stepX（0.10 m/s）: LQI は整定誤差 -0.105 m/s で全く動かず（輪速サーボが接触拘束に失速）、ballforce は +0.011 m/s へ追従（ボールが実際に指令速度へ到達）。yaw: ballforce 7/8、LQI 6/8。cycle（0.12 m/s 移動/停止）: LQI t=36.6 s、ballforce t=14.9 s でともに転倒。トラクション上限 0.078→0.10 N・m で ballforce は 22.9 s まで改善するが LQI は 13.1 s へ悪化（追加トルクがリミットサイクルを増幅）。ballforce は追従力で優位・cycle 耐久で劣後のため実験経路として保持し、既定はトルクLQI |
 | MATLAB単体試験 | `ballbotEstimatorStepTest` 16件、`ballbotParametersTest` 3件が合格 |
+| 制御周期スイープ（`ballbotRev1Parameters([], Ts)` で Ts 一貫再構築） | LQI・リアル化プラント。Ts=5ms: cycle t=36.6s 転倒。Ts=2.5ms: 24.4s、Ts=3ms: 29.5s、Ts=1ms: 22.3s と単調ではない。Ts=2ms(500Hz) は既定シードで cycle 52s完走（tilt 1.41°、contact=1.0、5/9合格・残は追従精度系）、再実行で完全一致を確認。ただしノイズシード7では t=33.2s 転倒・シード42では完走と、生存は境界上でノイズ実現値依存。hold（0.786°, 7/7）・stepX（-0.104 m/s 失速）は200Hzと同等、yaw 5/8・bias は量子化ゲート既知課題。1kHzはセンサノイズ増幅で全指標悪化（hold 1.155°, cycle 22.3s）— 周期短縮は遅延低減より量子化/ノイズ増幅が支配する系 |
+| CGオフセット頑健性（`p.fullplant.payload.lateralOffset`、実行時にPayloadRodMountへ適用） | ロッド横オフセット10mm（CG横ずれ2.8mm・平衡リーン~1.0°）・15mm（~1.5°）は5s保持成立（平衡リーンへ整定）。20mm（CG 5.6mm・平衡リーン~2.1°）は t=4.1s で転倒: 制御器は tilt=0 を保持しようとして一定重力トルクを輪トルクで相殺→系がオフセット方向へ加速しボールが脱輪する。静的リーン整定点を学習する機構（ヨーバイアス相当のロール/ピッチ版）がなく、~1.5°を超える平衡リーン要求に未対応 |
 
 既知の残課題:
 
