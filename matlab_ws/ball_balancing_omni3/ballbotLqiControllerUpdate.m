@@ -341,6 +341,38 @@ if torqueDrive
     else
         accelerationDemand = zeros(2, 1);
     end
+    % Static-lean (CG offset) adaptation: with a lateral CG offset the
+    % true equilibrium is a tilted attitude, and holding tilt=0 leaves
+    % the assembly drifting toward the offset (rest torque is ~zero --
+    % the wedge sits on contact friction).  The drift velocity is the
+    % offset signature: low-pass it and integrate it slowly into a lean
+    % setpoint bias that tilts the equilibrium AWAY from the drift.
+    % Under-biased -> drift toward the offset -> bias grows, a negative
+    % feedback that self-stops at the true equilibrium.  The gain must
+    % stay slow versus the lean->drift loop (~1 s): the injected lean
+    % itself accelerates the assembly, and a fast integrator oscillates
+    % (measured: gain ~1.5+ at 0.3 s filter diverges on 15-20 mm
+    % offsets).  A deadband keeps the estimator's velocity noise floor
+    % from winding the bias; the gate uses the ORIGINAL command because
+    % stopFollow rewrites it to track the rolling ball.
+    persistent staticLeanBias driftFilter driftRate prevDriftMag ...
+        seenStill
+    if isempty(staticLeanBias)
+        staticLeanBias = zeros(2, 1);
+        driftFilter = zeros(2, 1);
+        driftRate = 0;
+        prevDriftMag = 0;
+        seenStill = false;
+    end
+    staticLeanAdapt = isfield(p.controller.torqueDrive, ...
+        "staticLeanAdaptGain") && ...
+        p.controller.torqueDrive.staticLeanAdaptGain ~= 0;
+    % Inject the bias only at zero command: a wrongly-learned bias
+    % must not steer the rover during commanded motion.
+    if staticLeanAdapt && mode == 1 && norm(command(1:2)) < 0.01
+        state(3:4) = state(3:4) - ...
+            [staticLeanBias(1); -staticLeanBias(2)];
+    end
     % Tilt-gain scheduling: the static disturbance sensitivity is
     % ~1/(B*K_tilt - mgh/I), so a low tilt gain that stays quiet on IMU
     % noise also lets disturbance torques (propulsion reaction, contact
@@ -578,6 +610,111 @@ if torqueDrive
         wheelSpeedCommand(:) = 0;
     end
 
+    if staticLeanAdapt
+        driftRaw = rotationBodyFromWorld*estimate(7:8);
+        adaptGate = 0.30;
+        if isfield(p.controller.torqueDrive, ...
+                "staticLeanAdaptGate")
+            adaptGate = p.controller.torqueDrive. ...
+                staticLeanAdaptGate;
+        end
+        adaptRest = enable && mode == 1 && ...
+            norm(command(1:2)) < 0.01 && norm(driftRaw) < adaptGate;
+        % Qualification: learning is only armed by a rest period that
+        % began from genuine stillness (ball below ~0.4 mm/s).  In the
+        % move/stop cycle every stop window inherits a rolling ball --
+        % its accelerating creep is deceleration-corner dynamics, not
+        % a CG offset -- so the latch stays low and no bias is learned.
+        % Once armed it stays armed through the creep until the next
+        % commanded move or a non-mode-1 excursion.
+        % Arming is decided on the rest ENTRY edge: the rest period
+        % must begin from stillness (estimate already reads ~0 at the
+        % first rest sample).  A CG-offset hold enters rest settled;
+        % a cycle stop window enters already rolling (the lagging
+        % estimate still reads the inherited velocity), so it never
+        % arms -- its accelerating creep is deceleration-corner
+        % dynamics, not an offset signature.
+        persistent prevAdaptRest
+        if isempty(prevAdaptRest)
+            prevAdaptRest = false;
+        end
+        if ~adaptRest
+            seenStill = false;
+        elseif ~prevAdaptRest
+            seenStill = norm(driftRaw) < 0.02;
+        end
+        prevAdaptRest = adaptRest;
+        adaptTau = 0.30;
+        if isfield(p.controller.torqueDrive, ...
+                "staticLeanAdaptTimeConstant")
+            adaptTau = p.controller.torqueDrive. ...
+                staticLeanAdaptTimeConstant;
+        end
+        if adaptRest
+            driftW = p.controller.sampleTime/ ...
+                (adaptTau + p.controller.sampleTime);
+            driftFilter = driftFilter + driftW*(driftRaw - driftFilter);
+            % Offset drift ACCELERATES under unopposed gravity; a
+            % post-move coast DECELERATES under friction.  Without this
+            % gate the bias learns the coasting velocity after every
+            % move leg (cycle fell at ~15 s).  Track the filtered
+            % drift magnitude's rate of change and only learn while the
+            % drift is growing.
+            driftMag = norm(driftFilter);
+            instRate = (driftMag - prevDriftMag)/ ...
+                p.controller.sampleTime;
+            prevDriftMag = driftMag;
+            driftRate = driftRate + driftW*(instRate - driftRate);
+            adaptDeadband = 0.02;
+            if isfield(p.controller.torqueDrive, ...
+                    "staticLeanAdaptDeadband")
+                adaptDeadband = p.controller.torqueDrive. ...
+                    staticLeanAdaptDeadband;
+            end
+            % Offset creep is quasi-static (~0.1 m/s^2); a corner
+            % runaway accelerates several times faster, so cap the
+            % learning window on the fast side too.
+            adaptMaxRate = 1.0;
+            if isfield(p.controller.torqueDrive, ...
+                    "staticLeanAdaptMaxRate")
+                adaptMaxRate = p.controller.torqueDrive. ...
+                    staticLeanAdaptMaxRate;
+            end
+            if driftMag > adaptDeadband && driftRate > 0 && ...
+                    driftRate < adaptMaxRate && seenStill
+                driftVec = driftFilter*(driftMag - adaptDeadband)/ ...
+                    driftMag;
+                staticLeanBias = staticLeanBias - ...
+                    p.controller.torqueDrive.staticLeanAdaptGain* ...
+                    p.controller.sampleTime*driftVec;
+            end
+            biasLimit = 0.10;
+            if isfield(p.controller.torqueDrive, ...
+                    "staticLeanAdaptLimit")
+                biasLimit = p.controller.torqueDrive. ...
+                    staticLeanAdaptLimit;
+            end
+            staticLeanBias = min(max(staticLeanBias, -biasLimit), ...
+                biasLimit);
+        else
+            driftFilter(:) = 0;
+            driftRate = 0;
+            prevDriftMag = 0;
+            % A contaminated bias (learned from transient creep in a
+            % cycle stop window) decays while the rover is commanded:
+            % only an offset that re-asserts itself every rest period
+            % keeps its bias.  At a true offset hold the rest gate
+            % never opens, so the learned equilibrium is retained.
+            adaptLeak = 0.3;
+            if isfield(p.controller.torqueDrive, ...
+                    "staticLeanAdaptLeak")
+                adaptLeak = p.controller.torqueDrive. ...
+                    staticLeanAdaptLeak;
+            end
+            staticLeanBias = staticLeanBias* ...
+                (1 - adaptLeak*p.controller.sampleTime);
+        end
+    end
     if mode == 1 && isfield(p.controller.torqueDrive, ...
             "wheelRateObserverEnabled") && ...
             p.controller.torqueDrive.wheelRateObserverEnabled
@@ -605,11 +742,12 @@ if torqueDrive
     if debugCapture
         persistent captureLog
         if isempty(captureLog)
-            captureLog = zeros(0, 46);
+            captureLog = zeros(0, 48);
         end
         captureLog(end+1, :) = [captureInputs.', state.', ...
             rawWheelCommand.', wheelSpeedCommand.', ...
-            candidateIntegral.', double(mode)];
+            candidateIntegral.', double(mode), ...
+            staticLeanBias.'];
         assignin('base', 'dbgLqiInputs', captureLog);
     end
     output = [wheelSpeedCommand; nextVelocityIntegral; double(mode); ...

@@ -455,6 +455,29 @@ p.controller.torqueDrive.torqueSlewLimit = 0;
 % design, so this channel ships disabled.
 p.controller.torqueDrive.positionGain = 0;
 p.controller.torqueDrive.positionDampingGain = 0;
+% Static-lean (lateral CG offset) adaptation: with an offset payload
+% the equilibrium attitude is tilted; holding tilt=0 leaves the offset
+% gravity torque unopposed and the assembly drifts toward the offset
+% (rest torque is ~zero -- the wedge sits on contact friction, so the
+% residual signature is the drift velocity, not a holding torque).
+% At zero command the low-passed drift velocity integrates slowly into
+% a lean setpoint bias that tilts the equilibrium AWAY from the drift;
+% the update self-stops at the true equilibrium.  Safety structure:
+% learning only arms on a rest period that ENTERS from stillness
+% (lagging estV < 0.02 on the rest-entry edge -- a cycle stop window
+% enters already rolling, so deceleration-corner creep can never be
+% mistaken for an offset), the drift must be accelerating but below a
+% rate cap (a coast is not an offset), and the bias only injects at
+% zero command plus leaks while commanded.  Verified: 10/15/20 mm rod
+% offsets all hold (transients 1.0/3.9/4.1 deg), zero-offset hold and
+% the move/stop cycle are bit-identical to baseline.
+p.controller.torqueDrive.staticLeanAdaptGain = 0.5;
+p.controller.torqueDrive.staticLeanAdaptLimit = 0.10;
+p.controller.torqueDrive.staticLeanAdaptTimeConstant = 0.30;
+p.controller.torqueDrive.staticLeanAdaptDeadband = 0.02;
+p.controller.torqueDrive.staticLeanAdaptGate = 0.30;
+p.controller.torqueDrive.staticLeanAdaptMaxRate = 1.0;
+p.controller.torqueDrive.staticLeanAdaptLeak = 0.3;
 % Ball vertical-spin brake [N*m per rad/s of omegaBall_z]: translation
 % pumps ball z-spin through the omni kinematics and through the
 % common-mode residual of saturated torque patterns; the accumulated
