@@ -454,6 +454,19 @@ p.controller.torqueDrive.stopFollowSpeedBoost = 0;
 % -gain*relPos to the command so the chassis walks back over the
 % ball.  Correction is capped at 30% of ball speed.  0 disables.
 p.controller.torqueDrive.stopFollowRecenterGain = 0;
+% Eccentricity guard: entering a move leg with the ball ahead of the
+% chassis (relPos < 0 along the command direction) is the observed
+% cycle-fall trigger -- the accel lean kicks a wheel off the
+% off-centre ball.  Scales accelerationDemand by
+% max(floor, 1 - gain*max(-relPos.u - margin, 0)).  gain 12 /
+% margin 0 / floor 0.1 extends cycle tFall 33.6 -> 43.8 s at the
+% default seed (sweep 8/10/12/13/14/15/18 -> 35/39/44/40/35/41/36 s)
+% with hold/stepX/yaw unchanged; at 2 ms the guard is mildly harmful
+% (39.0 s vs ~52 s unguarded) because the fast loop catches the onset
+% itself.  0 disables.
+p.controller.torqueDrive.accelRelPosGuardGain = 12;
+p.controller.torqueDrive.accelRelPosMargin = 0;
+p.controller.torqueDrive.accelRelPosGuardFloor = 0.1;
 % Torque slew rate limit [N*m/s] on the final wheel-torque command:
 % tried as a cure for the clamp-level bang-bang limit cycle that sets
 % the ~0.13 m/s cruise wall -- REJECTED, 1.5/3/6 N*m/s gave tFall

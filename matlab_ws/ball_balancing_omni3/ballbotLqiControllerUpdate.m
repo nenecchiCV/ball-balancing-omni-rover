@@ -372,6 +372,30 @@ if torqueDrive
                 p.controller.torqueDrive.leanFadeTilt, 0);
             accelerationDemand = fade*accelerationDemand;
         end
+        % Eccentricity guard: the observed cycle fall is a tilt spike
+        % the instant a move leg begins with the ball ~5 cm ahead of
+        % the chassis (relPos < 0 along the command direction).
+        % Accelerating onto an off-centre ball kicks a wheel off the
+        % contact; throttling the lean demand while the geometry is
+        % eccentric gives the contact time to recenter.
+        if isfield(p.controller.torqueDrive, ...
+                "accelRelPosGuardGain") && ...
+                p.controller.torqueDrive.accelRelPosGuardGain ~= 0 && ...
+                commandSpeed > 0.01
+            commandDir = commandVelocityBody/commandSpeed;
+            eccentricity = max(-dot(estimate(12:13), commandDir) - ...
+                p.controller.torqueDrive.accelRelPosMargin, 0);
+            guardFloor = 0.1;
+            if isfield(p.controller.torqueDrive, ...
+                    "accelRelPosGuardFloor")
+                guardFloor = p.controller.torqueDrive. ...
+                    accelRelPosGuardFloor;
+            end
+            guardScale = max(guardFloor, 1 - ...
+                p.controller.torqueDrive.accelRelPosGuardGain* ...
+                eccentricity);
+            accelerationDemand = guardScale*accelerationDemand;
+        end
         state(3:4) = state(3:4) - ...
             [accelerationDemand(1); -accelerationDemand(2)]/p.gravity;
     else
@@ -404,10 +428,14 @@ if torqueDrive
         "staticLeanAdaptGain") && ...
         p.controller.torqueDrive.staticLeanAdaptGain ~= 0;
     % Inject the bias only at zero command: a wrongly-learned bias
-    % must not steer the rover during commanded motion.
+    % must not steer the rover during commanded motion.  The bias is
+    % already a tilt-setpoint in state(3:4) convention [pitch; -roll],
+    % NOT a planar vector like accelerationDemand -- negating channel
+    % 2 mirrored the roll lean away from a y-offset CG (positive
+    % feedback: 20 mm y-offset fell at 2.6 s vs 4.7 s unadapted).
     if staticLeanAdapt && mode == 1 && norm(command(1:2)) < 0.01
         state(3:4) = state(3:4) - ...
-            [staticLeanBias(1); -staticLeanBias(2)];
+            [staticLeanBias(1); staticLeanBias(2)];
     end
     % Tilt-gain scheduling: the static disturbance sensitivity is
     % ~1/(B*K_tilt - mgh/I), so a low tilt gain that stays quiet on IMU
