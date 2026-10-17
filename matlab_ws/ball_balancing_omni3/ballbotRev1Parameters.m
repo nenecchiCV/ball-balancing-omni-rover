@@ -441,6 +441,19 @@ p.controller.torqueDrive.propulsionRelVelGain = 0;
 % stop phase survives; the residual failure moves into the next move
 % leg.  0 disables.
 p.controller.torqueDrive.stopFollowGain = 0.75;
+% Speed-adaptive braking fraction [per m/s ball speed]: the effective
+% follow gain is min(0.97, stopFollowGain + boost*vBall) -- a heavy
+% braking lean on a fast ball is what ejects it, so braking authority
+% is tapered off while momentum is high and restored as the ball
+% slows.  0 disables (constant-gain behaviour).
+p.controller.torqueDrive.stopFollowSpeedBoost = 0;
+% Coast recentering [1/s]: during a follow window the ball leads the
+% chassis by whatever the braking lean injected; the next move leg
+% then accelerates onto an off-centre ball and unloads a wheel (the
+% observed ~33 s cycle failure).  While following, add
+% -gain*relPos to the command so the chassis walks back over the
+% ball.  Correction is capped at 30% of ball speed.  0 disables.
+p.controller.torqueDrive.stopFollowRecenterGain = 0;
 % Torque slew rate limit [N*m/s] on the final wheel-torque command:
 % tried as a cure for the clamp-level bang-bang limit cycle that sets
 % the ~0.13 m/s cruise wall -- REJECTED, 1.5/3/6 N*m/s gave tFall

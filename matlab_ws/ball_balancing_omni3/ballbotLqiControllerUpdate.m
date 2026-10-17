@@ -77,9 +77,45 @@ if torqueDrive && isfield(p.controller.torqueDrive, "stopFollowGain") ...
     ballVelocityWorld0 = [p.ball.radius*estimate(10); ...
         -p.ball.radius*estimate(9)];
     ballSpeed0 = norm(ballVelocityWorld0);
-    if commandSpeed < p.controller.torqueDrive.stopFollowGain*ballSpeed0
+    % Speed-adaptive braking fraction: the deceleration-corner ejection
+    % mechanism is a strong reverse lean while the ball still carries
+    % momentum -- the lean's supporting wheel torque kicks the ball
+    % forward.  At high ball speed follow almost perfectly (nearly a
+    % free roll where only rolling resistance dissipates momentum);
+    % the braking fraction ramps back to the nominal gain as the ball
+    % sheds speed, so the hard braking only ever acts on low residual
+    % momentum.  stopFollowSpeedBoost [per m/s of ball speed] adds
+    % fraction with speed; 0 keeps the constant-gain behaviour.
+    followGainEff = p.controller.torqueDrive.stopFollowGain;
+    if isfield(p.controller.torqueDrive, "stopFollowSpeedBoost") && ...
+            p.controller.torqueDrive.stopFollowSpeedBoost ~= 0
+        followGainEff = min(0.97, followGainEff + ...
+            p.controller.torqueDrive.stopFollowSpeedBoost*ballSpeed0);
+    end
+    if commandSpeed < followGainEff*ballSpeed0
         commandVelocityBody = rotationBodyFromWorld* ...
-            (p.controller.torqueDrive.stopFollowGain*ballVelocityWorld0);
+            (followGainEff*ballVelocityWorld0);
+        % Coast recentering: a follow command keeps the assembly
+        % rolling with the ball but never pulls the ball back under
+        % the chassis -- the observed cycle fall starts the NEXT move
+        % leg with the ball ~5 cm ahead (relPos = rover - ball ~ -0.05
+        % along travel), and accelerating onto an off-centre ball
+        % unloads a wheel.  While coasting, nudge the follow command
+        % by the relative-position error so the chassis walks back
+        % over the ball during the stop window.  relPos reads
+        % rover-ahead positive, so a negative entry (ball ahead) adds
+        % forward command.  The estimate is noisy at runaway, so the
+        % correction is bounded well under the ball speed itself.
+        if isfield(p.controller.torqueDrive, ...
+                "stopFollowRecenterGain") && ...
+                p.controller.torqueDrive.stopFollowRecenterGain ~= 0
+            recenter = -p.controller.torqueDrive. ...
+                stopFollowRecenterGain*estimate(12:13);
+            recenterLimit = 0.3*ballSpeed0;
+            recenter = min(max(recenter, -recenterLimit), ...
+                recenterLimit);
+            commandVelocityBody = commandVelocityBody + recenter;
+        end
         commandSpeed = norm(commandVelocityBody);
     end
 end
@@ -628,12 +664,13 @@ if torqueDrive
         % Once armed it stays armed through the creep until the next
         % commanded move or a non-mode-1 excursion.
         % Arming is decided on the rest ENTRY edge: the rest period
-        % must begin from stillness (estimate already reads ~0 at the
-        % first rest sample).  A CG-offset hold enters rest settled;
-        % a cycle stop window enters already rolling (the lagging
-        % estimate still reads the inherited velocity), so it never
-        % arms -- its accelerating creep is deceleration-corner
-        % dynamics, not an offset signature.
+        % must begin from stillness.  Both channels are checked: the
+        % lagging chassis estimate reads ~0 only from a settled start
+        % at 5 ms, but at 2 ms it settles fast enough to read <0.02
+        % while the ball still rolls -- the wheel-derived ball speed
+        % covers that hole.  A cycle stop window always enters with
+        % the ball rolling, so it can never arm: its accelerating
+        % creep is deceleration-corner dynamics, not an offset.
         persistent prevAdaptRest
         if isempty(prevAdaptRest)
             prevAdaptRest = false;
@@ -641,7 +678,16 @@ if torqueDrive
         if ~adaptRest
             seenStill = false;
         elseif ~prevAdaptRest
-            seenStill = norm(driftRaw) < 0.02;
+            % Judge stillness on RAW wheel rate, not the estimated
+            % ball rate: estimate(9:10) is smoothed and reads low for
+            % ~50 ms into a rest, which falsely armed learning inside
+            % cycle stop windows at 2 ms.
+            planarFromWheels = pinv(p.controller.lqi. ...
+                wheelSpeedFromPlanarVelocity);
+            wheelBallSpeed = norm( ...
+                planarFromWheels(1:2, :)*wheelRate(:));
+            seenStill = norm(driftRaw) < 0.02 && ...
+                wheelBallSpeed < 0.03;
         end
         prevAdaptRest = adaptRest;
         adaptTau = 0.30;
