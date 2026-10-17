@@ -1,4 +1,4 @@
-function p = ballbotRev1Parameters(payloadMass, sampleTime)
+function p = ballbotRev1Parameters(payloadMass, sampleTime, design)
 %BALLBOTREV1PARAMETERS Parameters for the rev1 Simscape-actuator model.
 %   p = BALLBOTREV1PARAMETERS returns the parameters for
 %   ball_balancing_omni3_multibody_lqi_rev1.slx: the full-plant parameter
@@ -20,8 +20,11 @@ function p = ballbotRev1Parameters(payloadMass, sampleTime)
 if nargin < 2
     sampleTime = [];
 end
+if nargin < 3
+    design = [];
+end
 
-p = ballbotFullPlantParameters(sampleTime);
+p = ballbotFullPlantParameters(sampleTime, design);
 
 % Plant augmentation (ball-ground rolling resistance, wheel-shaft
 % friction) is applied at runtime so the .slx stays in R2024b format.

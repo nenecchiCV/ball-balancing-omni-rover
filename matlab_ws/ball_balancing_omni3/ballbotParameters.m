@@ -1,10 +1,18 @@
-function p = ballbotParameters(sampleTime)
+function p = ballbotParameters(sampleTime, design)
 %BALLBOTPARAMETERS Nominal plant, estimator, and controller parameters.
 %   p = BALLBOTPARAMETERS uses the 5 ms (200 Hz) estimator/controller
 %   discrete rate the NUCLEO deployment was sized for.
 %   p = BALLBOTPARAMETERS(sampleTime) overrides that rate [s]; every
 %   Ts-derived quantity (encoder flicker thresholds, filter weights,
 %   discrete gain redesign) is built from it consistently.
+%   p = BALLBOTPARAMETERS(sampleTime, design) additionally applies
+%   DESIGN, a cell array of {dottedPath, value} pairs (same convention
+%   as ballbotBenchmark overrides), BEFORE the geometry/gain
+%   derivations so
+%   chassis-design knobs (wheel.contactLatitude, ball.radius, ...)
+%   propagate consistently.  Late overrides still clobber the values
+%   their dependents were built from -- use this path, not post-hoc
+%   p-field edits, for geometry what-ifs.
 
 if nargin < 1 || isempty(sampleTime)
     sampleTime = 0.005;
@@ -27,8 +35,21 @@ p.wheel.width = 0.018;
 p.wheel.mass = 0.032;
 p.wheel.rollerCount = 12;
 p.wheel.azimuth = deg2rad([0; 120; 240]);
-% Coaxial outward pod layout uses the maximum practical latitude.
-p.wheel.contactLatitude = deg2rad(65);
+% Wheel/ball contact latitude (elevation of the wheel normal above the
+% ball's equatorial plane; zenith angle = 90-latitude).  Conventional
+% ballbots use latitude 40-55 deg.  The previous 65 deg ("coaxial
+% outward pod maximum") starved every wheel of normal load
+% (N = mg/(3 sin lambda) grows 41% at 40 deg): the deceleration-corner
+% traction wall, the 8.6 s yaw fall, and the ~0.87 deg hold jitter all
+% traced back to that shortfall.  Measured at 5 ms / torque-LQI /
+% realistic plant (cycle move+stop, hold, stepX, yaw, bias, CG-20 mm):
+%   65deg: cyc 43.8 s fall / hold 0.87deg / yaw 8.6 s fall
+%   55deg: cyc 26.8 s      60deg: cyc 41.7 s
+%   50deg: cyc completes only with eccentricity guard OFF
+%   45deg: cyc completes 0.62deg 6/9
+%   40deg: cyc completes 0.27deg 7/9, hold 0.19deg, yaw completes,
+%          CG-20 mm holds 2.06 deg -- adopted.
+p.wheel.contactLatitude = deg2rad(40);
 % Small geometric preload keeps all three nominally tangent contacts
 % active despite contact-detection and floating-point tolerances.
 p.wheel.contactPreload = 5.0e-5;
@@ -227,6 +248,28 @@ p.contact.ballGround.rollingCriticalVelocity = 5.0e-3;
 % ~5 mm; half of it is a conservative arm.
 p.contact.ballGround.spinScrubArm = 1.0e-3;
 p.contact.ballGround.spinScrubCriticalRate = 0.5;
+
+% Design-point overrides applied BEFORE the first derivation that
+% consumes them (wheel geometry below).  Early-derived fields that a
+% design knob feeds are rebuilt here so every dependent stays
+% consistent.
+if nargin >= 2 && ~isempty(design)
+    for i = 1:numel(design)
+        pair = design{i};
+        f = strsplit(pair{1}, '.');
+        switch numel(f)
+            case 1, p.(f{1}) = pair{2};
+            case 2, p.(f{1}).(f{2}) = pair{2};
+            case 3, p.(f{1}).(f{2}).(f{3}) = pair{2};
+            case 4, p.(f{1}).(f{2}).(f{3}).(f{4}) = pair{2};
+        end
+    end
+    p.ball.inertia = (2/3)*p.ball.mass*p.ball.radius^2*eye(3);
+    p.rover.mass = p.rover.bodyMass + ...
+        3*(p.motor.mass + p.wheel.mass);
+    p.rover.initialPositionWorld = [0; 0; ...
+        p.ball.radius + p.rover.centerAboveBall];
+end
 
 geometry = ballbotWheelGeometry(p);
 p.wheel.normalLoadNominal = ...

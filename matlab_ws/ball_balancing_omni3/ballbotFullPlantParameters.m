@@ -1,12 +1,16 @@
-function p = ballbotFullPlantParameters(sampleTime)
+function p = ballbotFullPlantParameters(sampleTime, design)
 %BALLBOTFULLPLANTPARAMETERS Parameters for the Full Multibody LQI model.
 %   Optional SAMPLETIME [s] overrides the default 5 ms estimator/
-%   controller rate (see ballbotParameters).
+%   controller rate (see ballbotParameters).  Optional DESIGN is the
+%   pre-derivation override struct forwarded to ballbotParameters.
 
 if nargin < 1
     sampleTime = [];
 end
-p = ballbotParameters(sampleTime);
+if nargin < 2
+    design = [];
+end
+p = ballbotParameters(sampleTime, design);
 
 % The nominal speed PI is too aggressive for compliant wheel/ball contact.
 p.fullplant.speedPiGainScale = 0.25;

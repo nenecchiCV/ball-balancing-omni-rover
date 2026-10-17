@@ -34,7 +34,20 @@ if nargin < 4, sampleTime = []; end
 
 model = 'ball_balancing_omni3_multibody_lqi_rev1';
 ballbotRev1SimConfig(model);
-p = ballbotRev1Parameters([], sampleTime);
+% Overrides prefixed 'design.' are chassis-design knobs consumed BEFORE
+% the geometry/gain derivations (contactLatitude, ball.radius, ...);
+% they are stripped here and forwarded into the parameter build.
+design = {};
+keep = true(1, numel(ov));
+for i = 1:numel(ov)
+    pair = ov{i};
+    if strncmp(pair{1}, 'design.', 7)
+        design{end+1} = {pair{1}(8:end), pair{2}};
+        keep(i) = false;
+    end
+end
+ov = ov(keep);
+p = ballbotRev1Parameters([], sampleTime, design);
 
 stopTime = 5;
 switch scenario
