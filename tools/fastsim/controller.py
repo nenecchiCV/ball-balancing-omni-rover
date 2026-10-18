@@ -124,10 +124,13 @@ class TorqueLqiController:
                 self.obs_prev_torque = np.zeros(3)
                 self.obs_prev_kin = w_meas.copy()
             else:
+                # Mirror the plant: w' = driveGain*(tau - comp*(w - wkin));
+                # the compliance drag belongs inside the driveGain product.
                 self.wheel_rate_obs += (
-                    td["wheelRateObserverDriveGain"] * self.obs_prev_torque
-                    - td["wheelRateObserverCompliance"]
-                    * (self.wheel_rate_obs - self.obs_prev_kin)) * dt
+                    td["wheelRateObserverDriveGain"]
+                    * (self.obs_prev_torque
+                       - td["wheelRateObserverCompliance"]
+                       * (self.wheel_rate_obs - self.obs_prev_kin))) * dt
                 self.wheel_rate_obs += td["wheelRateObserverGain"] * (
                     w_meas - self.wheel_rate_obs)
             filteredWheelRate = self.wheel_rate_obs
