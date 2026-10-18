@@ -157,34 +157,43 @@ p.servo.maxSpeed = p.motor.noLoadSpeed;
 % Redesigned triangular body. The body frame origin is the IMU location.
 % Chassis lump follows the ball_balancing_omnirover3wd_assembly frame
 % structure: three ABS frame plates (D160x3 at z = 148.5/201.5/254.5 mm
-% above ground), twelve M4x50 ABS spacers at r = 65 mm, three ABS
-% MotorMount_v12 inward-pod brackets below L1 (single 28 mm uniform
-% side-profile plate, printed flat on its side; wheel adapters
-% included), and the L1/L2
+% above ground), twelve M3x50 ABS spacers (OD 6.2 / bore 3.2 mm) at
+% r = 65 mm on the 30-deg-rotated pattern {0,+-60,+-120,180}, three ABS
+% MotorMount_v23 inward-pod square-tube mounts below L1 (single-body
+% 48x48 mm square tube + face plate + frame-side wall extended to a
+% uniform rectangular fastening plate x=34..72.5 x y=+-34, wedge
+% fills so the fastening-plate face is the print-bed face, motor-end
+% bottom corner chamfered on the face-plate plane (parallel to the
+% ball-wheel contact tangent, +1.358 mm deeper so the chamfer merges
+% with the plate face); wheel
+% adapters included), and the L1/L2
 % electronics payload (Zeee 7.2 V NiMH pack centred on L1, two MDD3A
 % drivers, Nucleo+IKS4A1 stack).
 % Heights below are measured above the ball center (ground z = 50 mm).
 % lambda = 33 deg PLAN-B INWARD pod geometry (57 deg vehicle-axis tilt,
 % motors stowed inward-up toward the axis through L1 clearance holes).
-% Fusion-measured values from the lambda33 assembly (MotorMount_v12):
-% uniform-thickness profile plate face-bolted to the PCD-17 pattern
-% and bolted to the L1 pad; the clamp strap was deleted (no room
+% Fusion-measured values from the lambda33 assembly (MotorMount_v23):
+% single-body square tube wrapping the motor can, face plate bolted
+% to the PCD-17 pattern via M2.5 screws, fastening plate bolted to L1
+% via M3 bolt+nut+washer sandwiches at (44.5,+-29) and (62,+-29) mm;
+% the clamp strap was deleted (no room
 % behind the wheel hub bracket).  Wheel
 % arm/height rows are exact from geometry.
 rhoABS = 1050;
-l1DiscMass = rhoABS*44.1e-6;     % L1 disc net of 3 x Ø48 tail holes + centre opening
+l1DiscMass = rhoABS*43.994e-6;   % L1 disc net of openings + 30 x Ø3.5 M3-clearance holes incl. rotated spacer pattern (Fusion measured 43.994 cm^3)
 l1DiscInertia = l1DiscMass*(3*0.080^2 + 0.003^2)/12;
 frameDiscMass = rhoABS*pi*0.080^2*0.003;
 frameDiscInertia = frameDiscMass*(3*0.080^2 + 0.003^2)/12;
-spacerMass = rhoABS*(3*sqrt(3)/2)*0.003^2*0.050;
-spacerInertia = spacerMass*(3*0.003^2 + 0.050^2)/12;
-mountMass = rhoABS*18.629e-6;    % MotorMount_v13 sleeve+tab, measured volume 18.629 cm^3
+spacerMass = rhoABS*1.1074e-6;   % Spacer_M3x50 tube OD 6.2 / bore 3.2 x 50 mm (Fusion measured 1.1074 cm^3)
+spacerInertia = spacerMass*(3*(0.0031^2+0.0016^2) + 0.050^2)/12;
+mountMass = rhoABS*51.443e-6;    % MotorMount_v23 plate-width square-tube mount + rectangular fastening plate + wedge fills + motor-end bottom-corner chamfer on the face-plate plane (parallel to the ball-wheel contact tangent; M2.5 face holes + central Ø25 boss; single body, 60 faces), measured 51.443 cm^3
 adapterMass = rhoABS*1.2171e-6;  % WheelAdapter_v4 measured volume 1.217 cm^3 (tube s'=-1.0..11.5)
-% Fusion-measured own-CG inertias scaled to ABS mass (mean of the two
-% horizontal axes for tilt; the z axis entry is used in the yaw sum).
-% Principal values (steel) 0.500/0.440/0.185 kg*cm^2 -> ABS scale 0.1338.
-mountTiltI = 6.29e-6;  % per MotorMount_v13 (own-CG, ABS-scaled)
-mountYawI = 2.48e-6;
+% Fusion-measured own-CG inertias scaled to ABS mass (the y/tangential
+% axis entry is used for tilt; the z axis entry is used in the yaw sum).
+% v23 CG-frame tensor (steel) Ixx/Iyy/Izz = 2.012/1.181/1.761
+% kg*cm^2 (Ixz = -0.12) -> ABS scale 0.1338.
+mountTiltI = 1.58e-5;  % per MotorMount_v23 (own-CG, ABS-scaled)
+mountYawI = 2.36e-5;
 adapterTiltI = adapterMass*(3*0.006^2 + 0.0125^2)/12;
 adapterYawI = adapterMass*0.006^2/2;
 % Drivetrain CG heights [m above ball center] and radial arms [m] for
@@ -193,11 +202,11 @@ adapterYawI = adapterMass*0.006^2/2;
 % measurements of the placed occurrences.
 motorComAboveBall = 0.0790;   % Fusion motor CG z = 129.0 mm above ground
 wheelComAboveBall = 0.0403;
-mountComAboveBall = 0.0781;   % Fusion v13 CG z = 128.1 mm above ground
+mountComAboveBall = 0.0783;   % Fusion v23 CG z = 128.3 mm above ground (78.3 above ball centre z=50)
 adapterComAboveBall = 0.0447;   % Fusion adapter CG z = 94.7 mm above ground
 motorYawArm = 0.0371;         % Fusion motor CG radial arm
 wheelYawArm = 0.0620;
-mountYawArm = 0.0527;         % Fusion v13 CG radial arm
+mountYawArm = 0.0556;         % Fusion v23 CG radial arm
 adapterYawArm = 0.0592;       % Fusion adapter CG radial arm
 motorTiltI = p.motor.mass*(p.motor.dimensions(1)^2 + ...
     p.motor.dimensions(2)^2)/12;
