@@ -22,35 +22,6 @@ gyroBodyRaw = imu(4:6);
 gyroBody = gyroBodyRaw - [0; 0; gyroBiasZPrevious];
 rotationWorldFromBody = quaternionToRotation(quaternion);
 
-% Windowed wheel rate: a boxcar mean over N samples equals the
-% N-sample displacement difference /(N*Ts), so the encoder flicker
-% amplitude (quant/Ts on the per-sample difference) shrinks by N while
-% the group delay (~window/2) stays inside the downstream 80-150 ms
-% filter chain.  Feeds ONLY the kinematic solve, through the rest gate
-% below -- the bias/quasi-static gates must keep the raw rate: during
-% the window fill after motion onset the windowed value under-reports
-% and would briefly leak false stillness into bias learning (caught by
-% testLearningResumesAfterMotion).
-persistent rateWindow rateWindowIndex rateWindowCount
-winN = 1;
-if isfield(p.estimator, "wheelRateWindowTime") && ...
-        p.estimator.wheelRateWindowTime > 0
-    winN = max(1, round(p.estimator.wheelRateWindowTime/dt));
-end
-if isempty(rateWindow) || size(rateWindow, 2) ~= winN
-    rateWindow = zeros(3, winN);
-    rateWindowIndex = 0;
-    rateWindowCount = 0;
-end
-rateWindowIndex = mod(rateWindowIndex, winN) + 1;
-rateWindow(:, rateWindowIndex) = wheelRate;
-rateWindowCount = min(rateWindowCount + 1, winN);
-if rateWindowCount > 1
-    wheelRateEst = mean(rateWindow(:, 1:rateWindowCount), 2);
-else
-    wheelRateEst = wheelRate;
-end
-
 accelerationNorm = norm(specificForceBody);
 % Attitude correction validity: specific force points along true up only
 % when the body is not accelerating.  The norm test alone cannot see
@@ -95,22 +66,8 @@ rotationWorldFromBody = quaternionToRotation(quaternion);
 
 gravityWorld = [0; 0; -p.gravity];
 accelerationWorld = rotationWorldFromBody*specificForceBody + gravityWorld;
-useKalman = isfield(p.estimator, "velocityFusion") && ...
-    p.estimator.velocityFusion == "kalman";
-persistent velCov
-if useKalman
-    if isempty(velCov)
-        velCov = p.estimator.kfInitialCovariance*ones(2, 1);
-    end
-    % Predict: accel integration grows the velocity covariance by the
-    % IMU accel noise density integrated over the step.
-    velocityWorld(1:2) = p.estimator.velocityLeak* ...
-        velocityWorld(1:2) + dt*accelerationWorld(1:2);
-    velCov = velCov + p.estimator.kfAccelNoiseDensity^2*dt;
-else
-    velocityWorld = p.estimator.velocityLeak*velocityWorld + ...
-        dt*accelerationWorld;
-end
+velocityWorld = p.estimator.velocityLeak*velocityWorld + ...
+    dt*accelerationWorld;
 velocityWorld(3) = 0;
 
 geometry = p.wheel.geometry;
@@ -127,8 +84,7 @@ bodyRateWorld = rotationWorldFromBody*gyroBody;
 % during normal slow translation and halved the velocity estimate.
 % Decide on a low-passed rate instead: at rest the symmetric flicker
 % averages out to ~0, while sustained rolling keeps a coherent rate,
-% shrinking the blind band to ~0.03 m/s.  Updated BEFORE the solve so
-% it can also drive the solve-rate blend below.
+% shrinking the blind band to ~0.03 m/s.
 persistent filteredWheelRateForStill
 stillnessFilterTau = 0.080;
 stillnessRateThreshold = 1.5;
@@ -146,37 +102,6 @@ else
         wStill*(wheelRate - filteredWheelRateForStill);
 end
 
-% Solve-rate gate: after a short standstill the windowed rate (lagged
-% but flicker-free) is the better solve input -- the lag is harmless
-% while nothing moves and the flicker otherwise drives phantom ball
-% rates.  During any motion the raw per-sample rate is kept: a window
-% still containing deceleration injects a lagged ball-velocity error
-% and was measured to halve cycle survival.  The gate needs its OWN
-% rest timer, not the drain's stillnessHold: the drain's criterion
-% also demands gyro quiescence (norm < 0.15 rad/s), which IMU noise
-% flickers constantly at rest and would keep the gate shut.  A
-% filtered-rate-only timer opens reliably during hold.  With the
-% window disabled the two inputs are identical and the gate is a
-% no-op.
-persistent solveRestHold
-solveRestHoldTime = 0.3;
-if isfield(p.estimator, "windowedSolveSustainedRestTime")
-    solveRestHoldTime = p.estimator.windowedSolveSustainedRestTime;
-end
-if isempty(solveRestHold)
-    solveRestHold = 0;
-end
-if max(abs(filteredWheelRateForStill)) <= stillnessRateThreshold
-    solveRestHold = solveRestHold + dt;
-else
-    solveRestHold = 0;
-end
-if solveRestHold >= solveRestHoldTime
-    solveRate = wheelRateEst;
-else
-    solveRate = wheelRate;
-end
-
 ballRadius = p.ball.radius;
 groundRollingMatrix = [0, ballRadius, 0; ...
     -ballRadius, 0, 0; 0, 0, 0];
@@ -191,7 +116,7 @@ for wheelIndex = 1:3
         cross(bodyRateWorld, wheelCenterWorld(:, wheelIndex));
     kinematicRightSide(wheelIndex) = ...
         rollingWorld(:, wheelIndex)'*wheelCenterVelocity - ...
-        p.wheel.radius*solveRate(wheelIndex);
+        p.wheel.radius*wheelRate(wheelIndex);
 end
 
 regularization = p.estimator.kinematicRegularization;
@@ -226,8 +151,7 @@ ballRateWorld = ballRateWorldPrevious + ...
     filterWeight*(ballRateKinematic - ballRateWorldPrevious);
 
 ballVelocityWorld = groundRollingMatrix*ballRateWorld;
-% Contact confidence is needed by the velocity update below (Kalman
-% measurement weight) and by the bias-qualification gate further down;
+% Contact confidence feeds the bias-qualification gate further down;
 % compute it here from the same residual it has always used.
 residual = kinematicMatrix*ballRateWorld - kinematicRightSide;
 residualRootMeanSquare = sqrt(mean(residual.^2));
@@ -258,26 +182,7 @@ end
 % genuine creep keeps interrupting the timer and stays visible to the
 % velocity loop.  stillnessHold/drainHoldTime are maintained with the
 % ball-rate zeroing above.
-if useKalman
-    % Update: the wheel-derived ball velocity is the measurement.
-    % contactConfidence scales its noise: trusted contacts give a
-    % tight correction, slipping/lost contacts open R and let the
-    % accel prediction coast.  Confirmed stillness is a strong z=0
-    % measurement that plays the role of the legacy drain but with
-    % Kalman gain rather than a hard time constant.
-    if stillnessHold >= drainHoldTime
-        zEff = zeros(2, 1);
-        measVar = p.estimator.kfStillSigma^2*ones(2, 1);
-    else
-        zEff = ballVelocityWorld(1:2);
-        measVar = p.estimator.kfMeasSigma^2/ ...
-            max(contactConfidence, 0.05)*ones(2, 1);
-    end
-    kalmanGain = velCov./(velCov + measVar);
-    velocityWorld(1:2) = velocityWorld(1:2) + kalmanGain.* ...
-        (zEff - velocityWorld(1:2));
-    velCov = (1 - kalmanGain).*velCov;
-elseif stillnessHold >= drainHoldTime
+if stillnessHold >= drainHoldTime
     drainTau = 0.1;
     if isfield(p.estimator, "stillVelocityDrainTimeConstant")
         drainTau = p.estimator.stillVelocityDrainTimeConstant;

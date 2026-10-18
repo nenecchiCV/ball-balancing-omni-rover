@@ -414,7 +414,7 @@ $$
 
 へ変換する。$G_w$は$\beta_i$、接触緯度$\lambda$、$R_b$、$R_w$および既存の車輪正方向から導出する。符号は単輪正指令試験で確認し、解析式、Simscape Joint正方向、エンコーダー正方向を一致させる。
 
-現行コードおよび実機CAD測定値では$\lambda=65$ degである（旧コード55 deg、旧理論文書の一部45 degから更新済み）。LQIモデル生成は65 degの幾何に基づく。
+現行コードおよび実機CAD測定値では$\lambda=33$ degである（案B内向きモーター格納の成立限界）。LQIモデル生成は33 degの幾何に基づく。
 
 ## 7. LQI制御則
 
@@ -657,10 +657,10 @@ $$
 | $I_b$ | $4.75\times10^{-4}I_3$ | kg m$^2$ | `p.ball.inertia` |
 | $R_w$ | 0.024 | m | `p.wheel.radius` |
 | $m_w$ | 0.039 | kg/輪 | `p.wheel.mass` |
-| $m_R$ | 1.509 | kg | 基礎ローバーと上部ロッドの合計、`p.rover.mass` |
+| $m_R$ | 1.179 | kg | 基礎ローバーと上部ロッドの合計（Fusion実測反映後）、`p.rover.mass` |
 | $m_p$ | 0.500 | kg | 上部ロッド、`p.fullplant.payload.mass` |
-| $h_B$ | 0.125 | m | 機体原点の幾何高さ、`p.rover.centerAboveBall` |
-| $h_{COM}$ | 0.1611 | m | 上部ロッド込み合成重心高、`p.rover.comAboveBall` |
+| $h_B$ | 0.125 | m | 機体原点の幾何高さ |
+| $h_{COM}$ | 0.1074 | m | ローバー合成重心高（Fusion実測反映後）、`p.rover.centerAboveBall` |
 | $V_{dc}$ | 6.0 | V | `p.driver.supplyVoltage` |
 | $\tau_{stall}$ | 約0.981 | N m | `p.motor.stallTorque` |
 | $\tau_{continuous}$ | 約0.919 | N m | `p.driver.continuousTorqueLimit` |

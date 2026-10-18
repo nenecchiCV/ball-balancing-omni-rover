@@ -2,7 +2,7 @@ function result = ballbotBenchmark(scenario, tag, ov, sampleTime)
 %BALLBOTBENCHMARK Run a benchmark scenario on the rev1 model and score
 %   the G-01..G-11 specification metrics.
 %   result = ballbotBenchmark(scenario, tag, ov)
-%     scenario: 'hold' | 'stepX' | 'yaw' | 'cycle' | 'bias'
+%     scenario: 'hold' | 'stepX' | 'yaw' | 'cycle' | 'bias' | 'moveYaw'
 %     tag:      label printed in the summary line
 %     ov:       cell of {dottedPath, value} parameter overrides applied
 %               after the scenario preset (same convention as
@@ -20,9 +20,11 @@ function result = ballbotBenchmark(scenario, tag, ov, sampleTime)
 %   Scenarios:
 %     hold   - zero command, 5 s           -> G-01 attitude, G-08 limits
 %     stepX  - 0->0.10 m/s world-X, 15 s   -> G-02 velocity settling
-%     yaw    - 0->0.5 rad/s yaw, 10 s      -> G-03 yaw-rate settling
+%     yaw    - 0->0.4 rad/s yaw, 1.5 s bounded pulse, 10 s -> G-03
 %     cycle  - 3x move/stop cycles, 52 s   -> contact envelope, G-04/05
 %     bias   - +0.02 rad/s yaw gyro bias, 20 s hold -> G-09/10/11
+%     moveYaw- 0.15 m/s X + 0.4 rad/s yaw pulse (1 s), 10 s
+%                                       -> coupled v/yaw limiter, G-02/03
 %
 %   All runs share the realistic plant (IMU noise + shaft friction from
 %   ballbotRev1Parameters/ballbotRev1PlantAugment).
@@ -62,12 +64,22 @@ switch scenario
         p.command.yawRate = 0;
         stopTime = 15;
     case 'yaw'
+        % Bounded pulse: sustained common-mode yaw pumps the ball's free
+        % z-spin and the plant loses a wheel past ~0.4 rad of rotation;
+        % 1.5 s at 0.4 rad/s (~0.3 rad) sits inside the measured
+        % envelope (see roadmap M4 notes).
         p.command.cyclesEnabled = false;
         p.command.velocityWorld = [0; 0];
-        p.command.yawRate = 0.5;
+        p.command.yawRate = 0.4;
+        p.command.yawPulseDuration = 1.5;
         stopTime = 10;
     case 'cycle'
-        % defaults: 3x (12 s move + 4 s stop), profileVelocity [0.12;0]
+        % defaults: 3x (12 s move + 4 s stop), profileVelocity [0.12;0].
+        % Pinned yaw-free: the endurance metric tracks the translation
+        % cycle only; the default profile's every-other-stop yaw bursts
+        % (cycleYawEvery=2) raise tilt ~1.3 deg and would conflate the
+        % score with profile shape.  Yaw scenarios cover rotation.
+        p.command.cycleYawDuration = 0;
         stopTime = p.command.cycleStart + ...
             p.command.cycleCount*(p.command.cycleMoveDuration + ...
             p.command.cycleStopDuration) + 1;
@@ -77,6 +89,19 @@ switch scenario
         p.command.yawRate = 0;
         p.simulation.imuYawBias = 0.02;
         stopTime = 20;
+    case 'moveYaw'
+        % Simultaneous translation + yaw: the wheel-rate budget is
+        % shared (sin(lat)*|v| + chassisRadius*|yawRate| <= Rw*wMotor),
+        % so the pair is feasibility-limited jointly, not per axis.
+        % The yaw request is a 1 s pulse: sustained yaw rotation past
+        % ~0.4 rad pumps the ball z-spin past the contact margin (see
+        % roadmap M4 notes), so the demo yaws inside the envelope while
+        % translating continuously.
+        p.command.cyclesEnabled = false;
+        p.command.velocityWorld = [0.15; 0];
+        p.command.yawRate = 0.4;
+        p.command.yawPulseDuration = 1.0;
+        stopTime = 10;
     otherwise
         error('ballbotBenchmark:unknownScenario', ...
             'unknown scenario %s', scenario);

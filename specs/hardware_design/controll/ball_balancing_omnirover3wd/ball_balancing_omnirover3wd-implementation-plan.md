@@ -96,7 +96,7 @@ flowchart TD
 | 2.2 | ルートをCommandSource/Controller/MultibodyPlant/Loggingへ分割 | `model_overview` |
 | 2.3 | Infinite Planeと直径100 mm Spherical Solidを配置 | `model_read` |
 | 2.4 | 球–床Spatial Contact Forceを接続 | `model_read`, `model_check` |
-| 2.5 | 3輪中心を球面$\lambda=65$ degへ再配置 | Transform確認 |
+| 2.5 | 3輪中心を球面$\lambda=33$ degへ再配置 | Transform確認 |
 | 2.6 | 3組のRevolute Jointを$+a_i$へ整列 | Joint軸確認 |
 | 2.7 | 3組の輪–球Spatial Contact Forceを接続 | 物理ポート確認 |
 | 2.8 | Provided by Input摩擦と`ballbotCustomFriction`を接続 | すべり/力ログ |
@@ -137,14 +137,14 @@ Phase 3.1、3.6、3.7はSimulink Agentic Toolkitの`model_read`、`model_edit`�
 | $m_b$ | 0.285 | kg | 基準質量・実測更新 | `p.ball.mass` |
 | $R_w$ | 0.024 | m | 14108仕様書 | `p.wheel.radius` |
 | $m_w$ | 0.039 | kg | 14108仕様書/既存モデル | `p.wheel.mass` |
-| $m_R$ | 1.509 | kg | 基礎ローバー1.009 kg＋上部ロッド0.500 kg | `p.rover.mass` |
+| $m_R$ | 1.179 | kg | Fusion実測反映後（MotorMount_v12等） | `p.rover.mass` |
 | $m_p$ | 0.500 | kg | 正式上部ロッド仕様 | `p.fullplant.payload.mass` |
 | $L_p$ | 0.300 | m | 正式上部ロッド仕様 | `p.fullplant.payload.length` |
-| $h_{COM}$ | 0.1611 | m | 上部ロッド込み合成重心 | `p.rover.comAboveBall` |
-| $\lambda$ | 55 | deg | 機構設計 | `p.wheel.contactLatitude` |
+| $h_{COM}$ | 0.1074 | m | ローバー合成重心（Fusion実測反映後） | `p.rover.centerAboveBall` |
+| $\lambda$ | 33 | deg | 機構設計（案B内向き格納の成立限界） | `p.wheel.contactLatitude` |
 | $\tau_{motor,stall}$ | 0.981 | N·m | FIT0521公式仕様 | `p.motor.stallTorque` |
 | $\tau_{driver,continuous}$ | 0.919 | N·m | MDD3A 3 A連続定格とFIT0521トルク定数 | `p.driver.continuousTorqueLimit` |
-| $\tau_{contact,max}$ | 0.0779 | N·m | 上部ロッド込み公称法線荷重・摩擦 | `p.wheel.contactTorqueLimit` |
+| $\tau_{contact,max}$ | 0.1262 | N·m | ローバー質量・λ33の公称法線荷重・摩擦 | `p.wheel.contactTorqueLimit` |
 | $T_s$ | 0.005 | s | 制御設計 | estimator/controller |
 | $K_{pv}$ | [2.3,2.3] | s$^{-1}$ | 正本構成の速度外側ループ | `p.controller.fullplant.velocityKp` |
 | $K_{iv}$ | [0,0] | s$^{-2}$ | 正本構成の速度外側ループ | `p.controller.fullplant.velocityKi` |

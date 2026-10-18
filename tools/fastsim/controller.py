@@ -36,7 +36,6 @@ class TorqueLqiController:
         self.prev_command_velocity = None
         self.accel_demand_slew = None
         self.tilt_integral = None
-        self.prev_torque_command = None
         self.wheel_rate_obs = None
         self.obs_prev_torque = np.zeros(3)
         self.obs_prev_kin = np.zeros(3)
@@ -69,6 +68,19 @@ class TorqueLqiController:
         velocityBody = RBW @ velocityWorld
         commandVelocityBody = RBW @ command[0:2]
         commandSpeed = np.linalg.norm(commandVelocityBody)
+        # Coupled (v, yawRate) feasibility limiter: wheel-rate demand is
+        # sin(lat)*|v|/Rw + Rch*|yawRate|/Rw on every axle, so an
+        # over-budget pair is scaled jointly.
+        if c.get("coupledCommandLimitEnabled", False):
+            demand = (np.sin(P.contact_latitude) * commandSpeed
+                      + P.rover_chassis_radius * abs(command[2]))
+            budget = P.Rw * c["speedCommandLimit"]
+            if demand > budget:
+                k = budget / demand
+                commandVelocityBody = commandVelocityBody * k
+                command = command.copy()
+                command[2] *= k
+                commandSpeed = np.linalg.norm(commandVelocityBody)
         if commandSpeed > c["maxSpeed"]:
             commandVelocityBody *= c["maxSpeed"] / commandSpeed
             commandSpeed = c["maxSpeed"]
@@ -150,7 +162,8 @@ class TorqueLqiController:
         yg = td["yawGate"]
         stationary = (np.linalg.norm(velocityBody) < yg["maxSpeed"]
                       and tiltMag < yg["maxTilt"] and commandSpeed == 0)
-        yawActive = stationary and abs(command[2]) > yg["commandThreshold"]
+        yawActive = (abs(command[2]) > yg["commandThreshold"]
+                     and (stationary or commandSpeed > 0))
         state[6] = state[6] - yawRateCmd if yawActive else 0.0
 
         if tiltMag > c["tiltPriorityStart"]:
@@ -176,11 +189,6 @@ class TorqueLqiController:
                             - self.prev_command_velocity) / dt
                 self.prev_command_velocity = commandVelocityBody.copy()
                 accelDemand += td["accelFeedforwardGain"] * cmdAccel
-            if "positionLeanGain" in td:
-                relVelB = RBW @ (estimate[6:8] - ballVelW)
-                accelDemand = (accelDemand
-                               - td["positionLeanGain"] * estimate[11:13]
-                               - td["positionLeanDampingGain"] * relVelB)
             leanLimit = td["leanSetpointLimit"]
             accelDemand = np.clip(accelDemand, -leanLimit * P.G,
                                   leanLimit * P.G)
@@ -232,13 +240,6 @@ class TorqueLqiController:
         kinematicRate = P.W_map @ np.array([velocityBody[0],
                                             velocityBody[1], bodyRate[2]])
 
-        if td.get("positionGain", 0) != 0:
-            ballVelW = np.array([P.Rb * estimate[9], -P.Rb * estimate[8]])
-            relVelB = RBW @ (estimate[6:8] - ballVelW)
-            raw = raw + P.W_map[:, 0:2] @ (
-                td["positionGain"] * estimate[11:13]
-                + td["positionDampingGain"] * relVelB)
-
         if td["ballYawGain"] != 0:
             bt = td["ballYawGain"] * estimate[10]
             bt = min(max(bt, -td["ballYawTorqueLimit"]),
@@ -259,13 +260,6 @@ class TorqueLqiController:
         if td["propulsionGain"] != 0:
             wrc = P.W_map @ np.array([commandVelocityBody[0],
                                       commandVelocityBody[1], 0.0])
-            if "propulsionRelPosGain" in td:
-                ballVelW = np.array([P.Rb * estimate[9],
-                                     -P.Rb * estimate[8]])
-                relVelB = RBW @ (estimate[6:8] - ballVelW)
-                relCorr = (td["propulsionRelPosGain"] * estimate[11:13]
-                           + td["propulsionRelVelGain"] * relVelB)
-                wrc = wrc + P.W_map[:, 0:2] @ relCorr
             rateErr = wrc - filteredWheelRate
             rateActive = np.sign(rateErr) * np.maximum(
                 np.abs(rateErr) - dz, 0.0)
@@ -284,14 +278,6 @@ class TorqueLqiController:
         limit = min(P.continuous_torque_limit,
                     P.traction_limited_torque) * np.ones(3)
         wheelTorque = np.clip(raw, -limit, limit)
-
-        if td["torqueSlewLimit"] > 0 and mode == 1:
-            if self.prev_torque_command is None or not enable:
-                self.prev_torque_command = np.zeros(3)
-            step = td["torqueSlewLimit"] * dt
-            wheelTorque = self.prev_torque_command + np.clip(
-                wheelTorque - self.prev_torque_command, -step, step)
-            self.prev_torque_command = wheelTorque
 
         if mode == 2:
             raw2 = -c["recoveryGainScale"] * self.K @ state \

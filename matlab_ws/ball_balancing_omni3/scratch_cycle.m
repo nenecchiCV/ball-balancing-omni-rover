@@ -5,10 +5,12 @@ function scratch_cycle(stopTime, tag, ov)
 if nargin < 1, stopTime = 28; end
 if nargin < 2, tag = 'def'; end
 mdl = 'ball_balancing_omni3_multibody_lqi_rev1';
-open_system(mdl);
 % Never trust an inherited ballbotParams: pooled batch workers keep the
 % base workspace between jobs, and a stale set can silently zero the
 % command profile.  Regenerate deterministically, then apply overrides.
+% Build params BEFORE loading: the R2026a part handler fires PreLoadFcn
+% before subsystem parts resolve, so a ballbotRev1Parameters call there
+% can hit ballbotRev1PlantAugment while MultibodyPlant is still absent.
 % Optional payloadMass positional override rescales mass/COM before the
 % generic field overrides.
 payloadMassArg = [];
@@ -30,6 +32,14 @@ if nargin >= 3 && ~isempty(ov)
             ov{i, 2});
     end
 end
+ballbotRev1SimConfig(mdl);
+ballbotRev1PlantAugment(mdl, ballbotParams);
+% The pre-load parameter build is stamped "-pending" because the runtime
+% plant/solver pieces could not be applied without a loaded model; now
+% that they have been, restamp the set so the model InitFcn keeps it
+% (otherwise sim start rebuilds defaults and silently drops the
+% overrides above).
+ballbotParams.parameterSource = "ballbotRev1Parameters";
 assignin('base', 'ballbotParams', ballbotParams);
 set_param(mdl, 'StopTime', num2str(stopTime));
 % Reset interpreted-function state: the model's MATLAB Fcn blocks keep

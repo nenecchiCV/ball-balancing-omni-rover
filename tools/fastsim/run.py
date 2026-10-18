@@ -30,20 +30,64 @@ def command_profile(t, p_cmd=None):
                                   c["cycleMoveDuration"] / 2)
         period = c["cycleMoveDuration"] + c["cycleStopDuration"]
         tEnd = c["cycleStart"] + c["cycleCount"] * period
+        cmd[0:2] = 0.0
+        cmd[2] = 0.0
         if c["cycleStart"] <= t < tEnd and (rampUp > 0 or rampDn > 0):
             tc = (t - c["cycleStart"]) % period
-            if tc < c["cycleMoveDuration"]:
-                k = min(1.0, tc / rampUp if rampUp > 0 else 1.0,
-                        (c["cycleMoveDuration"] - tc) / rampDn
-                        if rampDn > 0 else 1.0)
-                k = max(k, 0.0)
-                cmd[0:2] = k * target
-                cmd[2] = k * yaw_t if speed > 0 else k * yaw_t
-            # stop window: command 0
+            moveEnd = c["cycleMoveDuration"]
+            if tc < rampUp:
+                fraction = tc / rampUp
+            elif tc < moveEnd - rampDn:
+                fraction = 1.0
+            elif tc < moveEnd:
+                fraction = (moveEnd - tc) / rampDn
+            else:
+                fraction = 0.0
+            cmd[0:2] = fraction * target
+            # Yaw is time-separated from translation (the common-mode
+            # torque that yaws the chassis also spins the ball, so doing
+            # both at once drains the tilt loop's torque budget).  The
+            # yaw trapezoid sits inside the stop window after
+            # cycleYawDelay, same as ballbotRev1CommandProfile.
+            yawStart = moveEnd + c.get("cycleYawDelay", 0.0)
+            yawDur = c.get("cycleYawDuration", 0.0)
+            yawEnd = yawStart + yawDur
+            yawEvery = c.get("cycleYawEvery", 0)
+            yawAllowed = (yawEvery <= 0 or
+                          int((t - c["cycleStart"]) // period)
+                          % yawEvery == 0)
+            if yawAllowed and yawStart <= tc < yawEnd and yawDur > 0:
+                yawRamp = min(abs(yaw_t) / accel if accel > 0 else 0,
+                              yawDur / 2)
+                yp = tc - yawStart
+                if yp < yawRamp:
+                    yf = yp / yawRamp
+                elif yp < yawDur - yawRamp:
+                    yf = 1.0
+                else:
+                    yf = (yawDur - yp) / yawRamp
+                cmd[2] = yaw_t * yf
     else:
         v = np.asarray(c.get("velocityWorld", [0.0, 0.0]), float)
         cmd[0:2] = np.clip(t * accel, 0, 1) * v if t > 0 else [0, 0]
         cmd[2] = c.get("yawRate", 0.0)
+    # Bounded yaw pulse: sustained common-mode yaw pumps the ball's
+    # free z-spin and the plant loses a wheel ~0.4-0.6 rad in, so demo
+    # scenarios cap the rotation instead of holding a rate (0 = off).
+    # Non-cycle path only — the cycle profile bounds yaw via its own
+    # stop-window trapezoid.
+    dur = c.get("yawPulseDuration", 0.0)
+    if dur > 0 and cmd[2] != 0 and not c.get("cyclesEnabled", False):
+        ramp = min(abs(cmd[2]) / accel if accel > 0 else 0, dur / 2)
+        if t < ramp:
+            f = t / ramp
+        elif t < dur - ramp:
+            f = 1.0
+        elif t < dur:
+            f = (dur - t) / ramp
+        else:
+            f = 0.0
+        cmd[2] *= f
     return cmd
 
 

@@ -174,7 +174,6 @@ est = dict(
     relativePositionLeak=0.9967,
     velocityAnchorTimeConstant=0.5,
     velocityAnchorMinSpeed=0.05,
-    ballRateStillWheelRate=1.2 * enc_quant / Ts,
     stillnessFilterTimeConstant=0.15,
     ballRateStillWheelRateFiltered=0.8,
     stillVelocityDrainTimeConstant=0.1,
@@ -216,6 +215,8 @@ ctrl = dict(
     velocityIntegralLimit=np.array([0.20, 0.20]),
     yawBiasCommandBypassThreshold=1.0e-6,
     yawBiasReadyRateThreshold=0.002,
+    coupledCommandLimitEnabled=True,
+    speedCommandLimit=max_duty * motor_no_load_speed,
 )
 
 td = dict(  # torqueDrive
@@ -234,7 +235,12 @@ td = dict(  # torqueDrive
     leanFadeTilt=0.02,
     leanRateLimit=0.05,
     tiltStiffenGain=2.0,
-    wheelRateObserverEnabled=True,
+    # Disabled (measured on the Simulink plant): driveGain=306 predicts
+    # the free-wheel rate response (~100x faster than the loaded one),
+    # inflating the rate estimate during any sustained torque -- kills
+    # the propulsion error and raises slipRate into phantom braking.
+    # See ballbotRev1Parameters.m for the measured stall numbers.
+    wheelRateObserverEnabled=False,
     wheelRateObserverGain=0.15,
     wheelRateObserverDriveGain=306.0,
     wheelRateObserverCompliance=0.134,
@@ -243,22 +249,14 @@ td = dict(  # torqueDrive
     tiltIntegralLimit=0.03,
     tiltIntegralLeak=0.5,
     startupTorqueRampTime=0.4,
-    positionLeanGain=0.0,
-    positionLeanDampingGain=0.0,
     propulsionGain=0.02,
     propulsionTorqueLimit=0.045,
     propulsionMinShare=0.25,
-    propulsionRelPosGain=0.0,
-    propulsionRelVelGain=0.0,
     stopFollowGain=0.75,
-    torqueSlewLimit=0.0,
-    positionGain=0.0,
-    positionDampingGain=0.0,
     ballYawGain=0.12,
     ballYawTorqueLimit=0.025,
     yawDampingGain=0.30,
-    yawGate=dict(maxSpeed=0.03, maxTilt=0.02, commandThreshold=1.0e-3,
-                 rateThreshold=0.05),
+    yawGate=dict(maxSpeed=0.03, maxTilt=0.02, commandThreshold=1.0e-3),
     wheelRateFeedbackEnabled=False,
 )
 
@@ -270,11 +268,21 @@ cmd = dict(
     cycleStart=0.5,
     cycleMoveDuration=12.0,
     cycleStopDuration=4.0,
+    cycleYawDelay=0.0,
+    # Verified safe on v12 (obs-off): 0.2 rad/s x 1.0 s trapezoid
+    # (~0.1 rad) at the start of the stop window, thinned to every
+    # other stop via cycleYawEvery=2, completes 49.5 s.  Denser or
+    # larger bursts all tip (see ballbotRev1Parameters.m).
+    cycleYawDuration=1.0,
+    # Thins the yaw window to every cycleYawEvery-th stop phase (1 =
+    # every stop window, 0 disables thinning), same as MATLAB.
+    cycleYawEvery=2,
     cycleCount=3,
     accelerationLimit=0.03,
     decelerationLimit=0.01,
+    yawPulseDuration=0.0,
     profileVelocityWorld=np.array([0.12, 0.0]),
-    profileYawRate=0.80,
+    profileYawRate=0.20,
 )
 
 # Ground friction bound on the escape (centering) force: the ball cannot

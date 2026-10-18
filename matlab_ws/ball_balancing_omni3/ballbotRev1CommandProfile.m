@@ -67,7 +67,13 @@ if isfield(p.command, "cyclesEnabled") && p.command.cyclesEnabled
         % settle margin before the next move phase.
         yawStart = moveEnd + p.command.cycleYawDelay;
         yawEnd = yawStart + p.command.cycleYawDuration;
-        if phase >= yawStart && phase < yawEnd
+        yawAllowed = true;
+        if isfield(p.command, "cycleYawEvery") && ...
+                p.command.cycleYawEvery > 0
+            cycleIndex = floor((time - p.command.cycleStart)/period);
+            yawAllowed = mod(cycleIndex, p.command.cycleYawEvery) == 0;
+        end
+        if yawAllowed && phase >= yawStart && phase < yawEnd
             yawRamp = min(abs(yawTarget)/accel, ...
                 p.command.cycleYawDuration/2);
             yawPhase = phase - yawStart;
@@ -88,5 +94,27 @@ else
     if rampTime > 0 && time < rampTime
         command(1:2) = command(1:2)*(time/rampTime);
     end
+end
+% Bounded yaw pulse: sustained common-mode yaw pumps the ball's free
+% z-spin mode and the plant loses a wheel ~0.6-0.8 rad into the turn,
+% so demonstrator scenarios cap the total rotation per pulse instead of
+% holding a rate indefinitely.  0/absent keeps the constant request.
+% Applies to the non-cycle path only — the cycle profile already bounds
+% yaw via its stop-window trapezoid (cycleYawDelay/cycleYawDuration).
+if isfield(p.command, "yawPulseDuration") && ...
+        p.command.yawPulseDuration > 0 && command(3) ~= 0 && ...
+        ~(isfield(p.command, "cyclesEnabled") && p.command.cyclesEnabled)
+    dur = p.command.yawPulseDuration;
+    yawRamp = min(abs(command(3))/accel, dur/2);
+    if time < yawRamp
+        yawFraction = time/yawRamp;
+    elseif time < dur - yawRamp
+        yawFraction = 1;
+    elseif time < dur
+        yawFraction = (dur - time)/yawRamp;
+    else
+        yawFraction = 0;
+    end
+    command(3) = command(3)*yawFraction;
 end
 end

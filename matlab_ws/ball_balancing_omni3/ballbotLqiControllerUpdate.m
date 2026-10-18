@@ -12,24 +12,6 @@ if isfield(p.controller, "fullplant") && ...
     return
 end
 
-if isfield(p.controller, "cascade") && ...
-        isfield(p.controller.cascade, "enabled") && ...
-        p.controller.cascade.enabled
-    output = ballbotCascadeUpdate(estimate, command, ...
-        previousVelocityIntegral, enable, previousYawBiasReady, ...
-        biasDiagnostics, wheelRate, p);
-    return
-end
-
-if isfield(p.controller, "ballforce") && ...
-        isfield(p.controller.ballforce, "enabled") && ...
-        p.controller.ballforce.enabled
-    output = ballbotBallforceUpdate(estimate, command, ...
-        previousVelocityIntegral, enable, previousYawBiasReady, ...
-        biasDiagnostics, wheelRate, p);
-    return
-end
-
 roll = estimate(1);
 pitch = estimate(2);
 yaw = estimate(3);
@@ -58,6 +40,22 @@ rotationBodyFromWorld = [cos(yaw), sin(yaw); ...
 velocityBody = rotationBodyFromWorld*velocityWorld;
 commandVelocityBody = rotationBodyFromWorld*command(1:2);
 commandSpeed = norm(commandVelocityBody);
+% Coupled (v, yawRate) feasibility limiter: every wheel's rate demand
+% is |v|*sin(lat)/Rw + Rch*|yawRate|/Rw (omni kinematics map both terms
+% identically onto all three axles), so an over-budget pair must be
+% scaled jointly -- clipping v alone leaves the yaw demand over budget.
+if isfield(p.controller, "coupledCommandLimitEnabled") && ...
+        p.controller.coupledCommandLimitEnabled
+    wheelRateDemand = sin(p.wheel.contactLatitude)*commandSpeed + ...
+        p.rover.chassisRadius*abs(command(3));
+    wheelRateBudget = p.wheel.radius*p.motor.speedCommandLimit;
+    if wheelRateDemand > wheelRateBudget
+        coupledScale = wheelRateBudget/wheelRateDemand;
+        commandVelocityBody = coupledScale*commandVelocityBody;
+        command(3) = coupledScale*command(3);
+        commandSpeed = norm(commandVelocityBody);
+    end
+end
 if commandSpeed > p.controller.maxSpeed
     commandVelocityBody = commandVelocityBody* ...
         (p.controller.maxSpeed/commandSpeed);
@@ -77,45 +75,9 @@ if torqueDrive && isfield(p.controller.torqueDrive, "stopFollowGain") ...
     ballVelocityWorld0 = [p.ball.radius*estimate(10); ...
         -p.ball.radius*estimate(9)];
     ballSpeed0 = norm(ballVelocityWorld0);
-    % Speed-adaptive braking fraction: the deceleration-corner ejection
-    % mechanism is a strong reverse lean while the ball still carries
-    % momentum -- the lean's supporting wheel torque kicks the ball
-    % forward.  At high ball speed follow almost perfectly (nearly a
-    % free roll where only rolling resistance dissipates momentum);
-    % the braking fraction ramps back to the nominal gain as the ball
-    % sheds speed, so the hard braking only ever acts on low residual
-    % momentum.  stopFollowSpeedBoost [per m/s of ball speed] adds
-    % fraction with speed; 0 keeps the constant-gain behaviour.
-    followGainEff = p.controller.torqueDrive.stopFollowGain;
-    if isfield(p.controller.torqueDrive, "stopFollowSpeedBoost") && ...
-            p.controller.torqueDrive.stopFollowSpeedBoost ~= 0
-        followGainEff = min(0.97, followGainEff + ...
-            p.controller.torqueDrive.stopFollowSpeedBoost*ballSpeed0);
-    end
-    if commandSpeed < followGainEff*ballSpeed0
+    if commandSpeed < p.controller.torqueDrive.stopFollowGain*ballSpeed0
         commandVelocityBody = rotationBodyFromWorld* ...
-            (followGainEff*ballVelocityWorld0);
-        % Coast recentering: a follow command keeps the assembly
-        % rolling with the ball but never pulls the ball back under
-        % the chassis -- the observed cycle fall starts the NEXT move
-        % leg with the ball ~5 cm ahead (relPos = rover - ball ~ -0.05
-        % along travel), and accelerating onto an off-centre ball
-        % unloads a wheel.  While coasting, nudge the follow command
-        % by the relative-position error so the chassis walks back
-        % over the ball during the stop window.  relPos reads
-        % rover-ahead positive, so a negative entry (ball ahead) adds
-        % forward command.  The estimate is noisy at runaway, so the
-        % correction is bounded well under the ball speed itself.
-        if isfield(p.controller.torqueDrive, ...
-                "stopFollowRecenterGain") && ...
-                p.controller.torqueDrive.stopFollowRecenterGain ~= 0
-            recenter = -p.controller.torqueDrive. ...
-                stopFollowRecenterGain*estimate(12:13);
-            recenterLimit = 0.3*ballSpeed0;
-            recenter = min(max(recenter, -recenterLimit), ...
-                recenterLimit);
-            commandVelocityBody = commandVelocityBody + recenter;
-        end
+            (p.controller.torqueDrive.stopFollowGain*ballVelocityWorld0);
         commandSpeed = norm(commandVelocityBody);
     end
 end
@@ -170,10 +132,14 @@ if torqueDrive
     % pumps the ball's free spin mode, and that exchange is what tipped
     % the plant at ~5 s in the truth-feedback comparison.  The yaw-rate
     % channel is therefore enabled ONLY while a yaw command is actually
-    % requested at rest.  Damping residual yaw rate at standstill also
-    % pumps the ball spin (measured: oBall_z ~21 rad/s inside 0.15 s
-    % while parked at zero command), so the gate keys on the command
-    % alone; uncommanded yaw drift is left to friction.
+    % requested.  Commanded yaw during translation (moveYaw) shares the
+    % wheel-rate budget with the planar command through the coupled
+    % limiter upstream; the ballYawGain spin brake below absorbs the
+    % spin the common-mode exchange pumps.  Damping residual yaw rate
+    % at standstill also pumps the ball spin (measured: oBall_z ~21
+    % rad/s inside 0.15 s while parked at zero command), so the gate
+    % keys on the command alone; uncommanded yaw drift is left to
+    % friction.
     % Gyro-rate low-pass for the state feedback path.  The estimator
     % outputs bias-corrected raw gyro, so noisy IMUs (the planned cheap
     % unit) would inject torque noise proportional to the rate gain.
@@ -252,10 +218,20 @@ if torqueDrive
         end
         filteredWheelRate = wheelRateFilter;
     end
+    % Yaw channel gating: the yaw-rate state error is fed to the LQI
+    % when a yaw rate is commanded at rest (stop-window yaw in the
+    % cycle profile, settle required as before) OR during commanded
+    % translation (moveYaw -- the coupled (v, yaw) limiter upstream
+    % bounds the shared wheel-rate budget, so tracking yaw while
+    % moving no longer starves the tilt loop).  With no yaw command
+    % the state is zeroed and the passive yaw damper below takes over;
+    % while yaw IS commanded that damper must stay off or it brakes
+    % the commanded rotation.
     yawGate = p.controller.torqueDrive.yawGate;
     stationary = norm(velocityBody) < yawGate.maxSpeed && ...
         tiltMagnitude < yawGate.maxTilt && commandSpeed == 0;
-    yawActive = stationary && abs(command(3)) > yawGate.commandThreshold;
+    yawActive = abs(command(3)) > yawGate.commandThreshold && ...
+        (stationary || commandSpeed > 0);
     if yawActive
         state(7) = state(7) - yawRateCommand;
     else
@@ -318,22 +294,6 @@ if torqueDrive
             accelerationDemand = accelerationDemand + ...
                 p.controller.torqueDrive.accelFeedforwardGain* ...
                 commandAccelBody;
-        end
-        % Ball-tracking through the same lean channel: relPos = rover -
-        % ball.  A positive offset (rover ahead of the ball) means the
-        % lean has pushed the chassis beyond the ball, which is the
-        % runaway geometry: the chassis must ease off acceleration so
-        % the ball catches up.  The relative-velocity term damps the
-        % loop -- position-only feedback on this coupled pair is a
-        % delay-driven oscillator (same lesson as channel 2).
-        if isfield(p.controller.torqueDrive, "positionLeanGain")
-            relativeVelocityBody = rotationBodyFromWorld* ...
-                (estimate(7:8) - ballVelocityWorld);
-            accelerationDemand = accelerationDemand - ...
-                p.controller.torqueDrive.positionLeanGain* ...
-                estimate(12:13) - ...
-                p.controller.torqueDrive.positionLeanDampingGain* ...
-                relativeVelocityBody;
         end
         leanLimit = p.controller.torqueDrive.leanSetpointLimit;
         accelerationDemand = min(max(accelerationDemand, -leanLimit* ...
@@ -510,26 +470,6 @@ if torqueDrive
     % rad/s) out of the damping channel.
     kinematicRate = p.controller.lqi.wheelSpeedFromPlanarVelocity* ...
         [velocityBody; bodyRate(3)];
-    % Outer loop, channel 2: station keeping.  relativePositionBody is
-    % rover - ball; wheel torque redistributes it internally (ball +x,
-    % chassis reaction -x), so a positive offset wants a positive-pattern
-    % torque: d2s/dt2 = -beta*(torque coefficient), beta ~29 m/s^2 per
-    % N*m.  The position term needs the relative-velocity term for
-    % damping -- a pure position loop on this double-integrator is a
-    % delay-driven oscillator, which is why both +/- signs of the old
-    % undamped positionGain fell faster than no feedback.
-    if isfield(p.controller.torqueDrive, "positionGain") && ...
-            p.controller.torqueDrive.positionGain ~= 0
-        ballVelocityWorld = [p.ball.radius*estimate(10); ...
-            -p.ball.radius*estimate(9)];
-        relativeVelocityBody = rotationBodyFromWorld* ...
-            (estimate(7:8) - ballVelocityWorld);
-        rawWheelCommand = rawWheelCommand + ...
-            p.controller.lqi.wheelSpeedFromPlanarVelocity(:, 1:2)* ...
-            (p.controller.torqueDrive.positionGain*estimate(12:13) + ...
-             p.controller.torqueDrive.positionDampingGain* ...
-             relativeVelocityBody);
-    end
     % Ball vertical spin brake: common-mode wheel torque is what the
     % rover-yaw damper uses to shed angular momentum, and it all lands
     % on the ball's free spin mode (nothing regulates omegaBall_z).
@@ -587,26 +527,6 @@ if torqueDrive
     if propulsionGain ~= 0
         wheelRateCommand = p.controller.lqi.wheelSpeedFromPlanarVelocity* ...
             [commandVelocityBody; 0];
-        % The ball must be torqued up through the wheel contacts; during
-        % acceleration the chassis leads the ball and that offset maps
-        % kinematically into pitch (tilt ~ relPos/0.12 m).  Closed on
-        % the wheel-rate command instead of the lean channel so the
-        % fast wheel->ball drive authority reels the ball forward:
-        % rover ahead (relPos > 0) asks for MORE ball rolling rate.
-        if isfield(p.controller.torqueDrive, "propulsionRelPosGain")
-            ballVelocityWorld = [p.ball.radius*estimate(10); ...
-                -p.ball.radius*estimate(9)];
-            relativeVelocityBody = rotationBodyFromWorld* ...
-                (estimate(7:8) - ballVelocityWorld);
-            relCorrection = ...
-                p.controller.torqueDrive.propulsionRelPosGain* ...
-                estimate(12:13) + ...
-                p.controller.torqueDrive.propulsionRelVelGain* ...
-                relativeVelocityBody;
-            wheelRateCommand = wheelRateCommand + ...
-                p.controller.lqi.wheelSpeedFromPlanarVelocity(:, 1:2)* ...
-                relCorrection;
-        end
         rateError = wheelRateCommand - filteredWheelRate;
         rateActive = sign(rateError).*max(abs(rateError) - ...
             slipDeadzone, 0);
@@ -645,26 +565,6 @@ if torqueDrive
     limit = min(p.driver.continuousTorqueLimit, ...
         p.controller.tractionLimitedWheelTorque)*ones(3, 1);
     wheelSpeedCommand = min(max(rawWheelCommand, -limit), limit);
-    % Torque slew limit: the LQI+bang-bang commands flip rail to rail
-    % in one sample at cruise, and the resulting torque square wave is
-    % what pumps the limit cycle past the ~0.13 m/s wall (raising the
-    % traction budget makes it worse -- the amplitude, not the
-    % resource, is the problem).  The real motor current cannot step
-    % anyway (winding inductance), so rate-limiting the command is a
-    % physically faithful damping of the relay.
-    if isfield(p.controller.torqueDrive, "torqueSlewLimit") && ...
-            p.controller.torqueDrive.torqueSlewLimit > 0 && mode == 1
-        persistent prevTorqueCommand
-        if isempty(prevTorqueCommand) || ~enable
-            prevTorqueCommand = zeros(3, 1);
-        end
-        torqueStep = p.controller.torqueDrive.torqueSlewLimit* ...
-            p.controller.sampleTime;
-        wheelSpeedCommand = prevTorqueCommand + ...
-            min(max(wheelSpeedCommand - prevTorqueCommand, ...
-                -torqueStep), torqueStep);
-        prevTorqueCommand = wheelSpeedCommand;
-    end
     if mode == 2
         rawWheelCommand = -p.controller.recoveryGainScale* ...
             lqi.stateGain*state - ...

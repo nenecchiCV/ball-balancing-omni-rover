@@ -56,16 +56,14 @@ flowchart LR
 
 制御器はトルクLQI経路を既定とします（`p.controller.torqueDrive.enabled`）。外側のボール速度→リーン変換と内側のロバスト固定ゲインLQI、プラント誤差を抑え込む輪速サーボ推進の構造です。
 
-1. `ballbotLqiControllerUpdate` は `p.controller.cascade.enabled` が真のとき `ballbotCascadeUpdate` へ委譲し、偽のとき既定のトルクLQI経路を実行します。
+1. `ballbotLqiControllerUpdate` は既定のトルクLQI経路を実行します。
 2. トルクLQI経路は `ballbotRobustTorqueGains` の固定ゲインでフィードバックし、速度誤差→指令リーンの外ループ（`velocityLeanGain`）で移動を生成します。
 3. プラント誤差抑制機構として、輪速整合サーボ推進（`propulsionGain`＋トラクション配分）、フィルタ済み輪速の滑り減衰（エンコーダー量子化フリッカー対策のLPF＋小デッドゾーン）、コモンモード残差除去、ボール垂直スピンブレーキ（`ballYawGain`）、並進ゲート付きヨーダンパーを持ちます。
 4. `ballbotTorqueDutyStep` が輪トルクをモータ式 `duty = (R*I + Ke*w)/Vs` でdutyへ変換し、ドライバ連続限界とトラクション限界で飽和します。
 
 LQIゲインは `ballbotRobustTorqueGains` が設計します。実測トルクステップB行列をペイロード族0〜1 kgへスケーリングし、族全体で保持床を満たすロバスト固定ゲインを選択します。
 
-`p.controller.cascade.enabled = true` の構成ではカスケード経路（MiaPURE方式準拠の速度→リーン外層＋6状態LQR＋ボール速度PI、`ballbotCascadeGains` 設計）へ切り替わります。保持性能はトルクLQI経路が優位（5 s保持の最大傾斜 ~0.007 rad対 ~0.04 rad）なためトルクLQIを既定としています。
-
-`p.controller.ballforce.enabled = true` の構成ではボールフォース経路（`ballbotBallforceUpdate`）へ切り替わります。姿勢・モード管理・滑り/スピン/ヨーの各レールはトルクLQIと同一で、並進チャネルだけを輪速Pサーボから「ボール速度PI → 平面力要求 → `pinv(Bvel)` で最小ノルム輪トルクへ配分」へ置き換えます。輪速サーボは接触拘束で輪速=ボール転動速度にピンされるため到達不能なレート目標に飽和して失速しますが、力配分は実ボール速度誤差に比例する要求なのでその失速が起きません。静止摩擦のプリロードとして指令輪速方向への Coulomb フィードフォワードを持ちます。実測ではトルクLQIが全く動かせなかった 0.10 m/s ステップへボールを実際に追従させます（整定誤差 +0.011 m/s）。サイクル耐久はトルクLQIのほうが長いため既定はトルクLQIのままです。
+過去の代替制御経路（カスケード `ballbotCascadeUpdate`/`ballbotCascadeGains`、ボールフォース `ballbotBallforceUpdate`）は全指標でトルクLQIに劣後したため削除しました（M1）。ボールフォースはトルクLQIが全く動かせなかった 0.10 m/s ステップへボールを実際に追従させた実績（整定誤差 +0.011 m/s）がありますが、サイクル耐久はトルクLQIが優位です。実験履歴は検証状態の記録と Git 履歴に残ります。
 
 ## MATLAB関数
 
@@ -78,7 +76,6 @@ LQIゲインは `ballbotRobustTorqueGains` が設計します。実測トルク�
 | `ballbotDesignLqi.m` | パラメーター初期化 | 縮約10状態プラントのLQIゲイン設計 |
 | `ballbotDesignTorqueLqi.m` | `ballbotRev1Parameters` から呼出し | トルク入力プラントのLQR設計 |
 | `ballbotRobustTorqueGains.m` | `ballbotRev1Parameters` から呼出し | 実測B行列の質量族スケーリングとロバスト固定ゲイン選択 |
-| `ballbotCascadeGains.m` | `ballbotRev1Parameters` から呼出し | カスケード6状態LQRゲイン設計（保持床制約付き） |
 | `ballbotReducedPlantDynamics.m` | `ballbotDesignLqi` から呼出し | 縮約10状態プラントの非線形動力学 |
 | `ballbotTorquePlantDynamics.m` | `ballbotDesignTorqueLqi` から呼出し | トルク入力縮約プラントの非線形動力学 |
 | `ballbotPayloadRoverProperties.m` | パラメーター初期化 | ペイロード→質量/重心/慣性の換算 |
@@ -89,15 +86,12 @@ LQIゲインは `ballbotRobustTorqueGains` が設計します。実測トルク�
 | `ballbotCustomFriction.m` | `WheelAssembly/WheelContact` | 駆動方向とローラー方向を分離した異方性接触摩擦 |
 | `ballbotIdealImu.m` / `ballbotImuFromJoint.m` | `MultibodyPlant/IdealIMU` | 6-DOF Joint真値から比力・角速度を生成 |
 | `ballbotWheelRateFromDisplacement.m` | `Controller/WheelSpeedSensing` | 車輪回転変位を5 ms後退差分して回転速度を算出 |
-| `ballbotTimedEncoderRate.m` | `WheelRateCalculation`（augmentで差替、実験経路） | T法エンコーダ模擬: カウント境界の補間時刻から `quant/dtEdge`、無エッジ時は `quant/経過時間` 下限へ減衰。`encoder.timedRateEnabled` で有効化（保持でバイアス化が観測され既定はoff） |
 | `ballbotEstimatorStep.m` / `ballbotEstimatorUpdate.m` | `Controller/StateEstimator` | IMU・エンコーダー融合、ボール回転・相対位置・ヨー軸ジャイロバイアス推定 |
 | `ballbotEstimatorInitialState.m` | 初期値式 | 推定器14状態の初期値 |
 | `ballbotTruthGate.m` | `Controller/TruthGate`（診断用） | `p.estimator.truthFeedbackEnabled` 時に推定値をプラント真値で置換 |
 | `ballbotYawBiasStartupGuard.m` | `BalanceController` 内関数から呼出し | バイアス収束までヨー制御だけを抑止する準備完了ラッチ |
-| `ballbotLqiControllerUpdate.m` | `Controller/BalanceController/LqiController` | モード管理・トルクLQI本体・fullplant/カスケード/ボールフォース経路のディスパッチ |
-| `ballbotBallforceUpdate.m` | `ballbotLqiControllerUpdate` から呼出し | ボールフォース制御器（ボール速度PI→力配分の新規並進チャネル＋LQI姿勢レール共有） |
+| `ballbotLqiControllerUpdate.m` | `Controller/BalanceController/LqiController` | モード管理・トルクLQI本体・fullplant経路のディスパッチ |
 | `ballbotFullPlantHierarchyUpdate.m` | `ballbotLqiControllerUpdate` から呼出し | 旧階層制御（速度外側ループ＋傾斜安定化＋輪速変換） |
-| `ballbotCascadeUpdate.m` | `ballbotLqiControllerUpdate` から呼出し | カスケード制御器本体 |
 | `ballbotLqiFeedbackState.m` | `Controller/BalanceController` | LQIフィードバック状態ベクトルの組立て |
 | `ballbotSpeedPiMotorStep.m` | `ballbotSpeedPiDutyStep` から呼出し | 輪速PI・MDD3A電圧制限・DCモータトルク |
 | `ballbotSpeedPiDutyStep.m` | `Controller/WheelDrive` | 輪速PIからPWM dutyを生成（トルクモード無効時のフォールバック） |
@@ -107,13 +101,19 @@ LQIゲインは `ballbotRobustTorqueGains` が設計します。実測トルク�
 | `ballbotPoseFromJoint.m` | `Logging` | 位置・クォータニオンからxyz/RPY真値を生成 |
 | `ballbotEulerToQuaternion.m` | 補助 | オイラー角からクォータニオン変換 |
 | `scratch_cycle.m` | 検証用エントリポイント | サイクルシミュレーション実行と `cycle_result_<tag>.mat` 保存 |
-| `ballbotBenchmark.m` | 検証用エントリポイント | シナリオ（hold/stepX/yaw/cycle/bias）を実行し G-01〜G-11 指標を採点・要約行を出力 |
+| `ballbotBenchmark.m` | 検証用エントリポイント | シナリオ（hold/stepX/yaw/cycle/bias/moveYaw）を実行し G-01〜G-11 指標を採点・要約行を出力 |
 
 推定器の内部状態は14要素で、末尾にヨー軸ジャイロバイアス推定値と低運動継続時間を保持します。制御器へ渡す`estimate(14)`の幅と順序は維持し、4～6番目をバイアス補正後の機体角速度とします。バイアス推定値、学習許可、継続時間は診断信号として扱います。起動時はバイアス収束までヨートルクだけを抑止し、明示的なヨー指令は抑止をバイパスします。
 
 ## 実行
 
 モデルを開くだけで `PreLoadFcn` が `ballbotRev1Parameters` を呼び出すため、`ballbotParams` をベースワークスペースへ明示設定する必要はありません。`InitFcn` が不一致・未設定の `ballbotParams` をシミュレーション開始時に自動で再生成します。
+
+GUI で開いてそのまま Run しても正式構成で動きます。ランタイム適用（転がり抵抗・輪軸摩擦・MDD3A 回生モード・MaxStep）は .slx に焼き込めないため `ballbotRev1Parameters` 経由で適用されます。ロード途中のビルドはブロック未解決で適用しきれないため、その場合は `parameterSource` を `-pending` スタンプにして `InitFcn` が sim 開始時に再構築→全適用＋`clear functions`（解釈実行ブロックの `persistent` 状態リセット）します。以後の Run も InitFcn 末尾の `ballbotRev1RuntimeApply` ブロック（ランタイム set_param、ファイル非保存）が同じ適用を再実行するため、連続した Run は毎回初回実行と同一の条件になります。
+
+既定コマンドプロファイルは「移動 12 s → 停止 4 s」を 3 周期繰り返し、停止窓の先頭で 0.2 rad/s×1.0 s のヨー台形を隔周期（cycle 1 と 3）に発行します — 移動・停止・回転が全て繰り返し実行され 49.5 s 完走します（v12 実測モデルで検証済み、ヨー包絡の詳細は制御ロードマップ §3）。ヨー窓は `p.command.cycleYawEvery`/`cycleYawDuration` で調整可能で、`cycleYawDuration=0` で並進のみに戻せます。
+
+注意: 実行時追加ブロックでモデルが変更済み扱いになるため、閉じる際は保存せず破棄してください（`close_system(m,0)`）。R2024b 形式を維持する必要があるため、新しい MATLAB からの保存はできません（R2026a で保存すると R2026a 形式に変わり互換性を失います）。
 
 ```matlab
 cd matlab_ws/ball_balancing_omni3
@@ -150,12 +150,17 @@ out = sim(in);
 | 減速コーナー対策の第2ラウンド（転倒形態の再特定＋新レバーA/B） | 直前追跡で転倒形態を更新: 致命傷は停止窓で系が ~0.25 m/s のまま転がり続け relPos≈−0.05（ボール5cm先行）を保持したまま**次の移動脚で加速指令が来る**瞬間（tilt 0.046→0.246 rad が 0.25s で発散）。試行は全て不採用: `stopFollowSpeedBoost`（高速時ほぼフリーロール、速度適応制動率）→16.5s、`stopFollowGain=1.02`（車体先行ジオメトリ）→23.2s、`stopFollowRecenterGain`（停止窓の惰行中にrelPosを再センタリング）0.3→15.3s / 0.1→17.4s（追いつき指令も同じ内部運動量交換で、かつ速度積分器を巻き上げる別経路の毒）。結論: **車輪トルクによる車体-ボール間のあらゆる補正は内部運動量交換であり、停止窓内での能動的リセンタリング・制動強化は全て射出方向へ働く**。残る有力方向は (a) 500 Hz 化で補正遅延を物理的に縮める（既定シードで52s完走実績・ただしシード依存）、(b) 移動脚突入時の偏心判定で加速要求を制限するゲート |
 | 移動脚突入時の偏心ゲート（`accelRelPosGuardGain=12`、既定ON） | **採用**。停止窓でボール先行（指令方向への relPos 射影が負）のまま突入する移動脚で `accelerationDemand` を `max(floor, 1-gain·偏心度)` に絞り、偏心幾何への急加速を緩和（接触が再センタリングする時間を稼ぐ）。実測（5ms・既定シード）: **cycle 33.6s → 43.8s**（gain掃引 8/10/12/13/14/15/18 → 35/39/44/40/35/41/36s、非単調・軌道レベルの位相依存あり）、hold 0.870°・stepX -0.268 m/s・yaw t=8.64s（全てベースライン同等・yawはもともと~8.6sで転倒する既知限界）。2msでは逆効果（39.0s vs 無ガード~52s）— 高速ループが自力捕捉する領域を絞りすぎるため5ms既定専用。**cycle転倒自体は残存**（t=43.8s・pass 4/9）: 偏心ゲートはトリガー緩和であり脱輪の根本原因（接触包絡・運動量交換構造）は未解決 |
 | staticLeanAdapt ロール軸符号修正 | y方向CGオフセットでバイアス注入 `state(3:4) -= [bias(1); -bias(2)]` のチャネル2反転が誤りだったことが判明（bias は `accelerationDemand` のような平面ベクトルではなく tilt 整定点 `[pitch; -roll]` 規約）。反転により +y オフセットで正帰還: 20mm y-offset が適応on t=2.6s / off t=4.7s で転倒。`[bias(1); bias(2)]` に修正後: **y-offset 10mm 0.92°・15mm 1.30°・20mm 1.95°で全て5s保持**（従来x方向のみ検証で y は未テストだった）。x-offset 20mm 4.40°・0mm 0.94°・cycle 43.8sビット一致は不変 |
+| M1 デッドパス削除（§1.3全項目）とビット一致検証 | cascade/ballforce 経路・stopFollowSpeedBoost/RecenterGain・torqueSlewLimit・position系/propulsionRelPos系チャネル・窓積算輪速・T法エンコーダ・Kalman融合を削除（全て enabled=false/ゲイン0 のデッドパス、歴史はgit履歴と上表に残存）。検証手法: `ballbotParams` を固定して新旧コード（git HEAD vs 作業ツリー、`code_head/` パスシャドーイング）を同一条件で 49.5 s cycle 実行 → **`res` 構造体がビット一致（`isequal`=1、両者 tTip=15.93 s）**。注意: 検証期間中に質量モデルが外部セッションで BISECT 反復されており、params 非固定の比較はプラント差に汚染される。また `scratch_cycle` は `ballbotRev1SimConfig`（MaxStep + MDD3A 回生モード常時有効）の適用が必須 — 未適用だとブリッジ式切替の代数例外でソルバーが実質停止する（1 シミュレーションで 2万行超の警告） |
 | 車輪接触緯度の再設計（65°→40°、既定変更） | **根本原因の特定**。`wheel.contactLatitude` は `design.*` オーバーライドでビルド時一貫変更可能（`ballbotParameters(sampleTime, design)` 追加・幾何/ゲイン派生の前に適用）。緯度掃引の実測（5ms・トルクLQI・リアル化プラント）: 65°→43.8s転倒、60°→41.7s、55°→26.8s、50°→ガードoffで完走(1.85°)、45°→完走0.62°・6/9、**40°→完走0.27°・7/9**、35°→完走0.31°・7/9。機構: 輪法線力 N=mg/(3·sinλ) が緯度低下で増大（40°で+41%）→トラクション限界トルクが上がり、減速コーナーの制動・ボール射出・エンコーダ帯の姿勢ジッタを同時に解消。全シナリオ改善: hold 0.87°→0.19°、yaw 8.6s転倒→完走7/8、stepX 5/8→7/8、bias 6/8、CG20mm 2.06°保持（staticLeanAdapt有効）。偏心ガードは40°でも有効（offで46.4s転倒）のため既定ON維持。**球径拡大の先行実験（110/120/150mmでcycle悪化）は幾何未連動の事後オーバーライドによる非一貫モデルであり無効**—本機構導入後の再試行が必要。CAD側は車輪中心が(半径31mm,z117.6)→(56.7mm,z97.6)へ外下方へ移動、車軸傾きは25°→50°に急化（内向き上向きモーター格納が新たに可能） |
+| 車輪接触緯度 40°→33°（案B・内向きモーター格納採用のため既定変更） | λ=33°は案B（モーター内向き格納）の幾何学的成立境界 — 3本の ~67mm モーターが +a_i 方向（内向き上向き57°）で中心軸へ収束し、尾部半径 ~14.7mm → 隣接尾部間隔 ~25mm で Ø24.4 を~1mm残して通過（外向きポッドは33°で尾部が地面接触 z~5mm のため不可）。制御影響評価（5ms・内向きポッド質量モデル・LQI自動再設計）: **cycle 完走0.35°・7/9、hold 0.146°・7/7、yaw 完走7/8、stepX 7/8、bias 6/8、CG20mm 1.62°保持** — λ40（0.27°/0.19°）と同等以上で、CG+20mm上昇（85→105mm）を法線力+18%（9.2→10.9N）と傾斜慣性-42%（質量の中心軸集約）が相殺。既定値でcycle 0.349°・7/9をビット一致確認。質量モデルのポッド値（motorComAboveBall=0.0822 等）は**推定値**で、案BのCAD確定後にFusion実測へ置換要。機構的課題: L1中央にモーター尾部逃げ開口（尾部 z=163mm > デッキ147mm）＋L1中央バッテリー・上部ロッドの再配置が必要（計画書: `specs/.../ball_balancing_omnirover3wd-lambda33-cad-plan.md`） |
 | 2ms運転とstaticLeanAdaptの相互作用 | 500 Hz では推定器の速度ラグが小さく、cycle停止窓突入時に estV<0.02 となり学習がアーム → ±0.004 rad級の微小バイアスが休止中に注入され、marginal軌道を摂動（適応off: 52s完走 / on: 23.7s転倒）。対策として静止判定を「lagging estV<0.02 かつ 生輪速由来のボール面速度<0.03」に強化（estimate(9:10)平滑化値は不十分と判明）したが、2msでは初期アーム期の学習自体は残り、結果はビット一致で不変。**5ms既定では cycle に対し適応有無でビット一致（完全に静黙）のため現構成では実害なし**。2ms運転はシード依存の補助経路として注記 |
+| M4: Fusion 実測質量モデル（MotorMount_v12）置換 + 全シナリオ回帰 | hold 7/7（0.157°）・**cycle 完走 49.5 s・採点 6/8**（新既定 obs-off で tilt 0.838°・contact 1.000・sep 0・duty 0.24、不達は G02 追従誤差 -0.051 と G07 推定速度誤差 0.025 — G07 は実運動量が増えた副作用で誤差率は旧 obs306 既定より良好、ロードマップ §2 比較表）・stepX 7/8・bias 6/8・CG-20mm 6/7・bounded yaw（0.4 rad/s×1.5 s パルス）5/8・bounded moveYaw（0.15 m/s+0.4 rad/s×1.0 s）5/9 — 全て転倒なし。cycle の毎周期ヨー窓は 0.1–0.6 rad 全て蓄積転倒（制御ロードマップ §3）のため、既定は停止窓ごとの 0.1 rad バースト（`cycleYawEvery=2`）へ変更 — 移動・停止・回転の連続繰り返しが 49.5 s 完走（maxTilt 1.295°）。採点 `cycle` は回帰比較性のためヨー無しにピン留め（ヨー込み既定の採点は 4/8、全て閾値マージン系・転倒なし）。M2 追試で輪速オブザーバの推進抑制（driveGain=306 が荷重応答を ~100 倍過大予測）を特定し `wheelRateObserverEnabled=false` を新既定に |
 
 既知の残課題:
 
-- 0.306 m/s 定速走行・高速移動/停止繰り返しは未達成。0.12 m/s の移動/停止サイクルは緯度40°化で完走するようになったが（pass 7/9、残は速度追従精度系）、0.3 m/s級の速度域では依然として接触包絡が壁になる見込み。減速コーナー脱輪の主因は緯度65°由来の法線力不足→トラクション限界であったことが判明し、緯度再設計で構造的に解消。
-- 有効速度帯は狭い: 下はエンコーダー量子化由来の静止判定閾値（フィルタ済み輪速 0.8 rad/s＝ボール ~0.026 m/s未満で速度推定がドレインへ切替わる。境界フリッカー対策として ~1 s 連続静止の滞留ゲート `stillVelocityDrainHoldTime` を追加し、ブラインド帯縁の実クリープを推定速度へ残す）、上は ~0.2 m/sの接触壁。
+- 0.306 m/s 定速走行・高速移動/停止繰り返しは未達成。0.12 m/s の移動/停止サイクルは緯度低下（65°→33°・案B内向きポッド採用）で完走するようになったが（当時の推定質量モデルで pass 7/9、現行 v12+obs-off 既定では 6/8 — 残は全て速度追従精度系）、0.3 m/s級の速度域では依然として接触包絡が壁になる見込み。減速コーナー脱輪の主因は緯度65°由来の法線力不足→トラクション限界であったことが判明し、緯度再設計で構造的に解消。λ33内向きポッドの質量モデルは Fusion 実測 MotorMount_v12 値へ置換済み（テスト参照値更新・19/19）。
+- 持続ヨー回転は物理包絡外（v12 実測・v9 推定の両質量モデルで再現）: 連続 0.2–0.5 rad/s は 2.6–3.4 s で転倒。生存は総回転角 ~0.4 rad/回以下のバーストのみ（静止発進 1.0 s@0.8・1.5 s@0.4 は完走、1.5 s@0.5・1.5 s@0.8 は転倒）。cycle 内の停止窓ヨーはさらに厳しく毎周期 0.1 rad/窓でも蓄積転倒するため、既定 cycle プロファイルは**隔周期**（`cycleYawEvery=2`）の 0.1 rad バースト — 49.5 s 完走・maxTilt 1.295°（転倒なし）。ヨー窓無しの採点 cycle は 49.5 s 完走・tilt 0.838°（G01 内・6/8）。機構はコモンモードヨートルク→ボール自由 z スピンのポンプ→輪法線力再配分→脱輪で、スピンブレーキ強化・ヨーゲイン×10・エンコーダ分解能×100・輪速/スリップ/推進チャネル個別無効化のいずれでも不変。詳細は制御ロードマップ §3。
+- 有効速度帯は狭い: 下はエンコーダー量子化由来の静止判定閾値（フィルタ済み輪速 0.8 rad/s＝ボール ~0.026 m/s未満で速度推定がドレインへ切替わる。境界フリッカー対策として ~1 s 連続静止の滞留ゲート `stillVelocityDrainHoldTime` を追加し、ブラインド帯縁の実クリープを推定速度へ残す）、上は追従ストール。
+- λ33 での速度限界（M2）: 定速指令掃引 0.15–0.50 m/s で転倒・輪荷重抜け・デューティ飽和なしだが実速度はクリープ平衡に留まる。根本原因を特定: 輪速オブザーバの `driveGain=306` がボール接触荷重下の実応答（実効 ~2–5）を ~100 倍過大予測し、推進誤差縮退＋幻スリップ制動を引き起こしていた → `wheelRateObserverEnabled=false` が新既定（median 0.017→0.044 m/s・2.6 倍、cycle 完走 tilt 0.838°）。**残存する ~0.05 m/s の頭打ちは別機構**（推進トルク配分・シャフト摩擦との力平衡）で次期課題。詳細は制御ロードマップ §2。
 - LQRの速度状態列は非最小位相経路（ボール逆蹴りで車体前傾）を選択するため既定で無効（`velocityStateFeedback=false`）。速度追従は外側リーンループと輪速サーボ推進が担当。
 - ボール鉛直スピンのポンプ機構はコモンモード残差除去＋スピンブレーキ（`ballYawGain=0.06`）で抑制済み（巡航中の傾斜歩行を消去）。

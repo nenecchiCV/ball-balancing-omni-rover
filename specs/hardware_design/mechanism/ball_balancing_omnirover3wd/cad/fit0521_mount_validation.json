@@ -1,23 +1,23 @@
 {
   "valid": true,
-  "revision": "v8 (Fusion 360: MotorMount_v12 inward-pod planar slab; lambda=33 wheel contact latitude; plan-B inward motor storage; Frame_L1 tail clearance holes 3x Ø48; 3D-print optimized)",
+  "revision": "v13 (Fusion 360: MotorMount_v13 SLEEVE mount — revolved cup OD31 x bore Ø25.5 on wheel-axis s'=14..50 enclosing the motor to the gearbox region; cap wall s'=14..18.6 carries Ø8 nose hole + PCD17 Ø3.5 through-holes + Ø7.2x3.5 washer pockets + Ø18.4 counterbore seat s'=18.3 for motor front boss; FRAME fastening = width-direction top tabs (y=±24, z=141..147) with 2x Ø4.5 vertical holes at (62,±19.5) matching Frame_L1 Ø4.5 holes -> M4 bolt+nut sandwich; single-body integrated cup+web+tab, 39 analytic faces, no fillets/protrusions; motors rebuilt as per-station baked components FIT0521_P0/P1/P2 at identity transform; WheelAdapter_v4 tube extended to s'=11.5 for 3.7 mm shaft engagement; lambda=33; plan-B inward)",
   "solids_count": {
-    "mount_v12": [1, 1, 1],
+    "mount_v13": [1, 1, 1],
     "motor": [2, 2, 2]
   },
   "face_count": {
-    "mount_v12": 18,
-    "mount_v12_face_types": "Plane(13) + Cylinder(5) のみ(解析面のみ、自由曲面なし)",
-    "mount_v12_volume_mm3": 12330.0
+    "mount_v13": 39,
+    "mount_v13_face_types": "解析面のみ(自由曲面・不要凹凸なし)。キャップ+ウェブ+タブ一体の単一ソリッド",
+    "mount_v13_volume_mm3": 18629.0
   },
-  "arrangement": "plan-B inward: motor stowed inward-up on the wheel axis (57 deg from horizontal); motor face at s'=16.0 mm on axle coordinate (3.4 mm inside wheel inner end s'=12.6 — M3 ボルト頭スペース確保); Ø4 output shaft inserted from inside into WheelAdapter_v4 through-bore Ø4.2; motor retained solely by 4x M3 face bolts into PCD17 gearbox taps through the slab; slab sweeps over the wheel hub bracket to the Frame_L1 pad; motor tail passes through Ø48 clearance hole in Frame_L1",
+  "arrangement": "plan-B inward: motor inserted into Ø25.5 bore of the sleeve (radial clearance 0.25 mm vs Ø25 can) from the inner open end s'~50; motor front boss seated on cap seat s'=18.3 via Ø18.4 counterbore, face planes s'=18.5..18.7; M3 bolts + washers inserted from wheel-side Ø7.2 pockets through cap-wall Ø3.5 holes into PCD17 gearbox taps; Ø4.2 output shaft on axis into WheelAdapter_v4 bore Ø4.2 (adapter tube spans s'=-1.0..+11.5, shaft tip s'=7.8 -> 3.7 mm engagement); motor tail passes through Ø48 clearance hole in Frame_L1",
   "wheel_geometry": {
     "contact_latitude_deg": [33.0, 33.0, 33.0],
     "wheel_center_radius_mm": [62.06, 62.06, 62.06],
     "wheel_center_z_mm": [90.30, 90.30, 90.30],
     "ball_center_distance_mm": [74.0, 74.0, 74.0],
     "axle_tilt_from_horizontal_deg": [57.0, 57.0, 57.0],
-    "motor_axis_alignment": "motor axis parallel to -u33 (dot = 1.0000, all 3 stations); motor face plane at s'=16.0 mm",
+    "motor_axis_alignment": "motor shaft axis = -u33 (dot = 1.0000, all 3 stations); motor geometry baked into per-station comps FIT0521_P0/P1/P2 (identity occurrence transform -> immune to transform rollback)",
     "wheel_axial_range_mm": "s' = -12.5..12.6, transverse +/-22 mm (all stations)"
   },
   "overlap_mm3": {
@@ -31,73 +31,89 @@
     "motor_frame_L1": 0.0,
     "motor_ball": 0.0,
     "adapter_wheel": 0.0,
+    "adapter_frame_L1": 0.0,
+    "adapter_ball": 0.0,
+    "wheel_frame_L1": 0.0,
     "wheel_ball": 0.0,
-    "note": "TemporaryBRepManager intersection on occurrence-transformed bodies; all pairs 0 mm3 at all 3 stations. Occurrences cleaned: MotorMount_v9/v10/v11 削除済み、現行は MotorMount_v12 x3"
+    "frame_L1_ball": 0.0,
+    "note": "TemporaryBRepManager intersection (booleanOperation op=1) on occurrence-space proxy bodies; all pairs 0 mm3 at all 3 stations after sleeve redesign. Mount occurrences: MotorMount_v13 x3"
   },
   "hole_alignment": {
-    "gearbox_taps": "motor front face M3 taps at PCD17 (±8.5,0)/(0,±8.5) local, Ø2.5 modeled",
-    "slab_holes": "4x Ø3.5 (print-compensated clearance) coaxial with PCD17 taps on slab face s'=16",
-    "slab_bore": "Ø26 (print-compensated from Ø25.8) through bore coaxial with wheel axle (motor insertion)",
-    "pad_holes_vs_frame": "4x Ø4.6 (print-compensated) at (57,±9)/(64,±9) mm match Frame_L1 Ø4.2 holes; pad top flush with L1 bottom",
-    "frame_L1_tail_holes": "3x Ø48 clearance holes for motor tails; L1 net volume 44.1 cm^3; tail tip z≈154 mm rho≈20 mm"
+    "gearbox_taps": "motor front face M3 taps at PCD17 (±8.5,0)/(0,±8.5) local; verified coaxial with sleeve cap-wall holes",
+    "cap_holes": "4x Ø3.5 through the cap wall (s'=14..18.6 solid), coaxial with PCD17 tap pattern",
+    "washer_pockets": "4x Ø7.2 x ~3.5 mm on wheel-side cap face",
+    "nose_hole": "Ø8 central clearance on axle axis",
+    "counterbore": "Ø18.4 counterbore s'=15..18.4 inside cap for motor front boss (Ø17.6 x s'~18.5..21.5 penetration)",
+    "tab_holes_vs_frame": "2x Ø4.5 vertical holes through width-direction tabs at (62,±19.5) mm match Frame_L1 Ø4.5 holes (3 stations); tab top z=147 flush with L1 bottom, M4 bolt+nut sandwich",
+    "frame_L1_tail_holes": "3x Ø48 clearance holes for motor tails"
   },
   "clearance_mm": {
     "adjacent_wheel_gap": 62.1,
-    "ball_to_motor": 13.4,
-    "bolt_head_room": "wheel inner end s'=12.6 vs slab face s'=16.0 -> 3.4 mm M3 bolt-head room (v11 の2.4mmから改善)",
-    "washer_room_gearbox_bolts": "adjacent tap pitch 12 mm; flat face around Ø3.5 holes fits M3 washers",
-    "note": "ball_to_motor はモーター軸線と球心の最近接距離(75.6 mm)から球半径50+モーター半径12.2を引いた解析値。隣接ホイール間クリアランスは頂点間近似値"
+    "ball_to_motor": 11.8,
+    "motor_bore_radial_clearance": 0.25,
+    "note": "ball_to_motor は車軸線と球心の最近接距離(74 mm)から球半径50+モータ半径12.2を引いた解析値。ボア径Ø25.5はØ25胴体に対し半径0.25 mmの隙間"
   },
   "printability": {
-    "orientation": "側面をベッドに伏せる(スラブ側面 flat)。押出方向 y がベッド鉛直 → サポート材完全不要",
-    "uniform_thickness_mm": 28.0,
-    "hole_orientation": "Ø26 ボア・Ø3.5 ×4・Ø4.6 ×4 すべて印刷姿勢で水平穴(形状精度良好)",
-    "fillets": "凹角に R4 mm x3 + R2.5 mm x1(応力集中緩和)",
-    "hole_compensation": "printed clearances: Ø26(nominal Ø25.8), Ø3.5(nominal Ø3.4/M3), Ø4.6(nominal Ø4.5/M4)",
+    "orientation": "スリーブ軸は車軸方向(水平から57°)。y法線側面をベッド伏せでスリーブ軸は水平、外筒下面オーバーハングはウェブが支える; あるいはタブ下面ベッド伏せ。サポート要否はスライサー確認",
+    "integrated": "キャップ+ウェブ+タブ単一ソリッド、面数39、不要凹凸なし",
+    "hole_orientation": "キャップ Ø8/Ø3.5/Ø7.2 はスリーブ軸方向、タブ Ø4.5 は垂直穴",
     "material_note": "Fusion 上は鋼材質(仮置き)。実印刷は ABS/PETG/PLA 想定; ballbotParameters.m は rhoABS=1050 で体積換算済み"
   },
   "envelope_mm": {
     "assembly_max_diameter": 167.5,
     "limit_diameter": 250,
-    "note": "モーターが内側に格納されたため外形はフレーム径支配(λ40 の242.5 mmから縮小)"
+    "note": "モーターが内側に格納されたため外形はフレーム径支配"
   },
   "mass_properties": {
-    "mount_v12_volume_mm3": 12330.0,
-    "mount_v12_mass_steel_kg": 0.0968,
-    "mount_v12_mass_abs_g": 12.9,
-    "mount_v12_cg_above_ball_mm": 80.1,
-    "mount_v12_cg_radial_mm": 58.8,
-    "mount_v12_ownCG_inertia_steel_kgcm2": {"Ixx": 0.2247, "Iyy": 0.2011, "Izz": 0.1107},
-    "motor_cg_above_ball_mm": 76.9,
-    "motor_cg_radial_mm": 38.4,
+    "mount_v13_volume_mm3": 18629.0,
+    "mount_v13_mass_steel_g": 146.2,
+    "mount_v13_mass_abs_g": 19.56,
+    "mount_v13_cg_above_ball_mm": 78.1,
+    "mount_v13_cg_radial_mm": 52.7,
+    "mount_v13_principal_inertia_steel_kgcm2": [0.500, 0.440, 0.185],
+    "motor_volume_mm3": 27046.0,
+    "motor_cg_above_ball_mm": 79.0,
+    "motor_cg_radial_mm": 37.1,
     "wheel_cg_above_ball_mm": 40.4,
     "wheel_cg_radial_mm": 62.0,
-    "adapter_volume_mm3": 2166.0,
-    "adapter_cg_above_ball_mm": 41.4,
-    "adapter_cg_radial_mm": 61.4,
-    "frame_L1_net_volume_mm3": 44100.0,
-    "rover_total_mass_kg_cad_density": 3.058,
-    "note": "Fusion 360 physicalProperties 計測値。mount_v12 慣性は CG 基準(平行軸減算済み)。ballbotParameters.m へ ABS 密度換算で反映済み"
+    "adapter_volume_mm3": 1217.1,
+    "adapter_cg_above_ball_mm": 44.7,
+    "adapter_cg_radial_mm": 59.2,
+    "frame_L1_net_volume_mm3": 43825.8,
+    "note": "Fusion 360 physicalProperties 計測値(オカレンス実配置基準)。mount_v13 の主慣性は平行軸定理でCG基準へ換算した推定値(暫定: CG系テンソル直接出力はAPI未取得)。ballbotParameters.m へ ABS 密度換算で反映済み"
   },
   "fasteners": {
     "frame_L1": {
-      "type": "M4 screw + nut (clearance holes both sides)",
-      "mount_pad_holes": "4x Ø4.6 vertical at (57,±9) and (64,±9) mm, pad top flush with Frame_L1 bottom",
-      "frame_holes": "4x Ø4.2 at identical XY positions (verified on Frame_L1 solid)"
+      "type": "M4 bolt + nut sandwich (frame plate + mount tab clamped together)",
+      "mount_tab_holes": "2x Ø4.5 vertical through width-direction tabs (y=±24, z=141..147) at (62,±19.5) mm, tab top flush with Frame_L1 bottom; nut access on exposed tab underside",
+      "frame_holes": "6x Ø4.5 vertical in Frame_L1 plate at station-rotated positions of (62,±19.5) mm"
     },
     "gearbox_face": {
-      "type": "M3 bolts + washers through mount slab into gearbox taps — sole motor retention",
-      "slab_holes": "4x Ø3.5, coaxial with PCD17 tap pattern",
+      "type": "M3 bolts + washers through sleeve cap-wall Ø3.5 holes into PCD17 gearbox taps — sole motor retention; wheel-side Ø7.2 pockets seat heads+washers",
+      "cap_holes": "4x Ø3.5, coaxial with PCD17 tap pattern (measured)",
       "taps": "4x M3 on gearbox front face"
     },
-    "clamp_strap": "DELETED — no room behind wheel hub bracket; motor retained by face bolts only"
+    "clamp_strap": "DELETED — sleeve bore constrains can radially; axial retention by face bolts only"
   },
   "assumptions": [
-    "パッド上面は Frame_L1 下面に面一で接し、M4 ネジ+ナットで締結",
-    "モーターは尾部側からスラブ中央 Ø26 ボアへ挿通し、ギアボックス前面タップへ M3 ×4 締結",
+    "タブ上面(z=147)は Frame_L1 下面に面一で接し、タブの Ø4.5 穴とフレームの同位置穴を通す M4 ボルト+ナットで挟み締結",
+    "モーターはスリーブ開口(s'~50)から挿入し、前面ボスを Ø18.4 カウンターボア座面(s'=18.3)へ収容。ホイール側キャップのワッシャーポケットから M3 ボルト+ワッシャーでギヤボックス前面タップへ締結",
     "モーター尾部とエンコーダ配線は Frame_L1 の Ø48 クリアランス穴を通過",
     "ギアボックス前面タップの実寸(径・有効深さ)は実機採寸で確定する",
-    "MotorMount_v9/v10/v11 のオカレンスは削除済み。現行は MotorMount_v12 のみ",
-    "印刷時はスラブ側面をベッドに伏せる向き(サポート不要)。積層方向強度は実印刷で確認"
-  ]
+    "ホイールの軸方向位置は実機ハブの Dカット止めネジで確定(アダプタ側に追加の軸位置決め構造は無し)",
+    "旧マウント(スラブ式)のオカレンスは削除済み。現行は MotorMount_v13 のみ",
+    "CAD干渉ゼロは実作業性(モーター挿入、ナット締結、工具アクセス)を保証しない — 実印刷で確認"
+  ],
+  "lambda65_reversion_root_cause": {
+    "summary": "保存・再計算時にモーターオカレンスがλ65姿勢へ巻き戻る現象の原因と対策",
+    "causes_removed": [
+      "asBuiltJoints[21](剛性108): 削除済みオカレンスを参照する破損剛性ジョイント(occPath1.valid()=InternalValidationError)。λ65時代に捕捉した変換を再計算時に生存オカレンスへ再適用していた — 削除済み",
+      "λ65時代の部品エクスポート削除: MotorMount_v4/v5/v6/v7/v9, MotorClampStrap_v1, fit0521_motor_clamp_strap, fit0521_motor_mount_bracket, WheelAdapter_v3 (parts/ と cad/ から削除 — git履歴には残存)",
+      "旧モーターオカレンス(:8/:11/:12/:14/:15)はλ65行列で生成されていたため削除。",
+      "オカレンス変換の保存時巻き戻し: APIで設定したtransform2が保存時に旧姿勢へ戻る現象が残存したため、各ステーションの最終姿勢をコンポーネント幾何へ直接焼き込んだ FIT0521_P0/P1/P2(オカレンス変換=恒等)へ再構築。保存+再オープンで姿勢維持を検証済み",
+      "omnirover3wd_reference ディレクトリ削除(オムニホイール以外は本機と無関係)"
+    ],
+    "verification": "モーター幾何をステーション別コンポーネント(恒等変換)へ焼き込み、保存+閉じる/再オープンでλ33姿勢維持を確認。v13スリーブ設計の保存+再オープン後もモーター軸=車軸方向・座面整合・全干渉0を維持",
+    "residual_note": "Fusionクラウドのドキュメント・バージョン履歴にはλ65版(v1-v17)が残るが、現行ドキュメントからの再計算パスは除去済み。Git側は未コミット"
+  }
 }

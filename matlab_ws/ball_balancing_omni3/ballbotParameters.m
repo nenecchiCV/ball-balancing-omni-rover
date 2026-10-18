@@ -178,26 +178,27 @@ frameDiscMass = rhoABS*pi*0.080^2*0.003;
 frameDiscInertia = frameDiscMass*(3*0.080^2 + 0.003^2)/12;
 spacerMass = rhoABS*(3*sqrt(3)/2)*0.003^2*0.050;
 spacerInertia = spacerMass*(3*0.003^2 + 0.050^2)/12;
-mountMass = rhoABS*12.33e-6;     % MotorMount_v12 measured volume 12.33 cm^3
-adapterMass = rhoABS*2.166e-6;   % WheelAdapter_v4 measured volume ~2.17 cm^3
+mountMass = rhoABS*18.629e-6;    % MotorMount_v13 sleeve+tab, measured volume 18.629 cm^3
+adapterMass = rhoABS*1.2171e-6;  % WheelAdapter_v4 measured volume 1.217 cm^3 (tube s'=-1.0..11.5)
 % Fusion-measured own-CG inertias scaled to ABS mass (mean of the two
 % horizontal axes for tilt; the z axis entry is used in the yaw sum).
-mountTiltI = 2.85e-6;  % per MotorMount_v12 (own-CG, ABS-scaled)
-mountYawI = 1.48e-6;
-adapterTiltI = adapterMass*(3*0.011^2 + 0.030^2)/12;
-adapterYawI = adapterMass*0.011^2/2;
+% Principal values (steel) 0.500/0.440/0.185 kg*cm^2 -> ABS scale 0.1338.
+mountTiltI = 6.29e-6;  % per MotorMount_v13 (own-CG, ABS-scaled)
+mountYawI = 2.48e-6;
+adapterTiltI = adapterMass*(3*0.006^2 + 0.0125^2)/12;
+adapterYawI = adapterMass*0.006^2/2;
 % Drivetrain CG heights [m above ball center] and radial arms [m] for
 % the lambda33 inward pod.  Wheel values are exact geometry
 % (74*sin(33deg) / 74*cos(33deg)); motor/mount values are Fusion CG
 % measurements of the placed occurrences.
-motorComAboveBall = 0.0769;   % Fusion motor CG z = 126.9 mm above ground
+motorComAboveBall = 0.0790;   % Fusion motor CG z = 129.0 mm above ground
 wheelComAboveBall = 0.0403;
-mountComAboveBall = 0.0801;   % Fusion v12 CG z = 130.1 mm above ground
-adapterComAboveBall = 0.0414;
-motorYawArm = 0.0384;         % Fusion motor CG radial arm
+mountComAboveBall = 0.0781;   % Fusion v13 CG z = 128.1 mm above ground
+adapterComAboveBall = 0.0447;   % Fusion adapter CG z = 94.7 mm above ground
+motorYawArm = 0.0371;         % Fusion motor CG radial arm
 wheelYawArm = 0.0620;
-mountYawArm = 0.0588;         % Fusion v12 CG radial arm
-adapterYawArm = 0.0614;
+mountYawArm = 0.0527;         % Fusion v13 CG radial arm
+adapterYawArm = 0.0592;       % Fusion adapter CG radial arm
 motorTiltI = p.motor.mass*(p.motor.dimensions(1)^2 + ...
     p.motor.dimensions(2)^2)/12;
 wheelTiltI = p.wheel.mass*(3*p.wheel.radius^2 + ...
