@@ -55,7 +55,7 @@ ball_balancing_omni3_multibody_lqi_custom_contact_fullplant.slx
 │   │   ├── EstimatorInputs                %   推定器入力の束ね
 │   │   ├── EstimatorUpdate                %   ballbotEstimatorUpdate
 │   │   ├── EstimatorStateMemory           %   14状態メモリ
-│   │   ├── SelectEstimate                 %   14要素推定出力
+│   │   ├── SelectEstimate                 %   14幅推定バス（estimate 13要素+末尾未使用パッド）
 │   │   ├── SelectNextEstimatorState       %   次回状態
 │   │   └── SelectYawBiasDiagnostics       %   診断3信号
 │   ├── BalanceController                  % 輪速指令生成
@@ -198,7 +198,7 @@ flowchart LR
   BIAS --> DLOG[Bias / enable / dwell logging]
 ```
 
-同一サンプル内の順序は、前回バイアスによるジャイロ補正、姿勢・運動学・接触信頼度の計算、低運動判定、次回用バイアス更新とする。`BIAS --> SUB`は1サンプル状態を介するため、代数ループを形成しない。
+同一サンプル内の順序は、前回バイアスによるジャイロ補正、姿勢・運動学の計算、低運動判定、次回用バイアス更新とする。`BIAS --> SUB`は1サンプル状態を介するため、代数ループを形成しない。
 
 ## 6. 制御
 
@@ -283,8 +283,8 @@ $\omega_{w,d}=u_{ff}-Kx-\lambda_K K_i I_v$
 | クォータニオンノルム | 毎ステップ正規化 |
 | 加速中の重力方向誤補正 | $\lvert\|f\|-g\rvert\le0.25g$ のときのみ補正 |
 | 一時停止によるバイアス誤学習 | 5条件の連続0.50 s成立後だけ更新 |
-| 閾値近傍のチャタリング | 認定後に1.25倍の退出側閾値と接触信頼度0.70を使用 |
-| 旋回・すべり中の誤学習 | 車輪角速度と接触信頼度で即時停止し、バイアスを保持 |
+| 閾値近傍のチャタリング | 認定後に1.25倍の退出側閾値を使用 |
+| 旋回・すべり中の誤学習 | 車輪角速度・比力・機体角速度ゲートで即時停止し、バイアスを保持 |
 | バイアス外れ値 | ±0.10 rad/s飽和と$1.0\times10^{-4}$ rad/s/サンプル更新制限 |
 
 ## 8. パラメーター管理
@@ -304,7 +304,6 @@ $\omega_{w,d}=u_{ff}-Kx-\lambda_K K_i I_v$
 | 絶対位置と絶対ヨーは外部基準なし | 長時間ドリフトを閉ループで除去できない |
 | エンコーダーは絶対ヨーを観測しない | バイアス補正後もヨー角は初期値からの積分値 |
 | 走行中の機体ヨーとボール回転は常時分離不能 | 走行中はバイアスを学習せず前回値を保持 |
-| 接触信頼度は残差由来 | 4接触の個別分離を一意に識別しない |
 | ボール質量・摩擦は仮値 | 実測後に再同定・再調整が必要 |
 | オムニローラーを等価摩擦化 | 8ローラー切替による振動を再現しない |
 
@@ -325,7 +324,7 @@ $\omega_{w,d}=u_{ff}-Kx-\lambda_K K_i I_v$
 | Transform Sensor | 相対フレーム運動の理想計測 | [MathWorks Multibody Dynamics](https://www.mathworks.com/help/sm/multibody-dynamics.html) |
 | `Simulink.SimulationInput` | StopTime等をモデル非破壊で上書き | 本ワークスペースのシミュレーション実行方法 |
 | `ballbotWheelGeometry` | $A_\tau$のランク3 | MATLAB R2026aで実行確認 |
-| `ballbotEstimatorStep` | 静止入力で状態変化0、接触信頼度1 | MATLAB R2026aで実行確認 |
+| `ballbotEstimatorStep` | 静止入力で状態変化0 | MATLAB R2026aで実行確認 |
 | `ballbotEstimatorStepTest` | バイアス学習・抑止・上限・再開・起動ガード・インターフェース回帰 | MATLAB R2026aで16件合格 |
 | `Simulink.BlockDiagram.createSubsystem` | 信号線と物理接続の境界ポートを自動生成 | モジュール化で使用 |
 | モデル更新 | `SimulationCommand=update` が ode15s で成功 | モジュール化後に確認 |

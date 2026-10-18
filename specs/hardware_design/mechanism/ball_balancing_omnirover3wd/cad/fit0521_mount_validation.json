@@ -4,7 +4,9 @@
   "solids_count": {
     "mount_v23": [1, 1, 1],
     "motor": [2, 2, 2],
-    "frame_L1": [1]
+    "frame_L1": [1],
+    "frame_L2": [1],
+    "frame_L3": [1]
   },
   "face_count": {
     "note": "単一ソリッド、60面。外形=締結プレート寸法(48mm幅)+一様長方形プレート x=34..72.5×y=±34、フレーム側斜め隙間を楔充填、モーター端部下端角はボール・ホイール接線に平行な面で面取り(+1.358 mm 深化でフェイス板外面と同一面)。M4→M3 移行で締結穴は Ø3.5(44.5,±29)+(62,±29) の4穴/ステーション、Frame_L1 に対応12穴。フェイス板は M2.5 化の充填→開け直しで中央 Ø25 ボス構造へ再構成: ノーズ Ø8 + 4×Ø2.9 貫通 + 4×Ø6.0 ワッシャポケット",
@@ -43,7 +45,7 @@
     "washer_pockets": "4x Ø6.0 on wheel-side boss face (M2.5 washer Ø5.5 seat, ~1.3 mm deep)",
     "boss": "Ø25 central boss on the face plate carries the whole fastener pattern",
     "tab_vs_frame": "Ø3.5 vertical holes (44.5,±29)+(62,±29) z=141..147 on the uniform rectangular plate (x=34..72.5, y=±34) match Frame_L1 Ø3.5 holes at all 3 stations (12 frame holes total); M3 bolt + Ø6 washer + nut sandwich; plate top z=147 flush with L1 bottom",
-    "spacer_holes": "all frame spacer holes Ø3.5 (M3) at r=65 on the +30-deg-rotated pattern {0,+-60,+-120,180}: Frame_L2/L3 6 each (filled+re-drilled), Frame_L1 30 holes total (incl. mount holes and other M3-clearance holes); Spacer_M3x50 tube OD 6.2 / bore Ø3.2 x 50 mm, 12 occurrences at the rotated positions, faces flush to frames (z=150..200 and 203..253)"
+    "spacer_holes": "all frame spacer holes Ø3.5 (M3) at r=65 on the +30-deg-rotated pattern {0,+-60,+-120,180}: Frame_L2/L3 6 each on clean rebuilt discs (obsolete fill stubs removed; L2 z=200..203, L3 z=253..256, each with Ø20 centre hole), Frame_L1 30 holes total (incl. mount holes and other M3-clearance holes); Spacer_M3x50 tube OD 6.2 / bore Ø3.2 x 50 mm, 12 occurrences at the rotated positions, faces flush to frames (z=150..200 and 203..253)"
   },
   "clearance_mm": {
     "adjacent_wheel_gap": 62.1,
@@ -81,7 +83,7 @@
     "adapter_cg_above_ball_mm": 44.7,
     "adapter_cg_radial_mm": 59.2,
     "frame_L1_net_volume_mm3": 43994.3,
-    "frame_L2_L3_net_volume_mm3": 60381.0,
+    "frame_L2_L3_net_volume_mm3": 59203.0,
     "spacer_M3x50_volume_mm3": 1107.4,
     "note": "Fusion 360 physicalProperties 計測値(オカレンス実配置基準)。CG基準慣性は実ボディの世界慣性から平行軸定理で換算。ballbotParameters.m へ ABS 密度換算で反映済み"
   },
@@ -124,7 +126,7 @@
       "オカレンス変換の保存時巻き戻し: APIで設定したtransform2が保存時に旧姿勢へ戻る現象が残存したため、各ステーションの最終姿勢をコンポーネント幾何へ直接焼き込んだ FIT0521_P0/P1/P2(オカレンス変換=恒等)へ再構築。保存+再オープンで姿勢維持を検証済み",
       "omnirover3wd_reference ディレクトリ削除(オムニホイール以外は本機と無関係)"
     ],
-    "verification": "スペーサー穴 +30° 回転・全 M4→M3+Ø6ワッシャ移行(フェイス板のみ M2.5)実施後、保存+閉じる/再オープンで全オカレンス位置(スペーサー12個=回転パターン)・マウント単一ボディ(60面,51.443 cm3)・Frame L1/L2/L3 回転穴パターン Ø3.5・全干渉0(モーター内部ペア除く)を維持することを確認",
+    "verification": "スペーサー穴 +30° 回転・全 M4→M3+Ø6ワッシャ移行(フェイス板のみ M2.5)・Frame_L2/L3 旧充填スタブ除去(清浄円板再構築、各59.203 cm3・単一ボディ)実施後、保存+閉じる/再オープン(v50)で全オカレンス位置(スペーサー12個=回転パターン・asBuiltJoint12個維持)・マウント単一ボディ(60面,51.443 cm3)・Frame L1/L2/L3 回転穴パターン Ø3.5・全フレーム/マウント/スペーサー間干渉0を維持することを確認",
     "residual_note": "Fusionクラウドのドキュメント・バージョン履歴にはλ65版(v1-v17)が残るが、現行ドキュメントからの再計算パスは除去済み。"
   }
 }

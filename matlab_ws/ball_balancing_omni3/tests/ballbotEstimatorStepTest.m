@@ -63,7 +63,6 @@ classdef ballbotEstimatorStepTest < matlab.unittest.TestCase
             testCase.verifyEqual(state(13), 0, AbsTol=1.0e-12);
             testCase.verifyEqual(estimate(4:6), zeros(3, 1), ...
                 AbsTol=1.0e-12);
-            testCase.verifyGreaterThan(estimate(14), 0.99);
             testCase.verifyTrue(all(isfinite([state; estimate; diagnostics])));
         end
 
@@ -79,7 +78,7 @@ classdef ballbotEstimatorStepTest < matlab.unittest.TestCase
                 state, imu, zeros(3, 1), p, sampleCount);
 
             testCase.verifyLessThan(abs(state(13) - injectedBias), 0.002);
-            testCase.verifyEqual(diagnostics(9), 1, AbsTol=0);
+            testCase.verifyEqual(diagnostics(5), 1, AbsTol=0);
         end
 
         function testQualificationDwellPreventsLearning(testCase)
@@ -94,7 +93,7 @@ classdef ballbotEstimatorStepTest < matlab.unittest.TestCase
                 state, imu, zeros(3, 1), p, sampleCount);
 
             testCase.verifyEqual(state(13), 0, AbsTol=1.0e-12);
-            testCase.verifyEqual(diagnostics(9), 0, AbsTol=0);
+            testCase.verifyEqual(diagnostics(5), 0, AbsTol=0);
             testCase.verifyEqual(state(14), ...
                 p.estimator.biasQualificationTime, AbsTol=1.0e-12);
         end
@@ -111,7 +110,7 @@ classdef ballbotEstimatorStepTest < matlab.unittest.TestCase
 
             testCase.verifyEqual(state(13), 0, AbsTol=1.0e-12);
             testCase.verifyEqual(state(14), 0, AbsTol=1.0e-12);
-            testCase.verifyEqual(diagnostics(9), 0, AbsTol=0);
+            testCase.verifyEqual(diagnostics(5), 0, AbsTol=0);
         end
 
         function testAccelerationNormAnomalyPreventsLearning(testCase)
@@ -126,24 +125,7 @@ classdef ballbotEstimatorStepTest < matlab.unittest.TestCase
 
             testCase.verifyEqual(state(13), 0, AbsTol=1.0e-12);
             testCase.verifyEqual(state(14), 0, AbsTol=1.0e-12);
-            testCase.verifyEqual(diagnostics(9), 0, AbsTol=0);
-        end
-
-        function testLowContactConfidencePreventsLearning(testCase)
-            p = ballbotParameters;
-            p.estimator.kinematicRegularization = 1;
-            p.estimator.contactResidualScale = 1.0e-6;
-            state = ballbotEstimatorInitialState;
-            imu = ballbotEstimatorStepTest.stationaryImu(p, 0.02);
-
-            [state, estimate, diagnostics] = ...
-                ballbotEstimatorStepTest.runSamples( ...
-                state, imu, zeros(3, 1), p, 1000);
-
-            testCase.verifyLessThan(estimate(14), ...
-                p.estimator.biasContactConfidenceThreshold);
-            testCase.verifyEqual(state(13), 0, AbsTol=1.0e-12);
-            testCase.verifyEqual(diagnostics(9), 0, AbsTol=0);
+            testCase.verifyEqual(diagnostics(5), 0, AbsTol=0);
         end
 
         function testBiasSaturatesAtConfiguredLimit(testCase)
@@ -192,18 +174,17 @@ classdef ballbotEstimatorStepTest < matlab.unittest.TestCase
             [state, estimate, diagnostics] = ballbotEstimatorStep( ...
                 state, imu, zeros(3, 1), p);
             controllerOutput = ballbotLqiControllerUpdate(estimate, ...
-                zeros(3, 1), zeros(2, 1), true, false, diagnostics, ...
-                zeros(3, 1), p);
+                zeros(3, 1), zeros(2, 1), true, false, ...
+                diagnostics(4:6), zeros(3, 1), p);
             motorOutput = ballbotSpeedPiMotorStep( ...
                 controllerOutput(1:3), zeros(3, 1), zeros(3, 1), ...
                 controllerOutput(6), p);
 
             testCase.verifySize(state, [14, 1]);
-            testCase.verifySize(estimate, [14, 1]);
-            testCase.verifySize(diagnostics, [10, 1]);
-            testCase.verifyEqual(estimate(1:13), zeros(13, 1), ...
+            testCase.verifySize(estimate, [13, 1]);
+            testCase.verifySize(diagnostics, [6, 1]);
+            testCase.verifyEqual(estimate, zeros(13, 1), ...
                 AbsTol=1.0e-10);
-            testCase.verifyGreaterThan(estimate(14), 0.99);
             testCase.verifyEqual(motorOutput(1:3), zeros(3, 1), ...
                 AbsTol=1.0e-12);
             testCase.verifyEqual(uint8(controllerOutput(6)), uint8(1));
@@ -219,7 +200,10 @@ classdef ballbotEstimatorStepTest < matlab.unittest.TestCase
 
             testCase.verifySize(output, [31, 1]);
             testCase.verifySize(diagnostics, [10, 1]);
-            testCase.verifyEqual(output(29:31), diagnostics(8:10), ...
+            testCase.verifyEqual(output(28), 0, AbsTol=1.0e-12);
+            testCase.verifyEqual(output(29:31), diagnostics(4:6), ...
+                AbsTol=1.0e-12);
+            testCase.verifyEqual(diagnostics(7:10), zeros(4, 1), ...
                 AbsTol=1.0e-12);
         end
 
@@ -240,9 +224,8 @@ classdef ballbotEstimatorStepTest < matlab.unittest.TestCase
 
         function testControllerInhibitsYawUntilBiasIsReady(testCase)
             p = ballbotParameters;
-            estimate = zeros(14, 1);
+            estimate = zeros(13, 1);
             estimate(6) = 0.02;
-            estimate(14) = 1;
             biasDiagnostics = [0; 1; p.estimator.biasQualificationTime];
             wheelRate = zeros(3, 1);
 
@@ -313,8 +296,8 @@ classdef ballbotEstimatorStepTest < matlab.unittest.TestCase
 
         function [state, estimate, diagnostics] = runSamples( ...
                 state, imu, wheelRate, p, sampleCount)
-            estimate = zeros(14, 1);
-            diagnostics = zeros(10, 1);
+            estimate = zeros(13, 1);
+            diagnostics = zeros(6, 1);
             for sampleIndex = 1:sampleCount
                 [state, estimate, diagnostics] = ballbotEstimatorStep( ...
                     state, imu, wheelRate, p);

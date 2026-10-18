@@ -140,9 +140,8 @@ def run(t_final=60.0, speed=0.306, n_cycles=3, wheel_meas="bdiff",
     logs.update({k: np.zeros((n_steps, 2)) for k in
                  ["vr", "vb", "relPos", "est_vball", "cmd_v"]})
     logs.update({k: np.zeros(n_steps) for k in
-                 ["obz", "psi", "r", "mode", "contactConf", "sat",
-                  "est_vr_x"]})
-    est_log = np.zeros((n_steps, 14))
+                 ["obz", "psi", "r", "mode", "sat", "est_vr_x"]})
+    est_log = np.zeros((n_steps, 13))
 
     failed_at = None
     for k in range(n_steps):
@@ -186,7 +185,6 @@ def run(t_final=60.0, speed=0.306, n_cycles=3, wheel_meas="bdiff",
             logs["psi"][k] = x[M.IPSI]
             logs["r"][k] = x[M.IR]
             logs["mode"][k] = mode
-            logs["contactConf"][k] = estimate_now[13]
             logs["sat"][k] = float(np.any(
                 np.abs(tau_cmd) >= P.traction_limited_torque - 1e-9))
             logs["est_vr_x"][k] = estimate_now[6]

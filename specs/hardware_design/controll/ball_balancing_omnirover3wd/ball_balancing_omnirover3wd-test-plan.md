@@ -35,7 +35,7 @@ flowchart LR
 | U-04 | 輪速飽和 | 大指令 | 全輪飽和 | $|\omega_{w,d,i}|\le p.controller.lqi.maximumWheelSpeedCommand$ |
 | U-05 | CustomFriction | $v_t\ne0,F_n>0$ | $F_t^Tv_t\le0$ | 常に非正 |
 | U-06 | WheelRateDerivative | 変位増分$[0.01,-0.02,0.03]^T$ rad、$T_s=5$ ms | 後退差分 | $[2,-4,6]^T$ rad/s、誤差$<10^{-12}$ rad/s |
-| U-07 | Estimator | 静止IMU、車輪回転変位一定 | 状態不変・接触信頼度 | ノルム誤差$<10^{-10}$、信頼度$>0.99$ |
+| U-07 | Estimator | 静止IMU、車輪回転変位一定 | 状態不変 | ノルム誤差$<10^{-10}$ |
 | U-08 | Controller | 静止推定、指令0 | BALANCE、$\tau_w=0$ | mode=1、誤差$<10^{-12}$ |
 | U-09 | Controller | $\theta=+1$ deg | 復元球トルク | $\tau_{b,y}<0$ |
 | U-10 | Controller | 傾斜40 deg | FALLEN | mode=0、$\tau_w=0$ |
@@ -44,10 +44,10 @@ flowchart LR
 | B-03 | Qualification | 全条件成立、$t<t_{min}$ | 学習待機 | $\gamma=0$、$\hat b_{g,z}$不変 |
 | B-04 | Qualification | 車輪回転が閾値超過 | 学習停止 | $t_{qual}=0$、$\hat b_{g,z}$不変 |
 | B-05 | Qualification | 比力ノルム偏差が閾値超過 | 学習停止 | $t_{qual}=0$、$\hat b_{g,z}$不変 |
-| B-06 | Qualification | 接触信頼度が閾値未満 | 学習停止 | $\gamma=0$、$\hat b_{g,z}$不変 |
+| B-06 | Qualification | ロール・ピッチ角速度が閾値超過 | 学習停止 | $t_{qual}=0$、$\hat b_{g,z}$不変 |
 | B-07 | BiasObserver | 長時間の上限超過相当入力 | 飽和 | $|\hat b_{g,z}|\le b_{max}$ |
 | B-08 | BiasObserver | 静止→車輪回転→再静止 | 再認定後に学習再開 | 運動中保持、再静止後に推定値増加 |
-| B-09 | Interface | 静止推定と制御器呼出し | 既存互換 | 状態14、`estimate` 14、`estimate(14)>0.99`、BALANCE、トルク0 |
+| B-09 | Interface | 静止推定と制御器呼出し | 既存互換 | 状態14、`estimate` 13、BALANCE、トルク0 |
 | B-10 | YawDrift | B-02学習後に静止10 s | ドリフト低減 | ヨードリフト0.5 deg未満 |
 | B-11 | BiasHold | 学習後に車輪回転5 s | 運動中保持 | 推定値変化0.002 rad/s未満 |
 | B-12 | StartupGuard | 学習未完了／完了／完了後運動 | ヨー抑止・解除ラッチ | 未完了時ヨートルク0、完了後と明示指令時は有効 |
@@ -117,7 +117,7 @@ B-01～B-12は`matlab_ws/ball_balancing_omni3/tests/ballbotEstimatorStepTest.m`�
 | E-02 | C-02 | 平面速度 | RMS誤差<0.02 m/s |
 | E-03 | C-04 | ヨー角速度 | RMS誤差<0.02 rad/s |
 | E-04 | C-02 | ボール角速度 | RMS誤差<0.2 rad/s |
-| E-05 | 摩擦-20% | 接触信頼度 | すべり増加時に公称より低下 |
+| E-05 | 摩擦-20% | 平面速度・ボール角速度 | 公称値との偏差を記録（診断観察） |
 | E-06 | C-09 | ヨーバイアス | 15 s以内に誤差0.002 rad/s未満 |
 | E-07 | C-10 | ヨー角 | 10 sドリフト0.5 deg未満 |
 
@@ -159,7 +159,7 @@ B-01～B-12は`matlab_ws/ball_balancing_omni3/tests/ballbotEstimatorStepTest.m`�
 | `imuMeasurement` | 理想比力・角速度 |
 | `wheelDisplacement` | エンコーダーが直接計測する3輪回転変位 |
 | `wheelTorqueCommand` | 3輪トルク |
-| `estimatedState` | 14要素推定出力 |
+| `estimatedState` | 14幅推定バス（estimate 13要素+末尾未使用パッド） |
 | `controllerMode` | 0/1/2 |
 | `estimatedYawGyroBias` | $\hat b_{g,z}$ [rad/s] |
 | `yawBiasLearningEnabled` | $\gamma$ [0/1] |

@@ -24,7 +24,6 @@
 | 推定値 | $p,q,r$ | 3 | rad/s | ローバー物体座標の角速度 |
 | 推定値 | $v_B^W$ | 2 | m/s | ローバー平面速度 |
 | 推定値 | $\omega_w$ | 3 | rad/s | 車輪軸角速度 |
-| 診断 | $c_{contact}$ | 1 | - | 接触信頼度 |
 | LQI出力 | $\omega_{w,d}$ | 3 | rad/s | 3輪速度指令 |
 | サーボ出力 | $v_a$ | 3 | V | 各モーターの等価電機子電圧 |
 
@@ -563,11 +562,11 @@ $$
 
 | モード | 条件 | LQI・サーボ動作 |
 |---|---|---|
-| BALANCE | `enable=1`、$\theta_{tilt}<18$ deg、$c_{contact}\ge0.20$ | LQI有効、速度積分有効 |
-| RECOVERY | `enable=1`、$\theta_{tilt}<35$ deg、かつ$\theta_{tilt}\ge18$ degまたは$c_{contact}<0.20$ | 速度・ヨー指令0、姿勢回復制御、LQI積分リセット |
+| BALANCE | `enable=1`、$\theta_{tilt}<18$ deg | LQI有効、速度積分有効 |
+| RECOVERY | `enable=1`、$18\le\theta_{tilt}<35$ deg | 速度・ヨー指令0、姿勢回復制御、LQI積分リセット |
 | FALLEN/DISABLED | `enable=0`または$\theta_{tilt}\ge35$ deg | 速度指令0、電圧0、積分リセット |
 
-完全拘束モデルはBALANCEの設計にのみ用いる。接触信頼度低下でRECOVERYへ入った場合、4接触仮定が崩れている可能性があるため、LQI出力を継続しない。
+完全拘束モデルはBALANCEの設計にのみ用いる。大傾斜でRECOVERYへ入った場合、4接触仮定が崩れている可能性があるため、LQI出力を継続しない。
 
 現在の判定にはモード境界のヒステリシスがない。実機化では、復帰側閾値を進入側より小さくし、最小滞留時間を設ける。
 

@@ -154,11 +154,10 @@ vc = out.get('velocityCommand');      % [vx vy yawRate]
 cmdSpeed = hypot(vc.Data(:, 1), vc.Data(:, 2));
 
 % --- estimates --------------------------------------------------------
-es = out.get('estimatedState');       % 14-wide estimate vector
+es = out.get('estimatedState');       % 14-wide estimate bus (13 + unused pad)
 tE = es.Time;
 estTilt = hypot(es.Data(:, 1), es.Data(:, 2));
 estVel = es.Data(:, 7:8);
-contactConf = es.Data(:, 14);
 estYawRateBody = es.Data(:, 6);
 
 % --- actuation / contact ----------------------------------------------

@@ -182,7 +182,7 @@ p.servo.maxSpeed = p.motor.noLoadSpeed;
 rhoABS = 1050;
 l1DiscMass = rhoABS*43.994e-6;   % L1 disc net of openings + 30 x Ø3.5 M3-clearance holes incl. rotated spacer pattern (Fusion measured 43.994 cm^3)
 l1DiscInertia = l1DiscMass*(3*0.080^2 + 0.003^2)/12;
-frameDiscMass = rhoABS*pi*0.080^2*0.003;
+frameDiscMass = rhoABS*59.203e-6; % L2/L3 discs net of 6 x Ø3.5 spacer holes + Ø20 center hole (Fusion measured 59.203 cm^3 each; obsolete spacer-hole fill stubs removed)
 frameDiscInertia = frameDiscMass*(3*0.080^2 + 0.003^2)/12;
 spacerMass = rhoABS*1.1074e-6;   % Spacer_M3x50 tube OD 6.2 / bore 3.2 x 50 mm (Fusion measured 1.1074 cm^3)
 spacerInertia = spacerMass*(3*(0.0031^2+0.0016^2) + 0.050^2)/12;
@@ -422,7 +422,6 @@ p.estimator.ballRateStillGyroRate = 0.15;
 % Physical bound on rover-minus-ball offset [m]: ball radius scale.
 p.estimator.relativePositionLimit = 0.12;
 p.estimator.kinematicRegularization = 1.0e-8;
-p.estimator.contactResidualScale = 0.25;
 
 % Provisional yaw-gyro bias observer settings. These values must be tuned
 % against the selected IMU noise, in-run bias stability, vibration, and
@@ -431,8 +430,6 @@ p.estimator.biasWheelRateThreshold = 0.10;
 p.estimator.biasAccelNormThreshold = 0.03*p.gravity;
 p.estimator.biasRollPitchRateThreshold = 0.02;
 p.estimator.biasYawRateThreshold = 0.05;
-p.estimator.biasContactConfidenceThreshold = 0.80;
-p.estimator.biasContactConfidenceRelease = 0.70;
 p.estimator.biasQualificationTime = 0.50;
 p.estimator.biasQualificationHysteresis = 1.25;
 p.estimator.biasTimeConstant = 1.0;
@@ -467,7 +464,6 @@ p.controller.maxYawRate = 0.80;
 p.controller.coupledCommandLimitEnabled = true;
 p.controller.recoveryTilt = deg2rad(18);
 p.controller.fallenTilt = deg2rad(35);
-p.controller.minimumContactConfidence = 0.20;
 p.controller.recoveryGainScale = 1.35;
 
 % Upright, centered, no-slip command limits. For pure translation the

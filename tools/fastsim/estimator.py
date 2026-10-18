@@ -3,7 +3,7 @@
 State: [q_WB(4); v_WB(3); omegaBall_W(3); roverMinusBall_B_xy(2);
         gyroBiasZ; qualificationTime].
 Estimate: [roll; pitch; yaw; p; q; r; vx_W; vy_W; omegaBall_W(3);
-           relPosB_xy(2); contactConfidence].
+           relPosB_xy(2)].
 """
 import numpy as np
 import params as P
@@ -139,25 +139,15 @@ class Estimator:
             relPosW *= e["relativePositionLimit"] / n
         relPosBody = Ryaw.T @ relPosW
 
-        residual = K @ ballRate - rhs
-        rms = np.sqrt(np.mean(residual**2))
-        contactConf = np.exp(-(rms / e["contactResidualScale"])**2)
-
         qualifiedPrev = qualificationTime >= e["biasQualificationTime"]
-        if qualifiedPrev:
-            thr = e["biasQualificationHysteresis"]
-            confThr = e["biasContactConfidenceRelease"]
-        else:
-            thr = 1.0
-            confThr = e["biasContactConfidenceThreshold"]
+        thr = e["biasQualificationHysteresis"] if qualifiedPrev else 1.0
         cand = (np.max(np.abs(wheel_rate))
                 <= thr * e["biasWheelRateThreshold"]
                 and abs(acc_norm - P.G)
                 <= thr * e["biasAccelNormThreshold"]
                 and np.hypot(gyro[0], gyro[1])
                 <= thr * e["biasRollPitchRateThreshold"]
-                and abs(gyro[2]) <= thr * e["biasYawRateThreshold"]
-                and contactConf >= confThr)
+                and abs(gyro[2]) <= thr * e["biasYawRateThreshold"])
         qualificationTime = (min(qualificationTime + dt,
                                  e["biasQualificationTime"]) if cand else 0.0)
 
@@ -173,6 +163,5 @@ class Estimator:
             quaternion, velocityWorld, ballRate, relPosBody,
             [gyroBiasZ, qualificationTime]])
         estimate = np.concatenate([
-            euler, gyro, velocityWorld[0:2], ballRate, relPosBody,
-            [contactConf]])
+            euler, gyro, velocityWorld[0:2], ballRate, relPosBody])
         return estimate

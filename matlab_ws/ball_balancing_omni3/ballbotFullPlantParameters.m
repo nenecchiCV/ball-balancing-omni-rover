@@ -124,7 +124,6 @@ p.controller.fullplant.openLoopEnabled = false;
 p.controller.fullplant.motorTorqueLimit = 0.010;
 p.controller.fullplant.commandScale = 0.60;
 p.controller.fullplant.commandFeedforward = 1.0;
-p.controller.minimumContactConfidence = 0;
 % Enter recovery before commanded wheel action unloads the upper contact.
 % With the unconstrained plant, all contacts remained active through 17.0
 % degrees, while loss first appeared at 17.25 degrees in the tested plane.

@@ -7,15 +7,13 @@ roll = estimate(1);
 pitch = estimate(2);
 yaw = estimate(3);
 bodyRate = estimate(4:6);
-contactConfidence = estimate(14);
 tiltMagnitude = hypot(roll, pitch);
 
 yawBiasReady = ballbotYawBiasStartupGuard(previousYawBiasReady ~= 0, ...
     bodyRate(3), biasDiagnostics(2) ~= 0, p);
 if ~enable || tiltMagnitude >= p.controller.fallenTilt
     mode = uint8(0);
-elseif tiltMagnitude >= p.controller.recoveryTilt || ...
-        contactConfidence < p.controller.minimumContactConfidence
+elseif tiltMagnitude >= p.controller.recoveryTilt
     mode = uint8(2);
 else
     mode = uint8(1);

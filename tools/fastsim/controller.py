@@ -48,7 +48,6 @@ class TorqueLqiController:
         roll, pitch, yaw = estimate[0], estimate[1], estimate[2]
         bodyRate = estimate[3:6]
         velocityWorld = estimate[6:8]
-        contactConf = estimate[13]
         tiltMag = np.hypot(roll, pitch)
 
         yawBiasReady = self.prev_yaw_bias_ready or (
@@ -57,8 +56,7 @@ class TorqueLqiController:
 
         if not enable or tiltMag >= c["fallenTilt"]:
             mode = 0
-        elif tiltMag >= c["recoveryTilt"] or \
-                contactConf < c["minimumContactConfidence"]:
+        elif tiltMag >= c["recoveryTilt"]:
             mode = 2
         else:
             mode = 1

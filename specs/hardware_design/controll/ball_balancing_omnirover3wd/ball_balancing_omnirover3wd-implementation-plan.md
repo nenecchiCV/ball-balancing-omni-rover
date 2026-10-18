@@ -67,7 +67,7 @@ flowchart TD
 |---|---|---|---|
 | 0.1 | $W,B,K,F_i$座標系を固定 | 機構・制御文書で一致 | 完了 |
 | 0.2 | 3輪番号と正方向を固定 | $\beta=[0,120,240]$ deg | 完了 |
-| 0.3 | 14要素推定出力を固定 | システム仕様§5と一致 | 完了 |
+| 0.3 | 13要素推定出力を固定（バスは14幅・末尾未使用） | システム仕様§5と一致 | 完了 |
 | 0.4 | 5 ms離散インターフェースを固定 | 推定器・制御器で一致 | 完了 |
 
 ### Phase 1: MATLAB関数
@@ -106,7 +106,7 @@ flowchart TD
 
 | ID | 操作 | 完了条件 |
 |---|---|---|
-| 3.1 | StateEstimatorをMATLAB Function+Unit Delayで構成 | 14状態、14要素`estimate` |
+| 3.1 | StateEstimatorをMATLAB Function+Unit Delayで構成 | 14状態、13要素`estimate` |
 | 3.2 | ModeAndControlをMATLAB Function+Unit Delayで構成 | 2積分状態、3輪出力 |
 | 3.3 | 輪トルクをRevolute Jointへ接続 | 正方向一致 |
 | 3.4 | 速度・ヨー指令をCommandSourceへ接続 | 範囲制限一致 |
@@ -156,12 +156,10 @@ Phase 3.1、3.6、3.7はSimulink Agentic Toolkitの`model_read`、`model_edit`�
 | $a_{th}$ | $0.03g$ | m/s² | 静止振動の暫定許容値 | `p.estimator.biasAccelNormThreshold` |
 | $\omega_{rp,th}$ | 0.02 | rad/s | ロール・ピッチ低運動の暫定値 | `p.estimator.biasRollPitchRateThreshold` |
 | $\omega_{z,th}$ | 0.05 | rad/s | 0.02 rad/sバイアスを含む暫定値 | `p.estimator.biasYawRateThreshold` |
-| $c_{th}$ | 0.80 | 1 | 公称接触に限定する暫定値 | `p.estimator.biasContactConfidenceThreshold` |
 | $t_{min}$ | 0.50 | s | 一時停止を除外する滞留時間 | `p.estimator.biasQualificationTime` |
 | $\tau_b$ | 1.0 | s | 低運動維持時間内の収束と15 s基準を両立する暫定値 | `p.estimator.biasTimeConstant` |
 | $b_{max}$ | 0.10 | rad/s | 未確定IMU向け保守上限 | `p.estimator.biasMaximum` |
 | $\Delta b_{max}$ | $1.0\times10^{-4}$ | rad/s/sample | 外れ値急変防止 | `p.estimator.biasMaximumUpdatePerSample` |
-| $\epsilon_{scale}$ | 0.25 | m/s | 既存接触信頼度スケールを維持 | `p.estimator.contactResidualScale` |
 | $\omega_{ready}$ | 0.002 | rad/s | 収束合格誤差と一致する起動ガード解除値 | `p.controller.yawBiasReadyRateThreshold` |
 
 ## 6. 完了定義
