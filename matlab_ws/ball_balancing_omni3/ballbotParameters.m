@@ -48,8 +48,16 @@ p.wheel.azimuth = deg2rad([0; 120; 240]);
 %   50deg: cyc completes only with eccentricity guard OFF
 %   45deg: cyc completes 0.62deg 6/9
 %   40deg: cyc completes 0.27deg 7/9, hold 0.19deg, yaw completes,
-%          CG-20 mm holds 2.06 deg -- adopted.
-p.wheel.contactLatitude = deg2rad(40);
+%          CG-20 mm holds 2.06 deg
+%   33deg: cyc completes 0.35deg 7/9, hold 0.15deg, yaw completes,
+%          CG-20 mm holds 1.62 deg (inward-pod mass model) -- adopted
+%          to enable plan-B inward motor storage: inward pods only fit
+%          for lambda <~ 33 deg (three ~67 mm motors converging on the
+%          axis need tail radius >= ~16 mm), and 33 deg keeps
+%          control metrics equal-or-better than 40 deg while gaining
+%          +18% wheel normal load.  Outward pods are impossible here --
+%          the motor tail would reach the floor (z ~ 5 mm).
+p.wheel.contactLatitude = deg2rad(33);
 % Small geometric preload keeps all three nominally tangent contacts
 % active despite contact-detection and floating-point tolerances.
 p.wheel.contactPreload = 5.0e-5;
@@ -116,14 +124,8 @@ p.encoder.quantization = 2*pi/p.encoder.pulsesPerOutputRevolution;
 % the PPR is per-cycle, the effective quantum is 4x smaller; left at 1
 % until bench-verified (conservative = more flicker modeled).
 p.encoder.quadratureFactor = 1;
-% Wheel-rate measurement model.  'diff' = per-sample backward
-% difference of the quantized displacement (flicker quant/Ts).
-% 'timed' = input-capture emulation (T-method hybrid): interpolated
-% edge-crossing times give dc*quant/dtEdge when edges cross, and a
-% decaying quant/(t - t_lastEdge) lower bound when none do.  Ballbot
-% rev1 swaps the model's WheelRateCalculation block to
-% ballbotTimedEncoderRate via the runtime augment.
-p.encoder.timedRateEnabled = false;
+% Wheel-rate measurement model: per-sample backward difference of the
+% quantized displacement (flicker quant/Ts).
 
 % Output-shaft-equivalent speed loop.  The 30 ms time constant is
 % provisional until a FIT0521 step response is measured under load.
@@ -156,26 +158,59 @@ p.servo.maxSpeed = p.motor.noLoadSpeed;
 % Chassis lump follows the ball_balancing_omnirover3wd_assembly frame
 % structure: three ABS frame plates (D160x3 at z = 148.5/201.5/254.5 mm
 % above ground), twelve M4x50 ABS spacers at r = 65 mm, three ABS
-% MotorMount_v9 brackets plus clamp straps below L1, and the L1/L2
+% MotorMount_v12 inward-pod brackets below L1 (single 28 mm uniform
+% side-profile plate, printed flat on its side; wheel adapters
+% included), and the L1/L2
 % electronics payload (Zeee 7.2 V NiMH pack centred on L1, two MDD3A
 % drivers, Nucleo+IKS4A1 stack).
 % Heights below are measured above the ball center (ground z = 50 mm).
+% lambda = 33 deg PLAN-B INWARD pod geometry (57 deg vehicle-axis tilt,
+% motors stowed inward-up toward the axis through L1 clearance holes).
+% Fusion-measured values from the lambda33 assembly (MotorMount_v12):
+% uniform-thickness profile plate face-bolted to the PCD-17 pattern
+% and bolted to the L1 pad; the clamp strap was deleted (no room
+% behind the wheel hub bracket).  Wheel
+% arm/height rows are exact from geometry.
 rhoABS = 1050;
+l1DiscMass = rhoABS*44.1e-6;     % L1 disc net of 3 x Ø48 tail holes + centre opening
+l1DiscInertia = l1DiscMass*(3*0.080^2 + 0.003^2)/12;
 frameDiscMass = rhoABS*pi*0.080^2*0.003;
 frameDiscInertia = frameDiscMass*(3*0.080^2 + 0.003^2)/12;
 spacerMass = rhoABS*(3*sqrt(3)/2)*0.003^2*0.050;
 spacerInertia = spacerMass*(3*0.003^2 + 0.050^2)/12;
-mountMass = rhoABS*44569.7e-9;   % MotorMount_v9 STEP solid volume
-strapMass = rhoABS*2819.7e-9;    % MotorClampStrap_v1 STEP solid volume
+mountMass = rhoABS*12.33e-6;     % MotorMount_v12 measured volume 12.33 cm^3
+adapterMass = rhoABS*2.166e-6;   % WheelAdapter_v4 measured volume ~2.17 cm^3
+% Fusion-measured own-CG inertias scaled to ABS mass (mean of the two
+% horizontal axes for tilt; the z axis entry is used in the yaw sum).
+mountTiltI = 2.85e-6;  % per MotorMount_v12 (own-CG, ABS-scaled)
+mountYawI = 1.48e-6;
+adapterTiltI = adapterMass*(3*0.011^2 + 0.030^2)/12;
+adapterYawI = adapterMass*0.011^2/2;
+% Drivetrain CG heights [m above ball center] and radial arms [m] for
+% the lambda33 inward pod.  Wheel values are exact geometry
+% (74*sin(33deg) / 74*cos(33deg)); motor/mount values are Fusion CG
+% measurements of the placed occurrences.
+motorComAboveBall = 0.0769;   % Fusion motor CG z = 126.9 mm above ground
+wheelComAboveBall = 0.0403;
+mountComAboveBall = 0.0801;   % Fusion v12 CG z = 130.1 mm above ground
+adapterComAboveBall = 0.0414;
+motorYawArm = 0.0384;         % Fusion motor CG radial arm
+wheelYawArm = 0.0620;
+mountYawArm = 0.0588;         % Fusion v12 CG radial arm
+adapterYawArm = 0.0614;
+motorTiltI = p.motor.mass*(p.motor.dimensions(1)^2 + ...
+    p.motor.dimensions(2)^2)/12;
+wheelTiltI = p.wheel.mass*(3*p.wheel.radius^2 + ...
+    p.wheel.width^2)/12;
 chassisParts = [ ...
 %    mass[kg]        comZ above ball center [m]  Ixx about own COM [kg m^2]
-    frameDiscMass   0.0985                      frameDiscInertia
+    l1DiscMass      0.0985                      l1DiscInertia
     frameDiscMass   0.1515                      frameDiscInertia
     frameDiscMass   0.2045                      frameDiscInertia
     6*spacerMass    0.12525                     6*spacerInertia
     6*spacerMass    0.17825                     6*spacerInertia
-    3*mountMass     0.0602                      3*mountMass*0.047^2/6
-    3*strapMass     0.0617                      3*strapMass*0.02^2/12
+    3*mountMass     mountComAboveBall           3*mountTiltI
+    3*adapterMass   adapterComAboveBall         3*adapterTiltI
     0.423           0.1125                      0.423*(0.140^2+0.025^2)/12
     0.030           0.103                       0.030*(0.050^2+0.030^2)/12
     0.090           0.156                       0.090*(0.133^2+0.080^2)/12
@@ -183,14 +218,27 @@ chassisParts = [ ...
 p.rover.bodyMass = sum(chassisParts(:, 1));
 p.rover.bodyComAboveBall = ...
     sum(chassisParts(:, 1).*chassisParts(:, 2))/p.rover.bodyMass;
-offAxisYaw = 6*spacerMass*0.065^2*2 + 3*mountMass*0.061^2 + ...
-    3*strapMass*0.0768^2;
+offAxisYaw = 6*spacerMass*0.065^2*2 + 3*mountMass*mountYawArm^2 + ...
+    3*adapterMass*adapterYawArm^2 + 3*p.motor.mass*motorYawArm^2 + ...
+    3*p.wheel.mass*wheelYawArm^2;
+driveTiltInertia = 3*(motorTiltI + p.motor.mass* ...
+    (motorComAboveBall - p.rover.bodyComAboveBall)^2) + ...
+    3*(wheelTiltI + p.wheel.mass* ...
+    (wheelComAboveBall - p.rover.bodyComAboveBall)^2);
 bodyTiltInertia = sum(chassisParts(:, 3) + chassisParts(:, 1).* ...
-    (chassisParts(:, 2) - p.rover.bodyComAboveBall).^2) + offAxisYaw/2;
+    (chassisParts(:, 2) - p.rover.bodyComAboveBall).^2) + offAxisYaw/2 ...
+    + driveTiltInertia;
+% Own-CG yaw inertias: disc/rod rows keep the Izz ~= 2*Ixx
+% approximation; the pod rows use the Fusion-measured yaw values.
+ownYaw = 2*chassisParts(:, 3);
+ownYaw(6) = 3*mountYawI;
+ownYaw(7) = 3*adapterYawI;
 p.rover.bodyInertia = [bodyTiltInertia; bodyTiltInertia; ...
-    2*sum(chassisParts(:, 3)) + offAxisYaw];
+    sum(ownYaw) + offAxisYaw];
 p.rover.mass = p.rover.bodyMass + 3*(p.motor.mass + p.wheel.mass);
-p.rover.centerAboveBall = 0.125;
+p.rover.centerAboveBall = (p.rover.bodyComAboveBall*p.rover.bodyMass + ...
+    3*(p.motor.mass*motorComAboveBall + ...
+    p.wheel.mass*wheelComAboveBall))/p.rover.mass;
 p.rover.chassisRadius = 0.080;
 p.rover.chassisHeight = 0.030;
 p.rover.initialPositionWorld = [0; 0; ...
@@ -211,7 +259,8 @@ p.rover.noseAxisBody = [1; 0; 0];
 p.contact.wheelBall.normalStiffness = 1.0e4;
 p.contact.wheelBall.normalDamping = 140;   % ~critical for k=1e4, m~0.5 kg/wheel
 p.contact.wheelBall.transitionWidth = 5.0e-4;
-% Relaxed value used by the cascade model to reduce contact-state chatter.
+% Wheel-ball contact transition width wired into the WheelNBallContact
+% blocks; the relaxed value damps contact-state chatter.
 p.contact.wheelBall.relaxedTransitionWidth = 1.5e-3;
 p.contact.wheelBall.staticFriction = 2.0;
 p.contact.wheelBall.dynamicFriction = 2.0;
@@ -340,8 +389,7 @@ p.estimator.velocityAnchorMinSpeed = 0.05;
 % zeroed the velocity estimate during slow translation.  Filtering at
 % ~80 ms leaves rest flicker near zero while sustained rolling keeps a
 % coherent rate, shrinking the blind band to ~0.03 m/s.
-p.estimator.ballRateStillWheelRate = ...
-    1.2*p.encoder.quantization/p.estimator.sampleTime;
+% removed (experiment history lives in README and git log).
 % Filtered-rate stillness test: the flicker residual through a 0.15 s
 % low-pass is ~+/-0.5 rad/s, so a 0.8 rad/s threshold separates rest
 % from genuine rolling above ~0.02 m/s of ball speed without blanking
@@ -365,29 +413,6 @@ p.estimator.ballRateStillGyroRate = 0.15;
 p.estimator.relativePositionLimit = 0.12;
 p.estimator.kinematicRegularization = 1.0e-8;
 p.estimator.contactResidualScale = 0.25;
-% Windowed wheel-rate for the estimator inputs [s]: the per-sample
-% backward difference flickers by quantization/Ts, but a boxcar mean
-% over N samples equals (theta[k]-theta[k-N])/(N*Ts), shrinking the
-% flicker amplitude by N.  Applied to the kinematic solve (through a
-% filtered-rate rest gate -- a lagged input during deceleration was
-% measured to halve cycle survival), the stillness gate, and the bias
-% wheel-rate gate; ~40 ms keeps the group delay inside the existing
-% 80-150 ms filter chain.  0 disables.
-p.estimator.wheelRateWindowTime = 0;
-% Velocity fusion law: 'legacy' = accel integral + anchor/drain gates;
-% 'kalman' = per-axis Kalman filter fusing the accel-integrated
-% prediction with the wheel-derived ball velocity, with the existing
-% contactConfidence as the measurement-noise weight.  The stillness
-% case becomes a strong zero-measurement instead of a hard drain.
-p.estimator.velocityFusion = 'legacy';
-% Kalman tunables: process noise density [m/s^2/sqrt(Hz)] is anchored
-% on the IMU accel noise density; measurement sigma bounds the
-% wheel-derived velocity trust band [m/s] and stillZeroSigma is the
-% sigma used for the implicit z=0 measurement while stillness holds.
-p.estimator.kfAccelNoiseDensity = 60e-6*p.gravity;
-p.estimator.kfMeasSigma = 0.03;
-p.estimator.kfStillSigma = 0.004;
-p.estimator.kfInitialCovariance = 0.25;
 
 % Provisional yaw-gyro bias observer settings. These values must be tuned
 % against the selected IMU noise, in-run bias stability, vibration, and
@@ -425,6 +450,11 @@ p.controller.yawBiasReadyRateThreshold = 0.002;
 p.controller.yawBiasCommandBypassThreshold = 1.0e-6;
 p.controller.maxPlanarAcceleration = 0.60;
 p.controller.maxYawRate = 0.80;
+% Coupled (v, yawRate) feasibility limiter: all three wheels share the
+% motor-speed budget, so the command pair's wheel-rate demand
+% sin(lat)*|v| + Rch*|yawRate| is scaled jointly down to Rw*wMotorLimit
+% when the pair exceeds it, instead of clipping each axis separately.
+p.controller.coupledCommandLimitEnabled = true;
 p.controller.recoveryTilt = deg2rad(18);
 p.controller.fallenTilt = deg2rad(35);
 p.controller.minimumContactConfidence = 0.20;
