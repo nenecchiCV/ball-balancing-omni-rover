@@ -531,6 +531,13 @@ p.controller.torqueDrive.settleLeanDamping = 1.0;
 % zero against them.  Kept separate so normal move legs keep the
 % validated gain.
 p.controller.torqueDrive.settleLeanGain = 1.0;
+% Recovery bail-out latch: once the ball escapes beyond reach, every
+% fallen->recovery re-entry plants the chassis into the floor again
+% (measured bounce cycles on the bare floor).  After this many failed
+% re-entries without a 1.5 s upright dwell, mode 0 latches (stay
+% down) until enable toggles -- one bad bail-out beats repeated
+% face-plants on hardware.
+p.controller.recoveryRetryLimit = 3;
 % (Direct settle ball-brake torque, tau = -c*pinv(W')*vBall, was tried
 % and removed: brake force and attitude authority share the same
 % wheel-ball contact traction budget (~0.078 N*m/wheel), so c~4

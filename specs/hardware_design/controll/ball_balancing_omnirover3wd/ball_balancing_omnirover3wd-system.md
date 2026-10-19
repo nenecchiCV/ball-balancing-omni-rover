@@ -113,6 +113,8 @@
 
 また mode 2 への進入は `elevatedAuthority` フラグを立て、車輪が静止するまで（filtered輪速<1.5 rad/s）保持する。有効中はモードに関わらずトルク上限を `recoveryWheelTorqueLimit`（公称牽引上限の2倍 ≈0.156 N·m）へ引き上げ、起立直後の残留ボール転がりを通常制御が制動できる権限を与える。接触信頼度ゲートは全運転域で不発だったため削除した。
 
+**ベイルアウト・ラッチ**: ボールが到達不能域まで逃げた後は、mode 2 が機体を立て直すたびに再転倒し、床への反復フェースプラントになる（実測: ドリフト ~22 s 後に 0.55→0.03 rad のバウンスサイクルが反復）。`recoveryRetryLimit`（既定 3）回の fallen→recovery 再突入を、1.5 s 以上の直立滞留なく超えた場合に mode 0 へラッチする（enable トグルまたは新規ランまで保持）— 実機での反復転倒破損を防ぐ安全機構。直立に成功すれば滞留判定でカウントはリセットされる。
+
 **初期傾き起立の実測包絡**: 傾き注入は `p.rover.initialEulerWorld`（プラント配置・6-DOFターゲット・推定器初期状態が共有）で行う。検証結果は — 5–7 deg: 全方向合格、10 deg: **全6方位で ~15–25 s 保持**（60°/90°方位は25 s完走、他方位はドリフトが ~10 m 伸びた後に再転倒。速度状態LQI導入前は純粋ロール ~8.6 s・settle制御導入前は ~4–6 s）。elevatedAuthority 中の mode 1（settle）は推定器のボール速度・機体速度チャネル（ドリフト中にそれぞれ ~7 倍・~3 倍のバイアスを実測）を捨て、エンコーダ輪速から逆解した運動学レート（`pinv(wheelSpeedFromPlanarVelocity)*filteredWheelRate`、~0.25 s 一次フィルタ）をチェイス目標・速度誤差・スリップ基準に共用する（`settleFollowGain=1.0` の純粋追従）。`settleLeanDamping=1.0` はフィルタ済みドリフト加速度をリーン要求から減算し、IMU加速度バイアス（ドリフト中 est-real ~0.016 rad実測）の相殺を兼ねる。settle専用の `settleLeanGain=1.0` はドループを超過する制動リーン要求を出す（通常運転の `velocityLeanGain=0.3` には影響しない）。
 
 速度状態付きLQI（`ballbotVelocityTorqueGains`）は10状態プラント [v; tilt; rate; yaw; wheels]（dv/dt = g·tilt + forceScale·W'τ/mEff、輪行は運動学レートへのcompliance結合）で速度列を設計する。フィードバック `state(1:2)=ballVelocityBody−commandVelocityBody` は **elevated-authority settle 中のみ有効** — 通常運転で有効化すると力チャネルが惰性走行ボールを牽引駆動する回帰（停止脚 ~0.2 m/s残留）を確認したため。settle中の速度ゲインは yaw-tilt シミーを減衰させる（保持 ~8.6 s→20 s級）が、ドリフト自体を止められない。
