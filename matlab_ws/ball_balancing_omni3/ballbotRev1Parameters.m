@@ -531,6 +531,12 @@ p.controller.torqueDrive.settleLeanDamping = 1.0;
 % zero against them.  Kept separate so normal move legs keep the
 % validated gain.
 p.controller.torqueDrive.settleLeanGain = 1.0;
+% (Direct settle ball-brake torque, tau = -c*pinv(W')*vBall, was tried
+% and removed: brake force and attitude authority share the same
+% wheel-ball contact traction budget (~0.078 N*m/wheel), so c~4
+% nearly stops the ball but the reaction tips the chassis ~7 s
+% earlier; c~8 stops the ball completely at ~8 s hold.  No gain gives
+% both -- the budget is the physical limit.)
 % (settleRampTime / settleRelPosGain / settlePumpGain /
 % settleYawDampGain experiments removed: a ramped or slipped chase
 % command pumps the lean->runaway cycle faster than pure chase; the
