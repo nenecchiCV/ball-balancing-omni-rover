@@ -341,6 +341,23 @@ p.controller.torqueDrive.yawGate.maxSpeed = 0.03;
 p.controller.torqueDrive.yawGate.maxTilt = 0.02;
 p.controller.torqueDrive.yawGate.commandThreshold = 1.0e-3;
 p.controller.torqueLqi.integralGain = zeros(3, 2);
+% Velocity-state columns for the torque LQI: ballbotVelocityTorqueGains
+% solves the 10-state plant [v; tilt; rate; yaw; wheels] whose dv/dt =
+% g*tilt + forceScale*W'*tau/mEff, i.e. wheel torque produces a DIRECT
+% tangential contact force on the ball (the measured forceScale=0.5
+% coupling).  The feedback then maps the velocity error straight to
+% wheel torque -- drift braking uses the same symmetric channel as
+% driving, instead of pumping the lean->gravity outer loop.  The
+% controller feeds state(1:2) = ballVelocityBody - commandVelocityBody
+% only during elevated-authority settle (gated in the controller: in
+% normal driving the force channel traction-drives the coasting ball).
+% velocityStateQv ~1000 gives ~0.34 N*m per m/s per wheel: a 0.2 m/s
+% drift draws ~0.07 N*m/wheel, inside the traction budget.
+p.controller.torqueDrive.velocityStateQv = 1000;
+[velocityColumns, velocityGainDesign] = ballbotVelocityTorqueGains( ...
+    p, payloadForDesign, p.controller.torqueDrive.velocityStateQv);
+p.controller.torqueLqi.stateGain(:, 1:2) = velocityColumns;
+p.controller.torqueLqi.velocityGainDesign = velocityGainDesign;
 p.controller.torqueDrive.slipDampingGain = 0.02;
 % Outer loop.  Two structurally separate channels, because wheel torque
 % is an internal force of the rover+ball system: it cannot accelerate
@@ -500,12 +517,20 @@ p.controller.torqueDrive.stopFollowGain = 0.75;
 % Values >1 drag the ball back under the chassis actively.
 p.controller.torqueDrive.settleFollowGain = 1.0;
 % Settle lean damping [s]: derivative term on the velocity outer loop,
-% applied only during elevated-authority settle.  The P-only lean
-% demand pumps a growing drift oscillation (yaw-tilt shimmy) that
-% throws the chassis ~5-7 s after a 10 deg roll start; opposing the
-% encoder-measured drift-rate change stretches the hold to ~10 s.
-% It delays but does not remove the re-tilt -- see system doc.
-p.controller.torqueDrive.settleLeanDamping = 0.05;
+% applied only during elevated-authority settle.  Also doubles as the
+% IMU accel-bias compensation: the tilt estimate reads real+a/g during
+% drift (measured est-real ~0.016 rad at ~0.1 m/s^2), so subtracting
+% the true encoder-derived acceleration puts the demanded setpoint in
+% the right place in estimate space.  ~1.0 holds the 10 deg roll
+% upright >20 s (vs ~8 s at 0.05); it does not stop the coasting drift.
+p.controller.torqueDrive.settleLeanDamping = 1.0;
+% Settle-only velocity-lean gain [m/s^2 per m/s]: replaces
+% velocityLeanGain during elevated-authority settle.  The drift brake
+% needs a lean demand larger than the IMU accel bias + attitude droop;
+% the normal-drive value (0.3) cannot push the real lean back through
+% zero against them.  Kept separate so normal move legs keep the
+% validated gain.
+p.controller.torqueDrive.settleLeanGain = 1.0;
 % (settleRampTime / settleRelPosGain / settlePumpGain /
 % settleYawDampGain experiments removed: a ramped or slipped chase
 % command pumps the lean->runaway cycle faster than pure chase; the

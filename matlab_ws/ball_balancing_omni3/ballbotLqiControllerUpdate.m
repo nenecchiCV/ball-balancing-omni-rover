@@ -124,6 +124,13 @@ end
 % ball.
 ballVelocityBody = rotationBodyFromWorld* ...
     [p.ball.radius*estimate(10); -p.ball.radius*estimate(9)];
+% Velocity reference for the state feedback: the USER command before
+% the follow-through chase rewrite.  The chase exists to keep the
+% wheel servo rolling with the ball (no wheel-lock brake); the
+% velocity-state gain, however, must see the true tracking error --
+% during settle the rewritten command equals ball speed and would zero
+% the error that drives the direct-force braking.
+commandVelocityBodyUser = commandVelocityBody;
 % Post-recovery settle witnesses: the estimator's ball-velocity channel
 % runs hot during uncommanded drift (est ~13 rad/s vs ~1.8 rad/s actual
 % in the sf100 run), so while elevatedAuthority holds the drift is read
@@ -136,7 +143,8 @@ ballVelocityBody = rotationBodyFromWorld* ...
 settleActive = mode == 1 && elevatedAuthority && ...
     isfield(p.controller.torqueDrive, "settleFollowGain") && ...
     p.controller.torqueDrive.settleFollowGain > 0;
-if settleActive
+settleWitness = mode == 1 && elevatedAuthority;
+if settleWitness
     settleKinRate = pinv(p.controller.lqi. ...
         wheelSpeedFromPlanarVelocity)*settleWheelRate;
     % Filtered finite difference of the drift rate: the derivative of
@@ -179,7 +187,7 @@ if mode == 1
     % load-bearing element.  Rover velocity leads the ball during any
     % acceleration, so integrating rover error winds the integrator with
     % the transient lead every manoeuvre.
-    velocityError = commandVelocityBody - ballVelocityBody;
+    velocityError = commandVelocityBodyUser - ballVelocityBody;
     candidateIntegral = previousVelocityIntegral + ...
         p.controller.sampleTime*velocityError;
     integralLimit = p.controller.velocityIntegralLimit;
@@ -327,6 +335,22 @@ if torqueDrive
     else
         state(7) = 0;
     end
+    % Velocity-state feedback: state(1:2) carries the BALL velocity
+    % error in body frame, matching the state(7) measured-minus-
+    % reference convention.  ballbotVelocityTorqueGains designs these
+    % columns on a plant whose dv/dt = g*tilt + W'*tau/mEff, so -K*e
+    % commands the contact force directly.  Gated to the post-recovery
+    % settle window: in normal driving the force channel traction-drives
+    % the coasting ball (stop-leg drift regression, ~0.2 m/s residual),
+    % while during settle its damping is what keeps the drifting
+    % assembly inside the tilt cone.  The reference is the pre-chase
+    % user command: the chase rewrite exists for the wheel servo, not
+    % for this loop.
+    if settleWitness
+        state(1:2) = ballVelocityBody - commandVelocityBodyUser;
+    else
+        state(1:2) = 0;
+    end
     if tiltMagnitude > p.controller.tiltPriorityStart
         candidateIntegral = zeros(2, 1);
     end
@@ -351,6 +375,16 @@ if torqueDrive
     % tracked through gravity: lean the chassis toward the desired
     % acceleration and let the tilt PD hold it there.
     velocityLeanGain = p.controller.torqueDrive.velocityLeanGain;
+    if settleActive && isfield(p.controller.torqueDrive, ...
+            "settleLeanGain") && ...
+            p.controller.torqueDrive.settleLeanGain > 0
+        % Settle-only brake gain: the IMU accel bias parks the measured
+        % tilt ~0.016 rad above the real lean during drift, so the
+        % demand must overshoot the bias before the real chassis leans
+        % back against the drift.  Kept out of normal driving where a
+        % hot lean gain would over-drive move legs.
+        velocityLeanGain = p.controller.torqueDrive.settleLeanGain;
+    end
     if velocityLeanGain ~= 0
         % Track the BALL velocity, not the rover velocity: the command
         % describes the assembly's translation and the ball is the
@@ -362,7 +396,14 @@ if torqueDrive
         % encoder-derived rate during elevated-authority settle (the
         % drift witness swap above -- the estimator's ball-velocity
         % channel runs ~7x hot on uncommanded drift).
-        velocityErrorBody = commandVelocityBody - ballVelocityBody;
+        % The lean channel's error is the USER command, not the
+        % follow-through chase rewrite -- during settle the rewritten
+        % command equals ball speed and zeroes the only error signal
+        % that can brake the drift.  Lean is the channel that draws a
+        % real external (gravity) force on the assembly; the velocity
+        % state gain adds fast contact-force response on the same
+        % error (commandVelocityBodyUser).
+        velocityErrorBody = commandVelocityBodyUser - ballVelocityBody;
         accelerationDemand = velocityLeanGain*velocityErrorBody;
         if settleActive && isfield(p.controller.torqueDrive, ...
                 "settleLeanDamping")
@@ -382,16 +423,20 @@ if torqueDrive
         % divergence ~0.2-0.3 m/s at every traction setting).  Feeding
         % the command's own acceleration forward supplies the lean the
         % ramp actually needs, so the error term stays in its linear
-        % range and only trims residual lag.
+        % range and only trims residual lag.  The USER command feeds
+        % this, never the chase rewrite -- differentiating the chased
+        % ball velocity during settle feeds the drift's own acceleration
+        % back as a lean demand in the drift direction (the measured
+        % ~-0.01 rad persistent lean that gravity-pumps the drift).
         if isfield(p.controller.torqueDrive, "accelFeedforwardGain") && ...
                 p.controller.torqueDrive.accelFeedforwardGain ~= 0
             persistent prevCommandVelocity
             if isempty(prevCommandVelocity) || mode ~= 1
-                prevCommandVelocity = commandVelocityBody;
+                prevCommandVelocity = commandVelocityBodyUser;
             end
-            commandAccelBody = (commandVelocityBody - ...
+            commandAccelBody = (commandVelocityBodyUser - ...
                 prevCommandVelocity)/p.controller.sampleTime;
-            prevCommandVelocity = commandVelocityBody;
+            prevCommandVelocity = commandVelocityBodyUser;
             accelerationDemand = accelerationDemand + ...
                 p.controller.torqueDrive.accelFeedforwardGain* ...
                 commandAccelBody;
@@ -660,6 +705,15 @@ if torqueDrive
         % authority (cycle_result_e05), while ramping propulsion removes
         % the wheelie kick that creates the excursion in the first
         % place.
+        % Settle cuts the wheel servo entirely: commanding the rolling
+        % rate makes the servo inject exactly the axle/bearing losses
+        % as ball thrust -- a traction-drive pump that holds the drift
+        % speed and keeps accelerating the ball (~+0.06 m/s^2 measured
+        % during the va000 sweep).  Free-rolling wheels plus the
+        % velocity-state force gain brake the drift instead.
+        if settleWitness
+            propTorque(:) = 0;
+        end
         propTorque = startupRamp(propTorque, enable, mode, p);
         rawWheelCommand = rawWheelCommand + propTorque;
     end
@@ -678,9 +732,10 @@ if torqueDrive
         % wheel-rate (8:10) channels of the LQI state pump translation
         % while held (measured: a righted 10 deg start kept rolling at
         % ~0.2 m/s under recovery until the rover ran off the ball).
-        % The torque LQI has no gains on those channels anyway
-        % (stateGain(:,[1 2 8 9 10]) == 0), so zeroing them costs
-        % nothing and removes the integral/propulsion pump paths.
+        % The wheel-rate columns (8:10) have no gains anyway, and the
+        % velocity columns (1:2) -- which do carry the direct-force
+        % velocity gain -- must NOT produce drive torque while the
+        % attitude-only recovery law rights the chassis.
         stateRecovery = state;
         stateRecovery([1 2 7 8 9 10]) = 0;
         rawWheelCommand = -p.controller.recoveryGainScale* ...
