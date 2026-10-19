@@ -93,6 +93,18 @@ p.controller.tractionLimitedWheelTorque = min( ...
     0.80*p.contact.wheelBall.tractionEstimateFriction*4.07* ...
     (p.rover.mass/(p.fullplant.payload.originalRoverMass + 0.50))* ...
     p.wheel.radius);
+% Recovery-mode traction allowance [N*m]: a tilted-start righting
+% maneuver needs ~0.44 N*m of moment about the ball centre at 10 deg,
+% but the nominal cap above only supplies ~0.49 N*m ideal (which
+% evaporates once the uphill wheel unloads).  Doubling the nominal cap
+% lets recovery reach ~0.98 N*m -- measured to right 10 deg starts in
+% ~0.4 s without exciting wheel slip.  Raising it further (0.25+)
+% overdrives the wheels into slip and makes recovery WORSE; the
+% validated working band is roughly [0.145, 0.25).  Applies to mode=2
+% only, so normal-operation slip budgeting is unchanged.
+p.controller.recoveryWheelTorqueLimit = min( ...
+    p.driver.continuousTorqueLimit, ...
+    2.0*p.controller.tractionLimitedWheelTorque);
 
 % Armature inductance is not in the FIT0521 datasheet; motors of this
 % class typically land in the 0.5-5 mH range.  5 mH gives tau_e = 2.7 ms

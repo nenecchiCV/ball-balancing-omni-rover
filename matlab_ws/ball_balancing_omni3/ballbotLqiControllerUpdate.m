@@ -25,13 +25,25 @@ torqueDrive = isfield(p.controller, "torqueDrive") && ...
     isfield(p.controller.torqueDrive, "enabled") && ...
     p.controller.torqueDrive.enabled;
 
+% Recovery hysteresis: exiting to mode 1 the instant tilt dips below
+% recoveryTilt hands a still-moving assembly back to the derated
+% traction budget, and the post-righting drift re-tilts it (observed:
+% 10 deg start righted by ~0.5 s, residual ball motion then ran the
+% rover off the ball and past 0.5 rad by ~4.8 s).  Stay in recovery
+% until the smaller exit threshold is crossed.
+persistent prevMode
+if isempty(prevMode)
+    prevMode = uint8(0);
+end
 if ~enable || tiltMagnitude >= p.controller.fallenTilt
     mode = uint8(0);
-elseif tiltMagnitude >= p.controller.recoveryTilt
+elseif tiltMagnitude >= p.controller.recoveryTilt || ...
+        (prevMode == 2 && tiltMagnitude >= p.controller.recoveryExitTilt)
     mode = uint8(2);
 else
     mode = uint8(1);
 end
+prevMode = mode;
 
 rotationBodyFromWorld = [cos(yaw), sin(yaw); ...
     -sin(yaw), cos(yaw)];
@@ -79,6 +91,9 @@ if torqueDrive && isfield(p.controller.torqueDrive, "stopFollowGain") ...
         commandSpeed = norm(commandVelocityBody);
     end
 end
+% (Settle-ramp experiment removed: a ramped handoff command made all
+% four 10-deg directions fall FASTER -- the tracking machinery cannot
+% follow a decelerating command while the ball runs away.)
 
 if mode == 1
     % Integrate the BALL velocity error, matching the lean channel: the
@@ -560,12 +575,49 @@ if torqueDrive
         propTorque = startupRamp(propTorque, enable, mode, p);
         rawWheelCommand = rawWheelCommand + propTorque;
     end
-    limit = min(p.driver.continuousTorqueLimit, ...
-        p.controller.tractionLimitedWheelTorque)*ones(3, 1);
+    % Elevated traction authority: armed by entering mode 2 and kept
+    % while the wheels still move, so the mode-1 controller that takes
+    % over after righting inherits the recovery budget for arresting
+    % the residual ball roll.  Without it the derated cap lets the
+    % assembly drift until it re-tilts (the measured 10 deg-start
+    % failure).  Clears on wheel stillness -- filtered rate, since the
+    % raw encoder flicker (~3.7 rad/s) never crosses a small threshold.
+    persistent elevatedAuthority
+    if isempty(elevatedAuthority) || ~enable || mode == 0
+        elevatedAuthority = false;
+    end
+    clearRate = 1.5;
+    if isfield(p.controller, "recoveryAuthorityClearRate")
+        clearRate = p.controller.recoveryAuthorityClearRate;
+    end
+    if mode == 2
+        elevatedAuthority = true;
+    elseif mode == 1 && elevatedAuthority && ...
+            max(abs(filteredWheelRate)) < clearRate
+        elevatedAuthority = false;
+    end
+    if elevatedAuthority && ...
+            isfield(p.controller, "recoveryWheelTorqueLimit")
+        torqueCap = min(p.driver.continuousTorqueLimit, ...
+            p.controller.recoveryWheelTorqueLimit);
+    else
+        torqueCap = min(p.driver.continuousTorqueLimit, ...
+            p.controller.tractionLimitedWheelTorque);
+    end
+    limit = torqueCap*ones(3, 1);
     wheelSpeedCommand = min(max(rawWheelCommand, -limit), limit);
     if mode == 2
+        % Attitude-only recovery: the velocity (1:2), yaw-rate (7) and
+        % wheel-rate (8:10) channels of the LQI state pump translation
+        % while held (measured: a righted 10 deg start kept rolling at
+        % ~0.2 m/s under recovery until the rover ran off the ball).
+        % The torque LQI has no gains on those channels anyway
+        % (stateGain(:,[1 2 8 9 10]) == 0), so zeroing them costs
+        % nothing and removes the integral/propulsion pump paths.
+        stateRecovery = state;
+        stateRecovery([1 2 7 8 9 10]) = 0;
         rawWheelCommand = -p.controller.recoveryGainScale* ...
-            lqi.stateGain*state - ...
+            lqi.stateGain*stateRecovery - ...
             p.controller.torqueDrive.slipDampingGain*slipActive;
         wheelSpeedCommand = min(max(rawWheelCommand, -limit), limit);
     elseif mode == 0
@@ -709,6 +761,15 @@ if torqueDrive
         nextVelocityIntegral = min(max(candidateIntegral, ...
             -integralLimit), integralLimit);
     else
+        nextVelocityIntegral = zeros(2, 1);
+    end
+    % The velocity integral is the only force channel that can pump a
+    % sustained drift: it winds to its limit against the residual ball
+    % roll and keeps demanding torque after the direction has gone
+    % unstable.  During the elevated-authority settle window the
+    % follow-through brake already supplies the deceleration demand,
+    % so freeze the integrator there.
+    if mode == 1 && elevatedAuthority
         nextVelocityIntegral = zeros(2, 1);
     end
     if debugCapture

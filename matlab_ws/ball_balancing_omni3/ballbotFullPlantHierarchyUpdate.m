@@ -11,13 +11,23 @@ tiltMagnitude = hypot(roll, pitch);
 
 yawBiasReady = ballbotYawBiasStartupGuard(previousYawBiasReady ~= 0, ...
     bodyRate(3), biasDiagnostics(2) ~= 0, p);
+% Recovery hysteresis: keep the higher-authority recovery law engaged
+% until the smaller exit tilt proves the post-righting drift has
+% settled (see ballbotLqiControllerUpdate for the measured runaway
+% after a tilted start).
+persistent prevMode
+if isempty(prevMode)
+    prevMode = uint8(0);
+end
 if ~enable || tiltMagnitude >= p.controller.fallenTilt
     mode = uint8(0);
-elseif tiltMagnitude >= p.controller.recoveryTilt
+elseif tiltMagnitude >= p.controller.recoveryTilt || ...
+        (prevMode == 2 && tiltMagnitude >= p.controller.recoveryExitTilt)
     mode = uint8(2);
 else
     mode = uint8(1);
 end
+prevMode = mode;
 
 rotationBodyFromWorld = [cos(yaw), sin(yaw); -sin(yaw), cos(yaw)];
 wheelVelocityMap = p.controller.lqi.wheelSpeedFromPlanarVelocity(:, 1:2);

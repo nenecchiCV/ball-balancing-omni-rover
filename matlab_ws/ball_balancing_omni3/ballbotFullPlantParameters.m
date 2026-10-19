@@ -125,9 +125,12 @@ p.controller.fullplant.motorTorqueLimit = 0.010;
 p.controller.fullplant.commandScale = 0.60;
 p.controller.fullplant.commandFeedforward = 1.0;
 % Enter recovery before commanded wheel action unloads the upper contact.
-% With the unconstrained plant, all contacts remained active through 17.0
-% degrees, while loss first appeared at 17.25 degrees in the tested plane.
-p.controller.recoveryTilt = deg2rad(17.0);
+% Lowered from 17 deg to 5 deg so that hardware-realistic tilted starts
+% (placement tolerance <10 deg) engage the righting controller instead
+% of the balance gains, which cannot arrest a 10 deg topple (they only
+% request ~0.2 N*m vs the ~0.44 N*m gravity moment).  Normal-cycle
+% transients stay under ~3 deg, keeping recovery out of ordinary moves.
+p.controller.recoveryTilt = deg2rad(5.0);
 
 % Redesign the reduced-order LQI for the formal high-center-of-mass
 % hardware configuration.  ballbotParameters computes the baseline gains

@@ -238,4 +238,50 @@ if ~isempty(rateBlock) && nargin >= 2 && ~isempty(p) && ...
         'ballbotWheelRateFromDisplacement(u(1:3),u(4:6),ballbotParams.estimator.sampleTime,ballbotParams.encoder.quantization)'));
 end
 
+% Estimator initial state: freeze the Unit Delay IC to the literal
+% vector computed from THIS parameter set.  The stored expression
+% re-evaluates ballbotParams at sim init, which silently drops the
+% caller's initial-tilt override whenever InitFcn rebuilds a default
+% parameter set between augment and sim start (observed: sequential
+% scratch_cycle runs -- plant kept the 10 deg lean while the estimator
+% seeded upright, est stayed ~0, recovery never engaged).
+mem = find_system(model, 'LookUnderMasks', 'all', ...
+    'FollowLinks', 'on', 'Name', 'EstimatorStateMemory');
+if ~isempty(mem) && nargin >= 2 && ~isempty(p) && ...
+        isfield(p, 'rover') && isfield(p.rover, 'initialEulerWorld')
+    x0 = ballbotEstimatorInitialState(p);
+    set_param(mem{1}, 'InitialCondition', mat2str(x0, 15));
+end
+
+% Floor slope: rotate the GroundFrame rigid transform about a
+% horizontal axis so the contact plane inclines -- the physically
+% correct way to model a floor that is not ideally level (gravity
+% stays world-vertical; tilting gravity instead would fake a
+% horizontal wind, not a slope).  p.simulation.floorSlopeDeg sets the
+% magnitude, floorSlopeAzimuthDeg picks the rotation axis (0 -> the
+% slope descends toward +x).  Envelope check: 1 deg holds cleanly,
+% >=2 deg rolls the assembly downhill out of balance.
+slopeDeg = 0; slopeAzimuthDeg = 0;
+if nargin >= 2 && ~isempty(p) && isfield(p, 'simulation')
+    if isfield(p.simulation, 'floorSlopeDeg')
+        slopeDeg = p.simulation.floorSlopeDeg;
+    end
+    if isfield(p.simulation, 'floorSlopeAzimuthDeg')
+        slopeAzimuthDeg = p.simulation.floorSlopeAzimuthDeg;
+    end
+end
+groundFrame = [model '/MultibodyPlant/Environment/GroundFrame'];
+if slopeDeg > 0
+    % Rotation axis perpendicular to the descent azimuth: rotating the
+    % plane about +Y tilts its +X edge downward (descent toward +X),
+    % so axis = [-sin(A), cos(A), 0] for descent azimuth A.
+    axis = [-sind(slopeAzimuthDeg), cosd(slopeAzimuthDeg), 0];
+    set_param(groundFrame, 'RotationMethod', 'ArbitraryAxis');
+    set_param(groundFrame, 'RotationArbitraryAxis', mat2str(axis, 15));
+    set_param(groundFrame, 'RotationAngleUnits', 'deg');
+    set_param(groundFrame, 'RotationAngle', num2str(slopeDeg, 15));
+else
+    set_param(groundFrame, 'RotationMethod', 'None');
+end
+
 end

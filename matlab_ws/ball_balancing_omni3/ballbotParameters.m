@@ -462,9 +462,33 @@ p.controller.maxYawRate = 0.80;
 % sin(lat)*|v| + Rch*|yawRate| is scaled jointly down to Rw*wMotorLimit
 % when the pair exceeds it, instead of clipping each axis separately.
 p.controller.coupledCommandLimitEnabled = true;
-p.controller.recoveryTilt = deg2rad(18);
+% Recovery entry threshold [rad]: covers tilted starts (hardware
+% placement is specified <10 deg).  Normal-cycle transients stay
+% below ~3 deg, so 5 deg separates an emergency lean from ordinary
+% move/stop excursions while still engaging early enough to arrest a
+% 10 deg start (validated: rights to <2 deg in ~0.4 s).
+p.controller.recoveryTilt = deg2rad(5);
+% Recovery exit threshold (hysteresis): mode 2 holds until the tilt
+% drops below this, so the higher traction allowance still covers the
+% post-righting drift-arrest phase instead of handing a moving
+% assembly back to the derated normal budget.
+p.controller.recoveryExitTilt = deg2rad(2);
+% Elevated-authority clear rate [rad/s wheel]: after mode 2 hands off
+% to mode 1, the recovery traction budget persists until the filtered
+% wheel rate drops below this -- post-recovery drift arrest needs the
+% larger cap.  Above the encoder flicker floor (~3.7 rad/s raw, but
+% the low-passed signal settles near zero when parked).
+p.controller.recoveryAuthorityClearRate = 1.5;
+% (recoveryRightTime / ramped tilt reference removed: a time-ramped
+% reference cannot arrest the initial fall -- the tilt error starts at
+% ~0 exactly when maximum torque is needed, and the 10 deg start fell
+% inside ~1-3 s for every direction.)
 p.controller.fallenTilt = deg2rad(35);
-p.controller.recoveryGainScale = 1.35;
+% Recovery gain multiplier over the LQI state gain: the nominal gain
+% only requests ~0.2 N*m at a 10 deg lean vs the ~0.44 N*m gravity
+% topple moment; 3x reaches the traction allowance and arrests the
+% fall.
+p.controller.recoveryGainScale = 3.0;
 
 % Upright, centered, no-slip command limits. For pure translation the
 % worst-case wheel rate is sin(lambda)*v/Rw. At half the resulting
@@ -478,6 +502,15 @@ p.controller.targetCommandSpeed = p.controller.commandSpeedFraction* ...
 p.controller.maxSpeed = p.controller.targetCommandSpeed;
 p.controller.tractionLimitedWheelTorque = min( ...
     p.driver.continuousTorqueLimit, p.wheel.contactTorqueLimit);
+% Recovery-mode traction allowance [N*m]: mode=2 is allowed more of
+% the contact's real friction than the derated normal-operation budget
+% -- a tilted start needs ~0.44 N*m about the ball centre while the
+% nominal cap only supplies ~0.49 N*m ideal (less once a wheel
+% unloads).  2x the nominal cap rights 10 deg starts without slip;
+% ~3x+ overdrives into slip.  ballbotRev1Parameters applies the same
+% ratio on top of its mass-scaled nominal cap.
+p.controller.recoveryWheelTorqueLimit = ...
+    2.0*p.controller.tractionLimitedWheelTorque;
 p.controller.theoreticalTractionAcceleration = sqrt(3)* ...
     p.controller.tractionLimitedWheelTorque/(p.wheel.radius* ...
     (p.rover.mass + p.ball.mass));
@@ -527,4 +560,11 @@ p.simulation.stopTime = 4.0;
 p.simulation.maxStep = 1.0e-4;
 p.simulation.relativeTolerance = 1.0e-4;
 p.simulation.imuYawBias = 0;
+% Non-ideal floor: floorSlopeDeg inclines the contact plane
+% (applied to Environment/GroundFrame at runtime by
+% ballbotRev1PlantAugment); floorSlopeAzimuthDeg chooses the descent
+% azimuth (0 -> downhill is +x).  0 = ideally level floor.  Measured
+% envelope: 1 deg holds, >=2 deg rolls the assembly out of balance.
+p.simulation.floorSlopeDeg = 0;
+p.simulation.floorSlopeAzimuthDeg = 0;
 end

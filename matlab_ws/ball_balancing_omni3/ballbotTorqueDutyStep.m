@@ -27,8 +27,30 @@ if ~isfield(p.controller, "torqueDrive") || ...
     return
 end
 
+% Elevated traction authority (mirrors ballbotLqiControllerUpdate):
+% armed by mode 2 and held while the wheels still move so the post-
+% recovery settling phase keeps the recovery traction budget.  Cleared
+% by filtered wheel stillness.
+persistent elevatedAuthority
+if isempty(elevatedAuthority) || mode == 0
+    elevatedAuthority = false;
+end
+clearRate = 1.5;
+if isfield(p.controller, "recoveryAuthorityClearRate")
+    clearRate = p.controller.recoveryAuthorityClearRate;
+end
+if mode == 2
+    elevatedAuthority = true;
+elseif mode == 1 && elevatedAuthority && ...
+        max(abs(previousIntegral(:))) < clearRate
+    elevatedAuthority = false;
+end
 torqueLimit = min(p.driver.continuousTorqueLimit, ...
     p.controller.tractionLimitedWheelTorque);
+if elevatedAuthority && isfield(p.controller, "recoveryWheelTorqueLimit")
+    torqueLimit = min(p.driver.continuousTorqueLimit, ...
+        p.controller.recoveryWheelTorqueLimit);
+end
 torque = min(max(torqueCommand, -torqueLimit), torqueLimit);
 
 % The encoder-quantized wheel rate flickers by quantization/sampleTime
