@@ -45,6 +45,48 @@ else
 end
 prevMode = mode;
 
+% Elevated traction authority: armed by entering mode 2 and kept while
+% the wheels still move, so the mode-1 controller that takes over after
+% righting inherits the recovery traction budget for arresting the
+% residual ball roll.  Without it the derated cap lets the assembly
+% drift until it re-tilts (the measured 10 deg-start failure).  Cleared
+% by filtered wheel stillness -- the raw encoder flicker (~3.7 rad/s
+% quantized) never crosses a small threshold, so a dedicated one-pole
+% filter witnesses stillness here regardless of the observer config.
+persistent elevatedAuthority settleWheelRate settleKinPrev settleKinAccel
+if isempty(elevatedAuthority) || ~enable || mode == 0
+    elevatedAuthority = false;
+    settleWheelRate = zeros(3, 1);
+    settleKinPrev = zeros(2, 1);
+    settleKinAccel = zeros(2, 1);
+end
+if isempty(settleWheelRate)
+    settleWheelRate = wheelRate(:);
+end
+if isempty(settleKinPrev)
+    settleKinPrev = zeros(2, 1);
+end
+if isempty(settleKinAccel)
+    settleKinAccel = zeros(2, 1);
+end
+% ~0.25 s one-pole: slow enough that the 3.7 rad/s encoder flicker
+% averages out, fast enough to track the drift decay.
+settleBlend = p.controller.sampleTime/(0.25 + p.controller.sampleTime);
+settleWheelRate = settleWheelRate + ...
+    settleBlend*(wheelRate(:) - settleWheelRate);
+clearRate = 1.5;
+if isfield(p.controller, "recoveryAuthorityClearRate")
+    clearRate = p.controller.recoveryAuthorityClearRate;
+end
+if mode == 2
+    elevatedAuthority = true;
+    settleKinPrev = zeros(2, 1);
+    settleKinAccel = zeros(2, 1);
+elseif mode == 1 && elevatedAuthority && ...
+        max(abs(settleWheelRate)) < clearRate
+    elevatedAuthority = false;
+end
+
 rotationBodyFromWorld = [cos(yaw), sin(yaw); ...
     -sin(yaw), cos(yaw)];
 velocityBody = rotationBodyFromWorld*velocityWorld;
@@ -80,20 +122,56 @@ end
 % speed-proportional gravity brake that decays smoothly as the ball
 % sheds momentum, while the propulsion servo keeps rolling WITH the
 % ball.
+ballVelocityBody = rotationBodyFromWorld* ...
+    [p.ball.radius*estimate(10); -p.ball.radius*estimate(9)];
+% Post-recovery settle witnesses: the estimator's ball-velocity channel
+% runs hot during uncommanded drift (est ~13 rad/s vs ~1.8 rad/s actual
+% in the sf100 run), so while elevatedAuthority holds the drift is read
+% off the encoders -- rolling contact makes the filtered wheel rate the
+% honest measure of the ball's surface speed.  Settle-active mode 1
+% therefore swaps ballVelocityBody AND the chase target to the encoder
+% rate (settleFollowGain ~1.0: follow the drift, let rolling
+% resistance shed it) -- a biased-estimate brake here is the measured
+% pump that re-tilts the chassis.
+settleActive = mode == 1 && elevatedAuthority && ...
+    isfield(p.controller.torqueDrive, "settleFollowGain") && ...
+    p.controller.torqueDrive.settleFollowGain > 0;
+if settleActive
+    settleKinRate = pinv(p.controller.lqi. ...
+        wheelSpeedFromPlanarVelocity)*settleWheelRate;
+    % Filtered finite difference of the drift rate: the derivative of
+    % a 0.25 s-filtered signal stays clean enough to damp the
+    % velocity-loop oscillation the P-only lean demand cannot.
+    rawKinAccel = (settleKinRate(1:2) - settleKinPrev)/ ...
+        p.controller.sampleTime;
+    settleKinPrev = settleKinRate(1:2);
+    settleKinAccel = settleKinAccel + settleBlend* ...
+        (rawKinAccel - settleKinAccel);
+    ballVelocityBody = settleKinRate(1:2);
+    % Rover ground speed rides the same drift; estimate(7:8) runs ~3x
+    % hot here, so the slip-damper's kinematic reference and the
+    % stationary gate also read the encoder-derived rate.
+    velocityBody = settleKinRate(1:2);
+    chaseBody = ballVelocityBody;
+else
+    chaseBody = ballVelocityBody;
+end
 if torqueDrive && isfield(p.controller.torqueDrive, "stopFollowGain") ...
         && p.controller.torqueDrive.stopFollowGain > 0
-    ballVelocityWorld0 = [p.ball.radius*estimate(10); ...
-        -p.ball.radius*estimate(9)];
-    ballSpeed0 = norm(ballVelocityWorld0);
-    if commandSpeed < p.controller.torqueDrive.stopFollowGain*ballSpeed0
-        commandVelocityBody = rotationBodyFromWorld* ...
-            (p.controller.torqueDrive.stopFollowGain*ballVelocityWorld0);
+    followGain = p.controller.torqueDrive.stopFollowGain;
+    if settleActive
+        followGain = p.controller.torqueDrive.settleFollowGain;
+    end
+    chaseSpeed = norm(chaseBody);
+    if commandSpeed < followGain*chaseSpeed
+        commandVelocityBody = followGain*chaseBody;
         commandSpeed = norm(commandVelocityBody);
     end
 end
-% (Settle-ramp experiment removed: a ramped handoff command made all
-% four 10-deg directions fall FASTER -- the tracking machinery cannot
-% follow a decelerating command while the ball runs away.)
+% (Decaying chase-ramp and proportional-slip settle brakes were tried
+% and rejected: every deceleration demand through this loop pumps the
+% lean->runaway cycle and the drift re-tilts the chassis sooner than
+% pure chase.)
 
 if mode == 1
     % Integrate the BALL velocity error, matching the lean channel: the
@@ -101,8 +179,7 @@ if mode == 1
     % load-bearing element.  Rover velocity leads the ball during any
     % acceleration, so integrating rover error winds the integrator with
     % the transient lead every manoeuvre.
-    velocityError = commandVelocityBody - rotationBodyFromWorld* ...
-        [p.ball.radius*estimate(10); -p.ball.radius*estimate(9)];
+    velocityError = commandVelocityBody - ballVelocityBody;
     candidateIntegral = previousVelocityIntegral + ...
         p.controller.sampleTime*velocityError;
     integralLimit = p.controller.velocityIntegralLimit;
@@ -281,11 +358,22 @@ if torqueDrive
         % rover lead (relPos > 0) reads as "already at speed" while the
         % ball lags, so the lean demand eases exactly when the ball most
         % needs driving torque -- the observed runaway geometry.
-        ballVelocityWorld = [p.ball.radius*estimate(10); ...
-            -p.ball.radius*estimate(9)];
-        ballVelocityBody = rotationBodyFromWorld*ballVelocityWorld;
+        % ballVelocityBody is the estimate channel normally, and the
+        % encoder-derived rate during elevated-authority settle (the
+        % drift witness swap above -- the estimator's ball-velocity
+        % channel runs ~7x hot on uncommanded drift).
         velocityErrorBody = commandVelocityBody - ballVelocityBody;
         accelerationDemand = velocityLeanGain*velocityErrorBody;
+        if settleActive && isfield(p.controller.torqueDrive, ...
+                "settleLeanDamping")
+            % D on the velocity outer loop: the P-only demand pumps a
+            % growing drift oscillation (~7 s divergence at 10 deg
+            % starts); opposing the measured ball acceleration rate
+            % starves the overshoot that drives it.
+            accelerationDemand = accelerationDemand - ...
+                p.controller.torqueDrive.settleLeanDamping* ...
+                settleKinAccel;
+        end
         % Command-acceleration feedforward: a saturated P demand parks
         % the lean at its cap, which drives the ball ~3-5x harder than
         % the ramped command needs -- the ball overshoots the command,
@@ -574,27 +662,6 @@ if torqueDrive
         % place.
         propTorque = startupRamp(propTorque, enable, mode, p);
         rawWheelCommand = rawWheelCommand + propTorque;
-    end
-    % Elevated traction authority: armed by entering mode 2 and kept
-    % while the wheels still move, so the mode-1 controller that takes
-    % over after righting inherits the recovery budget for arresting
-    % the residual ball roll.  Without it the derated cap lets the
-    % assembly drift until it re-tilts (the measured 10 deg-start
-    % failure).  Clears on wheel stillness -- filtered rate, since the
-    % raw encoder flicker (~3.7 rad/s) never crosses a small threshold.
-    persistent elevatedAuthority
-    if isempty(elevatedAuthority) || ~enable || mode == 0
-        elevatedAuthority = false;
-    end
-    clearRate = 1.5;
-    if isfield(p.controller, "recoveryAuthorityClearRate")
-        clearRate = p.controller.recoveryAuthorityClearRate;
-    end
-    if mode == 2
-        elevatedAuthority = true;
-    elseif mode == 1 && elevatedAuthority && ...
-            max(abs(filteredWheelRate)) < clearRate
-        elevatedAuthority = false;
     end
     if elevatedAuthority && ...
             isfield(p.controller, "recoveryWheelTorqueLimit")

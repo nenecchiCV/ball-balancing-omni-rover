@@ -490,6 +490,29 @@ p.controller.torqueDrive.propulsionMinShare = 0.25;
 % stop phase survives; the residual failure moves into the next move
 % leg.  0 disables.
 p.controller.torqueDrive.stopFollowGain = 0.75;
+% Post-recovery settle follow gain: replaces stopFollowGain while
+% elevatedAuthority is held (mode 1 after a recovery).  The 0.75 brake
+% fraction demands torque AGAINST the residual ball roll; in the weak
+% -y wheel-sharing direction that demand pumps the ball faster than it
+% decays (+2.5 rad/s^2 measured on a righted 10 deg roll start).
+% ~1.0 is a pure chase -- wheels roll WITH the ball at its own rate so
+% the contact needs no force and rolling resistance sheds the drift.
+% Values >1 drag the ball back under the chassis actively.
+p.controller.torqueDrive.settleFollowGain = 1.0;
+% Settle lean damping [s]: derivative term on the velocity outer loop,
+% applied only during elevated-authority settle.  The P-only lean
+% demand pumps a growing drift oscillation (yaw-tilt shimmy) that
+% throws the chassis ~5-7 s after a 10 deg roll start; opposing the
+% encoder-measured drift-rate change stretches the hold to ~10 s.
+% It delays but does not remove the re-tilt -- see system doc.
+p.controller.torqueDrive.settleLeanDamping = 0.05;
+% (settleRampTime / settleRelPosGain / settlePumpGain /
+% settleYawDampGain experiments removed: a ramped or slipped chase
+% command pumps the lean->runaway cycle faster than pure chase; the
+% relPos estimate carries an ~11 cm bias during drift so the
+% re-centring pull commanded phantom motion; the one-way wheel-accel
+% damper turned encoder flicker into a unidirectional drag; and
+% damping the yaw column did not reach the shimmy.)
 % Eccentricity guard: entering a move leg with the ball ahead of the
 % chassis (relPos < 0 along the command direction) is the observed
 % cycle-fall trigger -- the accel lean kicks a wheel off the
