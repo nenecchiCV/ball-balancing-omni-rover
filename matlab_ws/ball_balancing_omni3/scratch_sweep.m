@@ -1,0 +1,6 @@
+function scratch_sweep(tag, leanLim, acc, dec)
+ov = {'controller.torqueDrive.leanSetpointLimit', leanLim; ...
+      'command.accelerationLimit', acc; ...
+      'command.decelerationLimit', dec};
+scratch_cycle(50, tag, ov);
+end

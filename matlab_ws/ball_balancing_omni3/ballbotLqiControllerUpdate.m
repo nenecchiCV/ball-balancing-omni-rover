@@ -35,55 +35,24 @@ persistent prevMode
 if isempty(prevMode)
     prevMode = uint8(0);
 end
-% Bail-out latch: when the ball escapes beyond reach, mode 2 keeps
-% re-righting the chassis only to tip again (measured: repeated
-% 0.55->0.03 rad bounce cycles on the bare floor after ~22 s of
-% drift).  Each re-entry plants the chassis into the floor, so after
-% recoveryRetryLimit fallen->recovery re-entries without a sustained
-% upright dwell, latch mode 0 until enable toggles or a fresh run.
-persistent recoveryRetries recoveryLatch uprightDwell
-if isempty(recoveryRetries)
-    recoveryRetries = 0;
+% Mode 0 is TERMINAL: operation has ended (operator disable or the
+% chassis fell past fallenTilt) and there is no way back to mode 1/2.
+% A fallen->recovery re-entry would fire every time the chassis bounces
+% under 35 deg on the floor and plant it face-down again (measured:
+% repeated 0.55->0.03 rad bounce cycles after ~22 s of drift).  The latch
+% persists until a fresh run resets the persistent state.
+persistent mode0Latch
+if isempty(mode0Latch)
+    mode0Latch = false;
 end
-if isempty(recoveryLatch)
-    recoveryLatch = false;
-end
-if isempty(uprightDwell)
-    uprightDwell = 0;
-end
-if ~enable
-    recoveryRetries = 0;
-    recoveryLatch = false;
-    uprightDwell = 0;
-end
-retryLimit = 3;
-if isfield(p.controller, "recoveryRetryLimit")
-    retryLimit = p.controller.recoveryRetryLimit;
-end
-if ~enable || tiltMagnitude >= p.controller.fallenTilt || recoveryLatch
+if ~enable || tiltMagnitude >= p.controller.fallenTilt || mode0Latch
     mode = uint8(0);
+    mode0Latch = true;
 elseif tiltMagnitude >= p.controller.recoveryTilt || ...
         (prevMode == 2 && tiltMagnitude >= p.controller.recoveryExitTilt)
     mode = uint8(2);
 else
     mode = uint8(1);
-end
-if prevMode == 0 && mode == 2
-    % Fallen->recovery re-entry is the bounce signature: the previous
-    % righting attempt already failed once.
-    recoveryRetries = recoveryRetries + 1;
-    if recoveryRetries > retryLimit
-        recoveryLatch = true;
-        mode = uint8(0);
-    end
-end
-if mode == 1
-    uprightDwell = uprightDwell + p.controller.sampleTime;
-    if uprightDwell > 1.5
-        recoveryRetries = 0;   % a real upright stretch resets the count
-    end
-else
-    uprightDwell = 0;
 end
 prevMode = mode;
 

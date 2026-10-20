@@ -147,8 +147,8 @@ p.command.cycleStart = 0.5;
 % 8.7 s ramp up + 8.7 s down at the designed 0.06 m/s^2, so the lean
 % demand stays inside the cap with margin instead of saturating.
 % Move window sized to the retargeted 0.10 m/s-class profile: at
-% accelerationLimit the 0.167 m/s reference ramps in ~5.6 s, so 12 s
-% holds cruise ~0.8 s plus the symmetric ramp-down.
+% accelerationLimit the 0.167 m/s reference ramps in ~2.8 s, so 12 s
+% holds cruise ~3 s plus the symmetric ramp-down.
 p.command.cycleMoveDuration = 12.0;
 % Yaw control is fully separated from translation: the yaw-rate request
 % is issued as a trapezoid inside the stop window, starting cycleYawDelay
@@ -173,24 +173,24 @@ p.command.cycleYawDuration = 1.0;
 % before the next one).  1 = every stop window, 0 disables thinning.
 p.command.cycleYawEvery = 2;
 p.command.cycleCount = 3;
-% The holdable lean cone is ~0.023 rad of tilt at the full traction
-% budget, and propulsion torque spends part of that budget during the
-% ramp.  Commanded acceleration is therefore capped well inside the
-% cone: 0.06 m/s^2 ~ lean 0.006 rad, about a quarter of the limit.
-% Deceleration is the critical phase: braking transfers chassis momentum
-% to the ball, which surges ~+0.05 m/s and dies at the ~0.2 m/s contact
-% wall.  0.03 keeps the surge recoverable at the retargeted speed.
-p.command.accelerationLimit = 0.03;
+% Commanded acceleration is capped well inside the lean setpoint limit:
+% 0.06 m/s^2 ~ lean 0.006 rad, under half the 0.015 rad cap.  Measured
+% (lambda=33 plant, 50 s cycle): accel 0.06 completes clean at maxTilt
+% 0.0114 rad vs 0.0119 for the old 0.03 ramp -- 2x faster ramps at equal
+% tilt quality.  accel 0.10 (lean cap 0.02) fell at ~33 s and accel 0.15
+% (cap 0.03) survived only with sloppy 0.026 rad tilt, so the margin is
+% real: keep the ramp lean demand under half the cap.  Deceleration is
+% the critical phase: braking transfers chassis momentum to the ball,
+% which surges and can die at the contact wall -- the measured 50 s pass
+% used decel 0.03.
+p.command.accelerationLimit = 0.06;
 % Braking is asymmetric with acceleration on the real machine too: the
 % braking torque margin is thinner (decel drives the chassis pitch-back
 % that kicks the ball forward), so the ramp-down gets its own gentler
 % limit.  ballbotRev1CommandProfile applies it to the move-window tail.
-% Measured at the mu_est=1.0 traction budget: 0.02 dies in the first
-% stop window (~15 s, ball still rolling 0.24 m/s rolls out sideways),
-% 0.01 roughly doubles survival (~39-41 s, mid cycle 3).  0.005 is
-% worse again -- too-slow decel enters the stop phase with even more
-% residual ball speed, so do not simply keep reducing it.
-p.command.decelerationLimit = 0.01;
+% 0.03 (half the accel ramp) is the measured clean value in the lambda=33
+% 50 s cycle.
+p.command.decelerationLimit = 0.03;
 % Bounded-yaw pulse length [s] for the non-cycle command path: the
 % plant loses a wheel ~0.4-0.8 rad into any sustained common-mode yaw
 % (the wheel torque pumps the ball's free z-spin), so scenarios cap the
@@ -372,23 +372,22 @@ p.controller.torqueDrive.slipDampingGain = 0.02;
 % Enabled: the yaw-damper/ball-brake pump is now removed and the inner
 % loop holds machine-zero tilt, so the lean channel is the only physical
 % translation actuator.  leanSetpointLimit must sit well inside the
-% torque-limited hold cone (~0.023 rad measured at the mu_est=0.75
-% clamp; the cone scales with the traction budget, widening to ~0.031
-% rad at mu_est=1.0): a lean demand near the cone edge tips at t ~1 s
-% because any tilt overshoot past the cone is unrecoverable (gravity
-% pole ~6.4 rad/s, ~150 ms e-folding).  0.016 rad is about half the
-% widened cone and lifts the gravity-drive speed cap that throttled the
-% ball to ~0.13 m/s at the 0.008 rad setting.
+% torque-limited hold cone: at lambda=33 the static cone is ~0.11 rad
+% (two wheels at 0.078 N*m through r_b/r_w vs the ~2.5 N*m/rad gravity
+% moment about the ball centre) -- much wider than the ~0.023 rad the
+% old 65-deg geometry measured -- but a lean demand near the cone edge
+% still tips because tilt overshoot past the cone is unrecoverable
+% (gravity pole ~6.4 rad/s, ~150 ms e-folding).
 p.controller.torqueDrive.velocityLeanGain = 0.3;
-% Saturation-aware re-derivation (limit-cycle redesign): the commanded
-% lean band is now derived from the tilt-column gain, not set
-% independently.  With K_tilt ~6.5 N*m/rad (R=4000 design) a 0.016 rad
-% edge demanded 0.104 N*m -- 133% of the 0.078 clamp -- so the loop ran
-% bang-bang precisely inside the cone it was supposed to hold.  Capping
-% the band at 0.009 rad bounds the edge demand at ~75% of the clamp;
-% the residual tracking lean for a 0.03 m/s^2 ramp is only ~0.003 rad,
-% so translation authority is unaffected.
-p.controller.torqueDrive.leanSetpointLimit = 0.009;
+% Saturation-aware re-derivation for lambda=33 (replaces the 65-deg-era
+% 0.009 rad): the commanded lean band is derived from the tilt-column
+% gain, not set independently.  With the current K_tilt ~4.3 N*m/rad a
+% 0.015 rad edge demands ~0.065 N*m -- ~83% of the 0.078 clamp, same
+% ~75-85% margin the 0.009 rad value held at the old K~6.5.  Measured on
+% the lambda=33 50 s cycle: 0.015 completes clean (maxTilt 0.0114),
+% 0.02 fell at ~33 s and 0.03 only survived with sloppy 0.026 rad tilt.
+% The residual tracking lean for the 0.06 m/s^2 ramp is ~0.006 rad.
+p.controller.torqueDrive.leanSetpointLimit = 0.015;
 % Command-acceleration feedforward gain on the lean demand: the ramped
 % command needs lean ~a_cmd/g (0.003 rad at 0.03 m/s^2), far below the
 % P-error saturation cap, so feedforward carries the nominal lean and
@@ -531,13 +530,11 @@ p.controller.torqueDrive.settleLeanDamping = 1.0;
 % zero against them.  Kept separate so normal move legs keep the
 % validated gain.
 p.controller.torqueDrive.settleLeanGain = 1.0;
-% Recovery bail-out latch: once the ball escapes beyond reach, every
-% fallen->recovery re-entry plants the chassis into the floor again
-% (measured bounce cycles on the bare floor).  After this many failed
-% re-entries without a 1.5 s upright dwell, mode 0 latches (stay
-% down) until enable toggles -- one bad bail-out beats repeated
-% face-plants on hardware.
-p.controller.recoveryRetryLimit = 3;
+% Mode 0 is terminal (no fallen->recovery re-entry): once the ball
+% escapes beyond reach, every re-entry plants the chassis into the floor
+% again (measured bounce cycles on the bare floor), so falling past
+% fallenTilt ends operation until a fresh run -- one bad bail-out beats
+% repeated face-plants on hardware.
 % (Direct settle ball-brake torque, tau = -c*pinv(W')*vBall, was tried
 % and removed: brake force and attitude authority share the same
 % wheel-ball contact traction budget (~0.078 N*m/wheel), so c~4
