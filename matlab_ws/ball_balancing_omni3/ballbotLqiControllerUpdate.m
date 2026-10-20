@@ -55,6 +55,11 @@ else
     mode = uint8(1);
 end
 prevMode = mode;
+if mode0Latch && ~isempty(gcs)
+    % Operation ended: post-fall simulation time is dead time, so stop
+    % the run at the fall instead of running out StopTime on the floor.
+    set_param(bdroot(gcs), 'SimulationCommand', 'stop');
+end
 
 % Elevated traction authority: armed by entering mode 2 and kept while
 % the wheels still move, so the mode-1 controller that takes over after

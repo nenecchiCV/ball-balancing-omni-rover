@@ -78,33 +78,37 @@ if nargin >= 1 && ~isempty(payloadMass)
         p.rover.centerAboveBall - p.fullplant.groundStaticDeflection - ...
         p.fullplant.wheelBallStaticDeflection;
 end
-% The assembled model's logged wheel-ball normal force is ~4.07 N at
-% rest, not mg/(3 sin(lat)) = 5.44 N.  The clamp sits at 80% of the
-% nominal slip threshold: with the idealized (critically damped,
-% slip-free) contacts the transient N-dips are modest, so the earlier
-% 0.55 derating was overcautious.  Applies to the default call too, not
-% only payload sweeps.  The measured rest load scales with supported
-% mass, so the limit does too: heavier builds get the larger traction
-% budget their normal force can actually transmit, which is what gives
-% heavy configurations the torque headroom to leave a static lean
-% instead of stalling.
+% The assembled lambda=33 model's logged wheel-ball normal force is
+% ~8.45 N at rest (three wheels ~8.4 N each), below the idealized
+% mg/(3 sin(lat)) = 10.7 N because contact compliance redistributes the
+% load.  The clamp sits at 80% of the nominal slip threshold at that
+% measured load: with the idealized (critically damped, slip-free)
+% contacts the transient N-dips are modest.  The stale 4.07 N constant
+% came from the 65-deg assembly -- it starved the traction budget to
+% ~half of what the lambda=33 contact can actually transmit.
+% Applies to the default call too, not only payload sweeps.  The
+% measured rest load scales with supported mass, so the limit does too:
+% heavier builds get the larger traction budget their normal force can
+% actually transmit, which is what gives heavy configurations the torque
+% headroom to leave a static lean instead of stalling.
 p.controller.tractionLimitedWheelTorque = min( ...
     p.driver.continuousTorqueLimit, ...
-    0.80*p.contact.wheelBall.tractionEstimateFriction*4.07* ...
+    0.80*p.contact.wheelBall.tractionEstimateFriction*8.45* ...
     (p.rover.mass/(p.fullplant.payload.originalRoverMass + 0.50))* ...
     p.wheel.radius);
 % Recovery-mode traction allowance [N*m]: a tilted-start righting
 % maneuver needs ~0.44 N*m of moment about the ball centre at 10 deg,
-% but the nominal cap above only supplies ~0.49 N*m ideal (which
-% evaporates once the uphill wheel unloads).  Doubling the nominal cap
-% lets recovery reach ~0.98 N*m -- measured to right 10 deg starts in
-% ~0.4 s without exciting wheel slip.  Raising it further (0.25+)
-% overdrives the wheels into slip and makes recovery WORSE; the
-% validated working band is roughly [0.145, 0.25).  Applies to mode=2
-% only, so normal-operation slip budgeting is unchanged.
+% and ~0.156 N*m per wheel righted 10 deg starts in ~0.4 s without
+% exciting wheel slip.  Raising it further (~0.25+) overdrives the
+% wheels and makes recovery WORSE -- at 0.32 the 10 deg start tipped
+% past 35 deg within ~0.6 s.  The old 2x ratio only existed because the
+% nominal cap was starved by the stale 4.07 N rest-load constant; now
+% that nominal is the real contact budget (~0.162), recovery simply
+% shares it -- validated band is roughly [0.145, 0.25).  Applies to
+% mode=2 only, so normal-operation slip budgeting is unchanged.
 p.controller.recoveryWheelTorqueLimit = min( ...
     p.driver.continuousTorqueLimit, ...
-    2.0*p.controller.tractionLimitedWheelTorque);
+    max(p.controller.tractionLimitedWheelTorque, 0.156));
 
 % Armature inductance is not in the FIT0521 datasheet; motors of this
 % class typically land in the 0.5-5 mH range.  5 mH gives tau_e = 2.7 ms
