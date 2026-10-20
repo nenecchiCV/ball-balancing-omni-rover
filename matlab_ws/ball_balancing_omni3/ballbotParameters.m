@@ -258,16 +258,18 @@ p.rover.noseAxisBody = [1; 0; 0];
 
 % Penalty contacts, idealized environment: near-critically damped normals
 % kill the settle bounce (bare values gave zeta ~0.1-0.4, the seed of the
-% startup tipping mode), and high fixed friction makes slip impossible.
-% The wheel-slip acceleration limit the controller must respect is NOT
-% modeled here -- it lives in tractionLimitedWheelTorque below, which keeps
-% the physical mu=0.75 estimate even though the contact itself cannot slip.
-% The foam/rubber roller and thin-shell ball are far from rigid: 1e4 N/m
-% (~0.5 mm penetration per wheel at nominal load) is closer to the real
-% compliance than the earlier 2e4 value and keeps the contact-force
-% gradient inside a solver-friendly band.
-p.contact.wheelBall.normalStiffness = 1.0e4;
-p.contact.wheelBall.normalDamping = 140;   % ~critical for k=1e4, m~0.5 kg/wheel
+% startup tipping mode), and high fixed friction keeps wheel slip
+% controller-limited instead of contact-limited.  The wheel-slip
+% acceleration limit the controller must respect is NOT modeled here --
+% it lives in tractionLimitedWheelTorque below, which keeps the
+% effective mu=0.80 budget even though the contact itself cannot slip.
+% Ball compliance model: hollow Ø100 plastic shell + ~1-2 mm rubber
+% membrane -- the membrane, not the shell, sets the contact stiffness.
+% 3e4 N/m puts the wheel sag at ~0.3 mm and floor sag at ~0.7 mm under
+% nominal load, consistent with a membrane compressing a fraction of
+% its thickness; bench-measure before hardware sign-off.
+p.contact.wheelBall.normalStiffness = 3.0e4;
+p.contact.wheelBall.normalDamping = 250;   % ~critical for k=3e4, m~0.5 kg/wheel
 p.contact.wheelBall.transitionWidth = 5.0e-4;
 % Wheel-ball contact transition width wired into the WheelNBallContact
 % blocks; the relaxed value damps contact-state chatter.
@@ -281,11 +283,15 @@ p.contact.wheelBall.criticalVelocity = 5.0e-3;
 % accuracy budget.  Stiffer values buy nothing for the solver: the
 % dominant step-size limiter in the Simscape rev1 plant is motor
 % electrical dynamics, not contact stiffness.
-p.contact.ballGround.normalStiffness = 1.0e4;
-p.contact.ballGround.normalDamping = 270;  % ~critical for k=1e4, m~1.8 kg
+p.contact.ballGround.normalStiffness = 3.0e4;
+p.contact.ballGround.normalDamping = 500;  % ~critical for k=3e4, m~2.1 kg
 p.contact.ballGround.transitionWidth = 5.0e-4;
-p.contact.ballGround.staticFriction = 2.0;
-p.contact.ballGround.dynamicFriction = 2.0;
+% Ball-floor friction: real rubber-membrane ball on flooring/carpet is
+% ~0.8; 1.2 keeps a modest slip margin in the model without the old
+% idealized no-slip (mu=2.0) assumption.  Rolling -- not sliding -- is
+% still the dominant floor interaction for a ball.
+p.contact.ballGround.staticFriction = 1.2;
+p.contact.ballGround.dynamicFriction = 1.2;
 p.contact.ballGround.criticalVelocity = 5.0e-3;
 % Ball-ground rolling resistance: a real hollow ball rolling on the
 % floor loses energy through contact-patch hysteresis and scrub -- a
@@ -299,7 +305,9 @@ p.contact.ballGround.criticalVelocity = 5.0e-3;
 % aboard, 0.008 is the value that carried a full move+stop window
 % cleanly -- 0.005 let the ball overrun the command at the cmd->0
 % corner (~0.08->0.24 m/s kick), 0.01 over-damped the ball (it lagged
-% the command and the offset crept the contact envelope).
+% the command and the offset crept the contact envelope).  Deployment
+% floors span hardwood to short-pile carpet (~0.005-0.015): the design
+% target is robust control across that whole band, validated by sweep.
 p.contact.ballGround.rollingFriction = 0.008;
 p.contact.ballGround.rollingCriticalVelocity = 5.0e-3;
 % spinScrubArm [m]: effective lever arm for the contact-patch scrubbing

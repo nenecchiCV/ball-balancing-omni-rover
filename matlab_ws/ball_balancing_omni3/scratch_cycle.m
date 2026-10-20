@@ -66,6 +66,13 @@ res.tilt = hypot(res.roverPose(:,4), res.roverPose(:,5));
 iT = find(res.tilt > 0.5, 1);
 res.tTip = inf;
 if ~isempty(iT), res.tTip = res.t(iT); end
+% Controller debug capture (debugCapture override) lands in base as
+% dbgLqiInputs; fold it into the result file when present.
+try
+    res.dbg = evalin('base', 'dbgLqiInputs');
+    evalin('base', 'clear dbgLqiInputs');
+catch
+end
 save(['cycle_result_' tag '.mat'], 'res');
 fprintf('tag=%s tEnd=%.1f tTip=%.2f maxTilt=%.4f endYaw=%.3f\n', ...
     tag, res.t(end), res.tTip, max(res.tilt), res.roverPose(end, 6));

@@ -197,18 +197,59 @@ end
 % lean->runaway cycle and the drift re-tilts the chassis sooner than
 % pure chase.)
 
-if mode == 1
+integralGateOpen = true;
+if isfield(p.controller, "torqueDrive") && ...
+        isfield(p.controller.torqueDrive, "integralCommandGate")
+    integralGateOpen = norm(commandVelocityBodyUser) > ...
+        p.controller.torqueDrive.integralCommandGate;
+end
+if mode == 1 && integralGateOpen
     % Integrate the BALL velocity error, matching the lean channel: the
     % command describes the assembly's translation and the ball is the
     % load-bearing element.  Rover velocity leads the ball during any
     % acceleration, so integrating rover error winds the integrator with
-    % the transient lead every manoeuvre.
+    % the transient lead every manoeuvre.  The deadzone keeps encoder
+    % stillness-band flicker (~0.02-0.03 m/s) from winding the
+    % integrator at rest -- the residual it cancels is far below the
+    % drag thrust the channel exists to supply.  Accumulation is gated
+    % to commanded translation: during settle/idle a drifting ball
+    % would charge the integral with brake-direction bias that fights
+    % the settle brake and re-launches the ball (measured: 10 deg
+    % recovery fell at ~11.5 s once the integral ran at rest).
     velocityError = commandVelocityBodyUser - ballVelocityBody;
+    % Charge/unwind asymmetry: the deadzone keeps encoder stillness-
+    % band flicker from charging the integral, but a stored drag bias
+    % must still shed while the ball leads the command.  A bias held
+    % at the deadzone edge unwinds only through the 0.1/s leak (~10 s
+    % to clear) and keeps pushing an already-fast ball -- the measured
+    % ~0.5 m/s escape that ends in the chase fall.  Axes whose error
+    % opposes the integral unwind at a floor rate even inside the
+    % deadzone; the deadband itself still holds the drag-equilibrium
+    % bias (that hold is the point of the channel).
+    if isfield(p.controller, "torqueDrive") && ...
+            isfield(p.controller.torqueDrive, "integralUnwindFloor") && ...
+            isfield(p.controller.torqueDrive, "integralDeadzone")
+        unwindFloor = p.controller.torqueDrive.integralUnwindFloor;
+        opposing = sign(velocityError) == ...
+            -sign(previousVelocityIntegral) & ...
+            abs(velocityError) > ...
+            p.controller.torqueDrive.integralDeadzone;
+        velocityError(opposing) = sign(velocityError(opposing)).* ...
+            max(abs(velocityError(opposing)), unwindFloor);
+    end
+    if isfield(p.controller, "torqueDrive") && ...
+            isfield(p.controller.torqueDrive, "integralDeadzone") && ...
+            norm(velocityError) < p.controller.torqueDrive.integralDeadzone
+        velocityError = [0; 0];
+    end
     candidateIntegral = previousVelocityIntegral + ...
         p.controller.sampleTime*velocityError;
     integralLimit = p.controller.velocityIntegralLimit;
     candidateIntegral = min(max(candidateIntegral, -integralLimit), ...
         integralLimit);
+elseif mode == 1
+    % Not commanded: hold the residual for the leak to unwind below.
+    candidateIntegral = previousVelocityIntegral;
 else
     candidateIntegral = zeros(2, 1);
 end
@@ -370,13 +411,25 @@ if torqueDrive
     if tiltMagnitude > p.controller.tiltPriorityStart
         candidateIntegral = zeros(2, 1);
     end
-    % A torque-mode velocity integral is only weakly observable at rest;
-    % estimator startup transients otherwise wind it up into a permanent
-    % torque bias that creeps the ball out from under the chassis.
-    % Leak it toward zero so only sustained velocity errors persist.
+    % Velocity-integral bookkeeping (DORMANT): lqi.integralGain is
+    % zeros, so this term contributes nothing to the wheel command.
+    % The wheel-torque integral was measured unable to move the ball
+    % (internal force -- debugCapture showed it saturated while the
+    % ball sat still), and the lean-demand integral repeatedly wound
+    % a stored bias that kicked the ball into the unrecoverable
+    % overspeed regime (~0.9 m/s).  Sustained drag is now covered by
+    % the stateless dragLeanFeedforward below.  The accumulation is
+    % kept (leaky, gated, deadzoned) only so a future experiment can
+    % re-aim it without touching the bookkeeping; the two-rate leak
+    % still bounds whatever is stored.
+    integralLeak = p.controller.torqueDrive.integralLeak;
+    if isfield(p.controller.torqueDrive, "integralDriveLeak") && ...
+            isfield(p.controller.torqueDrive, "integralCommandGate") && ...
+            commandSpeed > p.controller.torqueDrive.integralCommandGate
+        integralLeak = p.controller.torqueDrive.integralDriveLeak;
+    end
     candidateIntegral = candidateIntegral* ...
-        (1 - p.controller.torqueDrive.integralLeak* ...
-         p.controller.sampleTime);
+        (1 - integralLeak*p.controller.sampleTime);
     if isfield(p.controller.torqueDrive, "integralEnabled") && ...
             ~p.controller.torqueDrive.integralEnabled
         candidateIntegral = zeros(2, 1);
@@ -453,11 +506,74 @@ if torqueDrive
             commandAccelBody = (commandVelocityBodyUser - ...
                 prevCommandVelocity)/p.controller.sampleTime;
             prevCommandVelocity = commandVelocityBodyUser;
-            accelerationDemand = accelerationDemand + ...
-                p.controller.torqueDrive.accelFeedforwardGain* ...
-                commandAccelBody;
+            % One-sided like the drag feedforward: while the ball
+            % already leads the command, an accelerating feedforward
+            % keeps pushing it further past the profile (measured:
+            % the ball out-ran the 0.06 m/s^2 ramp and hit the motor
+            % no-load ceiling ~0.97 m/s).  Cutting it leaves the P
+            % brake to pull the overshoot back.
+            accelMag = norm(commandAccelBody);
+            if accelMag > 1e-4 && dot(velocityErrorBody, ...
+                    commandAccelBody/accelMag) > -0.02
+                accelerationDemand = accelerationDemand + ...
+                    p.controller.torqueDrive.accelFeedforwardGain* ...
+                    commandAccelBody;
+            end
+        end
+        if isfield(p.controller.torqueDrive, "dragLeanFeedforward") && ...
+                p.controller.torqueDrive.dragLeanFeedforward ~= 0
+            % Sustained-drag feedforward: on level ground the only
+            % sustained external force is the floor reaction to a held
+            % lean, m*g*theta, and the rolling-resistance coefficient
+            % IS the required equilibrium lean (theta ~ rf).  Feeding
+            % rf*g along the ball's motion direction supplies the drag
+            % thrust with no stored state -- unlike an integrator it
+            % cannot wind a lean bias past the command and kick the
+            % ball into the unrecoverable overspeed regime (measured:
+            % ~0.9 m/s runaway while every guard variant faded the
+            % recovery demand).  At standstill the feedforward takes
+            % the command direction instead -- the ball-stationary
+            % gate would otherwise leave the P term alone against
+            % carpet drag (the measured low-command stall).  Residual
+            % drag mismatch is absorbed by the P term as a bounded
+            % speed error.
+            dragBallSpeed = norm(ballVelocityBody);
+            if dragBallSpeed > 0.02
+                dragDir = ballVelocityBody/dragBallSpeed;
+            elseif norm(commandVelocityBodyUser) > 0.01
+                dragDir = commandVelocityBodyUser/ ...
+                    norm(commandVelocityBodyUser);
+            else
+                dragDir = zeros(2, 1);
+            end
+            % One-sided application: the feedforward compensates drag
+            % only while the ball is behind/at the command.  Once the
+            % ball leads, keeping it would cancel the P brake exactly
+            % when the overspeed needs stopping (measured: the ball
+            % held ~1.5-2x command while P(-0.09) fought FF(+0.15) --
+            % and the chase-follow wheel path then maintains the
+            % overspeed roll indefinitely).  Cutting it hands the
+            % whole demand to the brake; the coast gate remains the
+            % fallback once the lead exceeds the margin.
+            if dot(velocityErrorBody, dragDir) > -0.02
+                accelerationDemand = accelerationDemand + ...
+                    p.controller.torqueDrive.dragLeanFeedforward* ...
+                    p.contact.ballGround.rollingFriction*p.gravity* ...
+                    dragDir;
+            end
         end
         leanLimit = p.controller.torqueDrive.leanSetpointLimit;
+        if settleActive && isfield(p.controller.torqueDrive, ...
+                "settleLeanCap") && ...
+                p.controller.torqueDrive.settleLeanCap < leanLimit
+            % The settle D-brake works near the bias-corrected edge of
+            % the measured tilt; a hotter cap lets its lean demand
+            % overshoot the recovery window (measured: 10 deg starts
+            % fell ~11 s at cap 0.02+ vs ~32 s at 0.015).  Cruise drag
+            % feedforward needs ~0.017+, so the raise applies to the
+            % move path only.
+            leanLimit = p.controller.torqueDrive.settleLeanCap;
+        end
         accelerationDemand = min(max(accelerationDemand, -leanLimit* ...
             p.gravity), leanLimit*p.gravity);
         % Slew-rate limit on the lean setpoint: the ball can only roll
@@ -487,19 +603,38 @@ if torqueDrive
         % Cone guard: tilt beyond the commanded lean (overshoot,
         % recovery) gets no additional lean demand -- feeding a demand
         % the traction-limited torque cannot hold only adds tilt rate
-        % bias on top of the runaway.
+        % bias on top of the runaway.  During commanded motion the
+        % fade applies ONLY to demand components that deepen the
+        % current tilt: a braking demand (commanded tilt opposing the
+        % measured lean) is the channel that pulls the tilt back
+        % inside the cone, and fading it locks the runaway open
+        % (measured: ~+0.03 rad tilt held while the assembly
+        % accelerated to ~0.9 m/s, brake demand faded).  During settle
+        % the unconditional fade is restored: the elevated-authority
+        % window was tuned with the brake demand attenuated at
+        % tilt>cap, and passing it at full strength overshoots the
+        % settle (measured: 10 deg starts fell ~13 s vs ~33 s).
         if isfield(p.controller.torqueDrive, "leanFadeTilt")
-            excessTilt = max(tiltMagnitude - leanLimit, 0);
-            fade = max(1 - excessTilt/ ...
-                p.controller.torqueDrive.leanFadeTilt, 0);
-            accelerationDemand = fade*accelerationDemand;
+            deepening = settleActive || accelerationDemand(1)*pitch - ...
+                accelerationDemand(2)*roll > 0;
+            if deepening
+                excessTilt = max(tiltMagnitude - leanLimit, 0);
+                fade = max(1 - excessTilt/ ...
+                    p.controller.torqueDrive.leanFadeTilt, 0);
+                accelerationDemand = fade*accelerationDemand;
+            end
         end
         % Eccentricity guard: the observed cycle fall is a tilt spike
         % the instant a move leg begins with the ball ~5 cm ahead of
         % the chassis (relPos < 0 along the command direction).
         % Accelerating onto an off-centre ball kicks a wheel off the
         % contact; throttling the lean demand while the geometry is
-        % eccentric gives the contact time to recenter.
+        % eccentric gives the contact time to recenter.  The throttle
+        % applies ONLY to the demand component accelerating toward the
+        % leading ball: a braking component (opposing commandDir) is
+        % the recovery channel for exactly this geometry, and scaling
+        % it locks the overspeed open (measured: ~10% of the brake
+        % demand reached the plant while the ball ran to ~0.9 m/s).
         if isfield(p.controller.torqueDrive, ...
                 "accelRelPosGuardGain") && ...
                 p.controller.torqueDrive.accelRelPosGuardGain ~= 0 && ...
@@ -516,7 +651,36 @@ if torqueDrive
             guardScale = max(guardFloor, 1 - ...
                 p.controller.torqueDrive.accelRelPosGuardGain* ...
                 eccentricity);
-            accelerationDemand = guardScale*accelerationDemand;
+            accelComponent = dot(accelerationDemand, commandDir);
+            if accelComponent > 0
+                accelerationDemand = accelerationDemand - ...
+                    accelComponent*commandDir*(1 - guardScale);
+            end
+        end
+        % Overspeed coast gate: a braking lean demand cannot physically
+        % pitch the chassis back once the ball leads -- the wheel
+        % torque is internal, so it rolls the (light) ball out from
+        % under the chassis instead of tilting the (heavy) chassis, and
+        % the face-plant follows (measured: brake demand saturated
+        % ~0.2 N*m while the ball ran to ~0.9 m/s, tilt pinned +0.03
+        % rad).  The gate fires when the ball exceeds the USER command
+        % by the margin (not an absolute speed, so the 0.7 m/s cruise
+        % keeps its feedforward), and it strips the whole along-motion
+        % demand component -- brake AND drag feedforward -- so the
+        % chassis levels and rolling resistance sheds the overshoot.
+        if isfield(p.controller.torqueDrive, "overspeedCoastMargin") && ...
+                ~settleActive
+            % The settle D-brake is the recovery channel for an
+            % already-drifting ball -- gating it there would leave the
+            % drift unbraked (measured: 10 deg starts fell ~15 s with
+            % the gate active in settle).
+            coastBallSpeed = norm(ballVelocityBody);
+            if coastBallSpeed > norm(commandVelocityBodyUser) + ...
+                    p.controller.torqueDrive.overspeedCoastMargin
+                coastDir = ballVelocityBody/coastBallSpeed;
+                accelerationDemand = accelerationDemand - ...
+                    dot(accelerationDemand, coastDir)*coastDir;
+            end
         end
         state(3:4) = state(3:4) - ...
             [accelerationDemand(1); -accelerationDemand(2)]/p.gravity;
@@ -569,6 +733,15 @@ if torqueDrive
     % state equals scaling the tilt columns of the gain matrix.
     if isfield(p.controller.torqueDrive, "tiltStiffenGain")
         stiffenStart = p.controller.torqueDrive.leanSetpointLimit;
+        if settleActive && isfield(p.controller.torqueDrive, ...
+                "settleLeanCap")
+            % The settle window was tuned with the stiffen edge at
+            % the old 0.015 cap; the raised move-path cap would
+            % otherwise leave the 0.015-0.022 tilt band unboosted
+            % (measured: 10 deg starts fell ~13 s vs ~33 s).
+            stiffenStart = min(stiffenStart, ...
+                p.controller.torqueDrive.settleLeanCap);
+        end
         stiffenBand = p.controller.torqueDrive.tiltStiffenTilt;
         boost = 1 + (p.controller.torqueDrive.tiltStiffenGain - 1)* ...
             min(max(tiltMagnitude - stiffenStart, 0)/stiffenBand, 1);
@@ -913,12 +1086,15 @@ if torqueDrive
     if debugCapture
         persistent captureLog
         if isempty(captureLog)
-            captureLog = zeros(0, 48);
+            captureLog = zeros(0, 50);
+        end
+        if ~exist('accelerationDemand', 'var')
+            accelerationDemand = zeros(2, 1);
         end
         captureLog(end+1, :) = [captureInputs.', state.', ...
             rawWheelCommand.', wheelSpeedCommand.', ...
             candidateIntegral.', double(mode), ...
-            staticLeanBias.'];
+            staticLeanBias.', accelerationDemand.'];
         assignin('base', 'dbgLqiInputs', captureLog);
     end
     output = [wheelSpeedCommand; nextVelocityIntegral; double(mode); ...

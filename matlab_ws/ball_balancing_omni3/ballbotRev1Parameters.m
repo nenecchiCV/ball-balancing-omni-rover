@@ -209,7 +209,15 @@ p.controller.slipLimitWheelSpeed = p.motor.noLoadSpeed* ...
 p.controller.slipLimitSpeed = min( ...
     p.controller.slipLimitWheelSpeed*p.wheel.radius/ ...
     sin(p.wheel.contactLatitude), p.controller.theoreticalMaxSpeed);
-p.controller.maxSpeed = p.controller.slipLimitSpeed;
+% Command clamp: capped at the demonstrated envelope, NOT the slip
+% limit.  Measured matrix (stateless drag-FF controller): <=0.3 m/s
+% survives at every rolling friction in the 0.005-0.015 band; the
+% rf005 corner tracks ~50% hot but holds, rf008+ tracks within ~12%.
+% At 0.4 m/s the low-drag corner (rf005) already overspeeds to the
+% motor no-load ceiling (~0.97 m/s) and tips; >=0.6 tips at every
+% friction.  The theoretical slip limit (~0.71 m/s) stays documented
+% as a hardware bound, not an achievable command.
+p.controller.maxSpeed = 0.30;
 % Cruise at the slip-limit speed consumes ~20.4 rad/s of wheel speed;
 % allow the command to reach the full motor speed envelope.
 p.controller.lqi.maximumWheelSpeedCommand = ...
@@ -275,12 +283,22 @@ p.controller.torqueDrive.wheelRateFilterTimeConstant = 0.03;
 % exist to correct.  ~1 rad/s keeps the residual filtered flicker out
 % while passing genuine slip/overshoot.
 p.controller.torqueDrive.filteredSlipDeadzone = 1.0;
-% Velocity-integral leak [1/s]: in torque mode a wound-up integral is a
-% constant torque bias that tips the chassis, so it must decay unless a
-% commanded velocity keeps feeding it.
+% Velocity-integral parameters -- DORMANT while torqueLqi.integralGain
+% is zeros (see below).  Retained only so the bookkeeping paths stay
+% parameterised for future experiments; the sustained-drag channel is
+% now the stateless dragLeanFeedforward.  Historical tuning notes:
+% a wheel-torque integral cannot move the assembly (internal force),
+% and a lean-demand integral winds a stored bias that repeatedly
+% produced ~0.9 m/s runaways ending in falls.
 p.controller.torqueDrive.integralLeak = 2.0;
+p.controller.torqueDrive.integralDriveLeak = 0.1;
+% Error magnitude below which the integral holds its value: the encoder
+% stillness band makes sub-0.02 m/s errors unmeasurable, and a leaky
+% integrator fed by flicker is the original creep mechanism.
+p.controller.torqueDrive.integralDeadzone = 0.02;
+p.controller.torqueDrive.integralCommandGate = 0.02;
 % Bisection switches while the torque path is being brought up.
-p.controller.torqueDrive.integralEnabled = false;
+p.controller.torqueDrive.integralEnabled = true;
 p.controller.fullplant.enabled = false;
 % Open-loop torque-step fit measured on the Simscape rev1 plant (0.01 N*m
 % per wheel, 0.25 s): the rigid reduced model overpredicts the tilt and
@@ -344,7 +362,14 @@ p.controller.torqueDrive.leanHoldTorque = ...
 p.controller.torqueDrive.yawGate.maxSpeed = 0.03;
 p.controller.torqueDrive.yawGate.maxTilt = 0.02;
 p.controller.torqueDrive.yawGate.commandThreshold = 1.0e-3;
-p.controller.torqueLqi.integralGain = zeros(3, 2);
+p.controller.torqueLqi.integralGain = zeros(3, 2);  % stays zero: the
+% velocity integral feeds the LEAN demand, not wheel torque -- measured
+% (debugCapture, carpet 0.3 m/s command): the integral winds to its
+% 0.20 limit and the ball still sits at ~0.005 m/s, because wheel
+% torque is an internal rover<->ball force and the tilt loop cancels
+% any sustained external thrust it tries to make.  Sustained thrust on
+% level ground can only come from a held lean (m*g*theta), so the
+% integral is routed into accelerationDemand instead.
 % Velocity-state columns for the torque LQI: ballbotVelocityTorqueGains
 % solves the 10-state plant [v; tilt; rate; yaw; wheels] whose dv/dt =
 % g*tilt + forceScale*W'*tau/mEff, i.e. wheel torque produces a DIRECT
@@ -362,6 +387,35 @@ p.controller.torqueDrive.velocityStateQv = 1000;
     p, payloadForDesign, p.controller.torqueDrive.velocityStateQv);
 p.controller.torqueLqi.stateGain(:, 1:2) = velocityColumns;
 p.controller.torqueLqi.velocityGainDesign = velocityGainDesign;
+% Drag lean feedforward [scale on rollingFriction*g]: on level ground
+% the only sustained external force is the floor reaction to a held
+% lean, m*g*theta, and the rolling-resistance coefficient IS the
+% required equilibrium lean (theta ~ rf, so ~0.15 m/s^2 on carpet and
+% ~0.05 m/s^2 on hardwood).  Feeding it forward along the ball's
+% motion direction supplies the drag thrust with no stored state --
+% unlike a lean-demand integrator it cannot wind a bias past the
+% command and kick the ball into the unrecoverable overspeed regime
+% (the integral version repeatedly produced ~0.9 m/s runaways ending
+% in face-plants across every anti-windup/guard variant tried).
+% 1.0 matches the modelled floor exactly; residual real-floor mismatch
+% is absorbed by the P term as a bounded speed error.
+p.controller.torqueDrive.dragLeanFeedforward = 1.0;
+% Settle-only lean cap [rad]: the move path uses the raised
+% leanSetpointLimit (carpet drag headroom), but the elevated-authority
+% settle D-brake works near the bias-corrected edge of measured tilt
+% and a hotter cap overshoots the recovery window (measured: 10 deg
+% starts fell ~11 s at cap 0.02+ vs ~32 s at 0.015).
+p.controller.torqueDrive.settleLeanCap = 0.015;
+% Overspeed coast margin [m/s above the user command]: a braking lean
+% demand cannot pitch the chassis back once the ball leads -- the
+% internal wheel torque rolls the light ball out from under the
+% chassis first, and the face-plant follows (measured: ~0.9 m/s
+% runaway, brake torque at cap, tilt pinned +0.03 rad).  When the ball
+% exceeds the user command by this margin the whole along-motion
+% demand component (brake AND drag feedforward) is stripped so the
+% chassis levels and rolling resistance sheds the overshoot; normal
+% braking resumes inside the margin.
+p.controller.torqueDrive.overspeedCoastMargin = 0.12;
 p.controller.torqueDrive.slipDampingGain = 0.02;
 % Outer loop.  Two structurally separate channels, because wheel torque
 % is an internal force of the rover+ball system: it cannot accelerate
@@ -384,15 +438,19 @@ p.controller.torqueDrive.slipDampingGain = 0.02;
 % the cone edge still tips because tilt overshoot past the cone is
 % unrecoverable (gravity pole ~6.4 rad/s, ~150 ms e-folding).
 p.controller.torqueDrive.velocityLeanGain = 0.3;
-% Saturation-aware re-derivation for lambda=33 (replaces the 65-deg-era
-% 0.009 rad): the commanded lean band is derived from the tilt-column
-% gain, not set independently.  With the current K_tilt ~4.3 N*m/rad a
-% 0.015 rad edge demands ~0.065 N*m -- ~83% of the 0.078 clamp, same
-% ~75-85% margin the 0.009 rad value held at the old K~6.5.  Measured on
-% the lambda=33 50 s cycle: 0.015 completes clean (maxTilt 0.0114),
-% 0.02 fell at ~33 s and 0.03 only survived with sloppy 0.026 rad tilt.
-% The residual tracking lean for the 0.06 m/s^2 ramp is ~0.006 rad.
-p.controller.torqueDrive.leanSetpointLimit = 0.015;
+% Floor-drag-aware re-derivation (supersedes the 0.015 value, which was
+% itself a saturation-aware redo of the 65-deg-era 0.009).  Cruise on a
+% real floor needs a sustained lean of drag/(m*g): rollingFriction 0.015
+% (short-pile carpet) x ~21 N = ~0.32 N asks ~0.0154 rad — at the old
+% 0.015 cap there was literally no margin, so every carpet command
+% stalled (0.11 m displacement on the 0.12 m/s cycle).  0.022 leaves
+% ~40% lean headroom over the carpet figure, keeps tracking overshoot
+% ~0.03 rad at ~3x margin under the 0.087 rad recoveryTilt, and at
+% K_tilt ~4.3 N*m/rad demands ~0.095 N*m at the edge — ~60% of the
+% corrected 0.162 clamp.  Measured at the corrected budget: the 0.020
+% and 0.030 candidates both survived the 50 s cycle (0.030 sloppy), so
+% 0.022 sits inside the verified-stable band.
+p.controller.torqueDrive.leanSetpointLimit = 0.022;
 % Command-acceleration feedforward gain on the lean demand: the ramped
 % command needs lean ~a_cmd/g (0.003 rad at 0.03 m/s^2), far below the
 % P-error saturation cap, so feedforward carries the nominal lean and
