@@ -376,12 +376,13 @@ p.controller.torqueDrive.slipDampingGain = 0.02;
 % Enabled: the yaw-damper/ball-brake pump is now removed and the inner
 % loop holds machine-zero tilt, so the lean channel is the only physical
 % translation actuator.  leanSetpointLimit must sit well inside the
-% torque-limited hold cone: at lambda=33 the static cone is ~0.11 rad
-% (two wheels at 0.078 N*m through r_b/r_w vs the ~2.5 N*m/rad gravity
-% moment about the ball centre) -- much wider than the ~0.023 rad the
-% old 65-deg geometry measured -- but a lean demand near the cone edge
-% still tips because tilt overshoot past the cone is unrecoverable
-% (gravity pole ~6.4 rad/s, ~150 ms e-folding).
+% torque-limited hold cone: at lambda=33 the static cone is ~0.23 rad at
+% the corrected 0.162 N*m traction cap -- two wheels at the cap through
+% r_b/r_w (~0.58 N*m) vs the ~2.5 N*m/rad gravity moment about the ball
+% centre; it was ~0.11 rad at the stale 0.078 cap.  Much wider than the
+% ~0.023 rad the old 65-deg geometry measured, but a lean demand near
+% the cone edge still tips because tilt overshoot past the cone is
+% unrecoverable (gravity pole ~6.4 rad/s, ~150 ms e-folding).
 p.controller.torqueDrive.velocityLeanGain = 0.3;
 % Saturation-aware re-derivation for lambda=33 (replaces the 65-deg-era
 % 0.009 rad): the commanded lean band is derived from the tilt-column
