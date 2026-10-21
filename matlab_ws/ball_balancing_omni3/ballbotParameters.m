@@ -265,11 +265,19 @@ p.rover.noseAxisBody = [1; 0; 0];
 % effective mu=0.80 budget even though the contact itself cannot slip.
 % Ball compliance model: hollow Ø100 plastic shell + ~1-2 mm rubber
 % membrane -- the membrane, not the shell, sets the contact stiffness.
-% 3e4 N/m puts the wheel sag at ~0.3 mm and floor sag at ~0.7 mm under
-% nominal load, consistent with a membrane compressing a fraction of
-% its thickness; bench-measure before hardware sign-off.
-p.contact.wheelBall.normalStiffness = 3.0e4;
-p.contact.wheelBall.normalDamping = 250;   % ~critical for k=3e4, m~0.5 kg/wheel
+% Wheel side adds the goBILDA roller in SERIES: 50A-durometer rubber
+% sleeve ~1.5 mm thick over the plastic roller core (E ~2.5 MPa,
+% contact patch ~1.5e-5 m^2 -> ~2.5e4 N/m), so the wheel-ball
+% interface is the series combination ~1.4e4 N/m, NOT the ball
+% membrane alone.  Sag check at ~8.5 N nominal wheel load: ~0.6 mm
+% total (roller + membrane), consistent with each layer compressing
+% a fraction of its thickness.  The floor contact below has no
+% roller layer and keeps the membrane-dominated value.  All values
+% remain bench-measure candidates before hardware sign-off.
+p.contact.wheelBall.ballMembraneStiffness = 3.0e4;
+p.contact.wheelBall.rollerLayerStiffness = 2.5e4;
+p.contact.wheelBall.normalStiffness = 1/(1/3.0e4 + 1/2.5e4);   % ~1.4e4
+p.contact.wheelBall.normalDamping = 170;   % ~critical for k=1.4e4, m~0.5 kg/wheel
 p.contact.wheelBall.transitionWidth = 5.0e-4;
 % Wheel-ball contact transition width wired into the WheelNBallContact
 % blocks; the relaxed value damps contact-state chatter.
