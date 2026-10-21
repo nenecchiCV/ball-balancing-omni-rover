@@ -18,50 +18,82 @@ qualificationTimePrevious = previousState(14);
 
 specificForceBody = imu(1:3);
 gyroBodyRaw = imu(4:6);
-gyroBody = gyroBodyRaw - [0; 0; gyroBiasZPrevious];
-rotationWorldFromBody = quaternionToRotation(quaternion);
+% Error-state EKF internals: 5-state covariance [delta-theta(3);
+% delta-gyroBiasXY(2)] plus the filtered motion-model acceleration and
+% the previous kinematic ball velocity it is differentiated from.
+% Roll/pitch gyro bias is observable through the accelerometer and is
+% estimated online; the YAW gyro bias stays on the qualified-stillness
+% learner below (no heading reference makes it unobservable here).
+persistent ekfCovariance ekfBiasXY ekfAccelWorld prevBallVelocityWorld
+ekfEnabled = isfield(p.estimator, "ekf") && ...
+    isfield(p.estimator.ekf, "enabled") && p.estimator.ekf.enabled;
+if ekfEnabled && isempty(ekfCovariance)
+    ekfBiasXY = zeros(2, 1);
+    ekfAccelWorld = zeros(3, 1);
+    prevBallVelocityWorld = zeros(3, 1);
+    ekfCovariance = diag([ ...
+        repmat(p.estimator.ekf.initTiltStd^2, 1, 3), ...
+        repmat(p.estimator.ekf.initBiasStd^2, 1, 2)]);
+end
+if ekfEnabled
+    gyroBody = gyroBodyRaw - [ekfBiasXY*p.estimator.ekf.biasEnabled; ...
+        gyroBiasZPrevious];
+else
+    gyroBody = gyroBodyRaw - [0; 0; gyroBiasZPrevious];
+end
 
 accelerationNorm = norm(specificForceBody);
-% Attitude correction validity: specific force points along true up only
-% when the body is not accelerating.  The norm test alone cannot see
-% horizontal acceleration (|f| changes at second order in a), and the
-% horizontal gate cannot be trusted either: it is computed from the
-% ESTIMATED attitude, and once the attitude error approaches a/g the
-% horizontal component of g+a disappears inside the estimate, so the
-% gate locks open during motion and the correction starts tracking the
-% specific-force direction instead of gravity -- measured runaway: est
-% tilt swung to +/-1.8 rad while the true tilt stayed below 0.02 rad
-% (cycle_result_g05).  The only acceleration-free witness independent
-% of the estimated attitude is the motion sensors themselves: wheels
-% at rest and gyro quiescent means the chassis is genuinely parked, so
-% gravity really is the only specific force.  During motion the
-% attitude integrates gyro only; the move/stop cycle re-corrects at
-% every stop, bounding the drift a noisy IMU accumulates per leg.
+% Stillness witness: wheels at rest and gyro quiescent means the
+% chassis is genuinely parked, so gravity really is the only specific
+% force.  Shared by the legacy gated correction, the EKF measurement
+% noise selection, and the bias learner below.
 quasiStatic = max(abs(wheelRate)) <= p.estimator.biasWheelRateThreshold && ...
     hypot(gyroBody(1), gyroBody(2)) <= p.estimator.biasRollPitchRateThreshold && ...
     abs(gyroBody(3)) <= p.estimator.biasYawRateThreshold;
-if abs(accelerationNorm - p.gravity) <= p.estimator.accelNormGate && ...
-        quasiStatic
-    measuredUpBody = specificForceBody/max(accelerationNorm, eps);
-    predictedUpBody = rotationWorldFromBody'*[0; 0; 1];
-    correction = p.estimator.attitudeCorrectionGain* ...
-        cross(measuredUpBody, predictedUpBody);
-    % Clamp the correction rate: even a legitimate gate opening must not
-    % snap the attitude, because a large single-step rotation outruns
-    % the controller's tilt response.  ~0.5 rad/s still reconverges a
-    % 0.05 rad offset in ~0.1 s of real standstill.
-    maxCorrectionRate = 0.5;
-    correctionMagnitude = norm(correction);
-    if correctionMagnitude > maxCorrectionRate
-        correction = correction*(maxCorrectionRate/correctionMagnitude);
-    end
+if ekfEnabled
+    % EKF predict: gyro integration + covariance propagation.
+    % Error dynamics dTheta' = -[w]x dTheta - dB, dB' = 0.
+    quaternion = integrateQuaternion(quaternion, gyroBody, dt);
+    rotationWorldFromBody = quaternionToRotation(quaternion);
+    stateTransition = eye(5);
+    stateTransition(1:3, 1:3) = eye(3) - dt*skewMatrix(gyroBody);
+    stateTransition(1:3, 4:5) = -dt*[eye(2); zeros(1, 2)];
+    processNoise = diag([ ...
+        repmat(p.estimator.ekf.gyroNoiseDensity^2*dt, 1, 3), ...
+        repmat(p.estimator.ekf.biasRandomWalk^2*dt, 1, 2)]);
+    ekfCovariance = stateTransition*ekfCovariance* ...
+        stateTransition' + processNoise;
 else
-    correction = zeros(3, 1);
+    rotationWorldFromBody = quaternionToRotation(quaternion);
+    % Legacy gated correction: specific force points along true up
+    % only when the body is not accelerating, and no gate computable
+    % from the estimated attitude can be trusted during motion
+    % (measured runaway: est tilt swung to +/-1.8 rad while the true
+    % tilt stayed below 0.02 rad, cycle_result_g05).  Correct only
+    % under the independent stillness witness.
+    if abs(accelerationNorm - p.gravity) <= p.estimator.accelNormGate && ...
+            quasiStatic
+        measuredUpBody = specificForceBody/max(accelerationNorm, eps);
+        predictedUpBody = rotationWorldFromBody'*[0; 0; 1];
+        correction = p.estimator.attitudeCorrectionGain* ...
+            cross(measuredUpBody, predictedUpBody);
+        % Clamp the correction rate: even a legitimate gate opening
+        % must not snap the attitude, because a large single-step
+        % rotation outruns the controller's tilt response.  ~0.5 rad/s
+        % still reconverges a 0.05 rad offset in ~0.1 s of standstill.
+        maxCorrectionRate = 0.5;
+        correctionMagnitude = norm(correction);
+        if correctionMagnitude > maxCorrectionRate
+            correction = correction* ...
+                (maxCorrectionRate/correctionMagnitude);
+        end
+    else
+        correction = zeros(3, 1);
+    end
+    correctedRateBody = gyroBody + correction;
+    quaternion = integrateQuaternion(quaternion, correctedRateBody, dt);
+    rotationWorldFromBody = quaternionToRotation(quaternion);
 end
-
-correctedRateBody = gyroBody + correction;
-quaternion = integrateQuaternion(quaternion, correctedRateBody, dt);
-rotationWorldFromBody = quaternionToRotation(quaternion);
 
 gravityWorld = [0; 0; -p.gravity];
 accelerationWorld = rotationWorldFromBody*specificForceBody + gravityWorld;
@@ -150,6 +182,215 @@ ballRateWorld = ballRateWorldPrevious + ...
     filterWeight*(ballRateKinematic - ballRateWorldPrevious);
 
 ballVelocityWorld = groundRollingMatrix*ballRateWorld;
+if ekfEnabled
+    if p.estimator.ekf.useLegacyCorrection
+        % A/B experiment: run the proven legacy gated correction inside
+        % the EKF predict path (covariance propagation already ran).
+        % Gyro integration already happened in the predict step; here
+        % the correction is integrated on top, exactly like the legacy
+        % branch does.
+        if abs(accelerationNorm - p.gravity) <= p.estimator.accelNormGate && ...
+                quasiStatic
+            measuredUpBody = specificForceBody/max(accelerationNorm, eps);
+            predictedUpBody = rotationWorldFromBody'*[0; 0; 1];
+            correction = p.estimator.attitudeCorrectionGain* ...
+                cross(measuredUpBody, predictedUpBody);
+            correctionMagnitude = norm(correction);
+            if correctionMagnitude > 0.5
+                correction = correction*(0.5/correctionMagnitude);
+            end
+        else
+            correction = zeros(3, 1);
+        end
+        quaternion = integrateQuaternion(quaternion, correction, dt);
+        rotationWorldFromBody = quaternionToRotation(quaternion);
+    else
+    % Motion-model acceleration: the encoder-witnessed ball velocity is
+    % an independent physical channel (not derived from the estimated
+    % attitude), so its derivative predicts the rover's world
+    % acceleration: rover-ball relative motion is bounded to ~0.05 m/s
+    % while the contacts hold, making a_rover ~= a_ball + relPos wobble
+    % to first order.  This prediction is what lets the accelerometer
+    % correct attitude DURING motion: residual = f - R^T(a_pred - g)
+    % isolates gravity regardless of the acceleration state, removing
+    % the quasi-static gate the legacy correction needed.  The
+    % derivative rides on the already-low-passed ball rate and gets a
+    % second filter because encoder flicker differentiates hot.
+    % Motion model: chassis translational acceleration predicted from
+    % channels independent of the estimated attitude.
+    %   a_chassis ~ a_ball + R*d^2(relPos_body)/dt^2
+    % a_ball comes from the encoder-witnessed kinematic solve above;
+    % relPos (rover-minus-ball horizontal offset) is an estimator
+    % state.  The relative term is the piece every simpler model
+    % lacked: during balance slosh the light ball micro-rolls ~mm at
+    % ~1.5 Hz under the chassis, i.e. relPos_ddot reaches +-0.5-1
+    % m/s^2 while the chassis itself barely translates.  a_ball alone
+    % read that slosh as chassis accel and steered the estimate half
+    % a tilt wrong (measured: est ~true/2, loop self-excited past
+    % 0.15 rad); gating on it either leaked ramp-onset accel (ball
+    % lags the tip) or deadlocked (witnesses never quiet mid-wobble).
+    % relVel needs no differentiation: it is the already-filtered
+    % velocityWorld - ballVelocityWorld difference rotated to body.
+    accelTau = p.estimator.ekf.accelFilterTimeConstant;
+    ballAccelRaw = (ballVelocityWorld - prevBallVelocityWorld)/dt;
+    prevBallVelocityWorld = ballVelocityWorld;
+    accelWeight = dt/(accelTau + dt);
+    ekfAccelWorld = ekfAccelWorld + ...
+        accelWeight*(ballAccelRaw - ekfAccelWorld);
+    persistent ekfRelVelBody ekfRelAccBody
+    if isempty(ekfRelVelBody)
+        ekfRelVelBody = zeros(2, 1);
+        ekfRelAccBody = zeros(2, 1);
+    end
+    relVelBodyNow = rotationWorldFromBody(1:2, 1:2)'* ...
+        (velocityWorld(1:2) - ballVelocityWorld(1:2));
+    relAccRaw = (relVelBodyNow - ekfRelVelBody)/dt;
+    ekfRelVelBody = relVelBodyNow;
+    relAccWeight = dt/(p.estimator.ekf.relAccFilterTimeConstant + dt);
+    ekfRelAccBody = ekfRelAccBody + ...
+        relAccWeight*(relAccRaw(1:2) - ekfRelAccBody);
+    relAccWorld = rotationWorldFromBody*[ekfRelAccBody; 0];
+    % Rotation witness: at ramp onset the chassis tips before it
+    % translates, so translation-only predictions (a_ball + relAcc)
+    % read ~0 through exactly the window where the IMU feels
+    % z_lever*theta_ddot of sway accel.  The gyro-rate derivative
+    % reports the tip instantly and is independent of the attitude
+    % estimate; its absence let phantom-tilt residuals through at
+    % onset (measured: estP pulled negative while true pitch grew).
+    persistent ekfGyroDotBody ekfPrevGyroBody
+    if isempty(ekfGyroDotBody)
+        ekfGyroDotBody = zeros(3, 1);
+        ekfPrevGyroBody = gyroBody;
+    end
+    gyroDotRaw = (gyroBody - ekfPrevGyroBody)/dt;
+    ekfPrevGyroBody = gyroBody;
+    gyroDotWeight = dt/(p.estimator.ekf.gyroDotFilterTimeConstant + dt);
+    ekfGyroDotBody = ekfGyroDotBody + gyroDotWeight*( ...
+        gyroDotRaw - ekfGyroDotBody);
+    gyroDotWorld = rotationWorldFromBody*ekfGyroDotBody;
+    comSwayWorld = p.rover.centerAboveBall* ...
+        [gyroDotWorld(2); -gyroDotWorld(1); 0];
+    accelPrediction = ekfAccelWorld + relAccWorld + comSwayWorld;
+    % The prediction gates update admissibility only -- it is NOT
+    % injected into the residual.  Every injection variant (a_ball,
+    % a_ball+z*thetaddot, a_ball+relAcc) parasitically cancelled the
+    % true tilt signature or fed back through the bootstrapped
+    % relPos/velocity channels and destabilized the hold (measured:
+    % hold maxTilt 0.15-0.72 vs 0.006 gated-only).  Admissibility =
+    % provably inertial segment: wheels at rest, or predicted chassis
+    % accel ~0 (steady cruise), where specific force IS pure gravity
+    % and the residual is attitude error however large.
+    % Rate witness: every accel witness (a_ball, relAcc, z*thetaddot)
+    % is filtered and lags the onset by ~0.1-0.2 s; the raw gyro rate
+    % has no filter lag -- the instant the chassis tips the gate shuts.
+    % Wheel-slew witness: the motors drive the wheels hard the instant
+    % a ramp starts, before EITHER accel witness has filtered through
+    % (measured: ~0.02 rad of phantom tilt leaked into the estimate
+    % during that blind window and stayed, since the gate then shuts
+    % legitimately through the whole accel leg).  A lightly filtered
+    % wheel slew reacts within ~2 samples.
+    persistent ekfWheelSlew ekfPrevWheelRate
+    if isempty(ekfWheelSlew)
+        ekfWheelSlew = 0;
+        ekfPrevWheelRate = wheelRate;
+    end
+    wheelSlewRaw = max(abs((wheelRate - ekfPrevWheelRate)/dt));
+    ekfPrevWheelRate = wheelRate;
+    slewWeight = dt/(p.estimator.ekf.wheelSlewFilterTimeConstant + dt);
+    ekfWheelSlew = ekfWheelSlew + slewWeight*(wheelSlewRaw - ekfWheelSlew);
+    inertialNow = norm(accelPrediction) <= p.estimator.ekf.accelGate && ...
+        hypot(gyroBody(1), gyroBody(2)) <= ...
+            p.estimator.ekf.gyroRateGate && ...
+        ekfWheelSlew <= p.estimator.ekf.wheelSlewGate;
+    % Debounce on BOTH inertia witnesses: even instant witnesses admit
+    % a ~0.2 s blind window at a ramp onset before the rate builds,
+    % and the raw quasiStatic test flickers true inside the calm gaps
+    % of an active wobble -- phantom-tilt residuals leaked through
+    % exactly those windows (measured: est pulled to ~0.4-0.5x true
+    % through every leg, then the tilt ran away; gating without the
+    % debounce still fell at 8 s).  Requiring quiet to hold
+    % continuously for settleTime before updates resume closes every
+    % transient leak; cruise legs and parking stay quiet for seconds,
+    % so in-motion corrections still flow -- the EKF gain over the
+    % rest-only corrector.
+    persistent inertialHold
+    if isempty(inertialHold)
+        inertialHold = 0;
+    end
+    if quasiStatic || inertialNow
+        inertialHold = inertialHold + dt;
+    else
+        inertialHold = 0;
+    end
+    updateAllowed = inertialHold >= p.estimator.ekf.inertialSettleTime;
+    if quasiStatic
+        modelVar = p.estimator.ekf.modelSigmaStatic^2;
+    else
+        modelVar = p.estimator.ekf.modelSigmaMove^2;
+    end
+    expectedForceWorld = -gravityWorld;   % pure gravity (a ~ 0)
+    predictedForceBody = rotationWorldFromBody'*expectedForceWorld;
+    residual = specificForceBody - predictedForceBody;
+    % H = d f / d [dTheta; dB]: with q_true = q ⊗ dq(dTheta) the
+    % specific-force sensitivity is [h]x on attitude and zero on bias.
+    measurementJacobian = [skewMatrix(predictedForceBody), ...
+        zeros(3, 2)];
+    accelVar = (p.estimator.ekf.accelNoiseDensity* ...
+        sqrt(1/(2*dt)))^2;
+    measurementNoise = (accelVar + modelVar)*eye(3);
+    innovationCov = measurementJacobian*ekfCovariance* ...
+        measurementJacobian' + measurementNoise;
+    % While the two-witness gate is open the chassis is provably
+    % inertial, so the residual is attitude error however large it
+    % is -- vetoing big residuals deadlocked the estimate (measured:
+    % once the lag passed ~0.03 rad the 0.3 m/s^2 veto rejected every
+    % update and the true tilt walked off to a fall while the estimate
+    % sat frozen).  The only remaining veto is the extreme bound that
+    % no plausible attitude error reaches: sensor fault, slipping or
+    % airborne contact under a still-reading encoder.
+    if updateAllowed && ...
+            norm(residual) <= p.estimator.ekf.residualGate
+        kalmanGain = ekfCovariance*measurementJacobian'/ ...
+            innovationCov;
+        deltaState = kalmanGain*residual;
+        % Per-update tilt clamp: a large residual is legitimate here
+        % (the debounced quiet window can open with a real ~0.1 rad
+        % backlog), but a single 0.2+ rad snap still outruns the
+        % controller's tilt response -- the legacy corrector's
+        % 0.5 rad/s rate clamp existed for the same reason.  Bounded
+        % steps reconverge a 0.1 rad error in ~4 samples of quiet.
+        tiltStepNorm = norm(deltaState(1:3));
+        tiltStepLimit = p.estimator.ekf.maxTiltStep;
+        if tiltStepNorm > tiltStepLimit
+            deltaState(1:3) = deltaState(1:3)* ...
+                (tiltStepLimit/tiltStepNorm);
+        end
+        % Inject the attitude correction (multiplicative, small-angle
+        % quat), absorb the bias increment, Joseph-form covariance.
+        deltaQuat = [1; 0.5*deltaState(1:3)];
+        deltaQuat = deltaQuat/norm(deltaQuat);
+        quaternion = quaternionMultiply(quaternion, deltaQuat);
+        ekfBiasXY = ekfBiasXY + ...
+            deltaState(4:5)*p.estimator.ekf.biasEnabled;
+        identityKH = eye(5) - kalmanGain*measurementJacobian;
+        ekfCovariance = identityKH*ekfCovariance*identityKH' + ...
+            kalmanGain*measurementNoise*kalmanGain';
+        % Attitude-covariance floor: a balancing chassis re-tilts at
+        % any moment (the plant genuinely violates the constant-tilt
+        % assumption every control cycle), so the covariance is not
+        % allowed to collapse to the sensor-noise floor -- the Kalman
+        % gain would die and the estimate would lag real excursions
+        % ~2x (measured).  The floor holds the correction bandwidth
+        % near the legacy corrector's ~0.4 s equivalent.
+        for diagIndex = 1:3
+            ekfCovariance(diagIndex, diagIndex) = max( ...
+                ekfCovariance(diagIndex, diagIndex), ...
+                p.estimator.ekf.tiltVarFloor);
+        end
+        rotationWorldFromBody = quaternionToRotation(quaternion);
+    end
+    end
+end
 % Velocity anchor: the accel-integrated rover velocity drifts because no
 % channel corrects it during motion (a small sustained accel bias
 % integrates to ~0.3 m/s over a move leg -- observed).  The
@@ -255,6 +496,15 @@ function matrix = skewMatrix(vector)
 matrix = [0, -vector(3), vector(2); ...
     vector(3), 0, -vector(1); ...
     -vector(2), vector(1), 0];
+end
+
+function product = quaternionMultiply(q1, q2)
+% Hamilton product q1 ⊗ q2 for [w; x; y; z] quaternions: applies the
+% q2 rotation in the q1 frame (error-state injection uses nominal ⊗ delta).
+product = [q1(1)*q2(1) - q1(2)*q2(2) - q1(3)*q2(3) - q1(4)*q2(4); ...
+    q1(1)*q2(2) + q1(2)*q2(1) + q1(3)*q2(4) - q1(4)*q2(3); ...
+    q1(1)*q2(3) - q1(2)*q2(4) + q1(3)*q2(1) + q1(4)*q2(2); ...
+    q1(1)*q2(4) + q1(2)*q2(3) - q1(3)*q2(2) + q1(4)*q2(1)];
 end
 
 function nextQuaternion = integrateQuaternion(quaternion, rate, dt)

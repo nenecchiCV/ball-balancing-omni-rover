@@ -444,6 +444,99 @@ p.estimator.biasTimeConstant = 1.0;
 p.estimator.biasMaximum = 0.10;
 p.estimator.biasMaximumUpdatePerSample = 1.0e-4;
 
+% Attitude EKF (error-state, 5 dof: small-angle delta-theta + roll/pitch
+% gyro bias).  The yaw gyro bias is unobservable without a heading
+% sensor and stays on the qualified-stillness learner above.  The
+% accelerometer update is compensated by a motion model -- the
+% encoder-witnessed ball acceleration -- so gravity correction stays
+% ACTIVE during motion, replacing the legacy rest-only gated
+% correction that bounded drift only at stop windows.
+p.estimator.ekf.enabled = true;
+% Sensor noise densities, LSM6DSO datasheet high-performance mode:
+% gyro 3.8 mdps/sqrt(Hz); accel 75 ug/sqrt(Hz) at the +-4 g range.
+% The filter runs an inflated gyro figure (3x datasheet): it doubles
+% as process noise for the unmodeled flex/mount dynamics and keeps the
+% attitude covariance high enough that the Kalman gain tracks the
+% plant's real tilt excursions (measured: datasheet-exact gains lagged
+% the true tilt ~2.5x and the loop self-excited).
+p.estimator.ekf.gyroNoiseDensity = 3.8e-3*pi/180*3;    % rad/s/sqrt(Hz)
+p.estimator.ekf.accelNoiseDensity = 75e-6*p.gravity;   % m/s^2/sqrt(Hz)
+% Gyro bias random walk: LSM6DSO publishes no explicit ARW; the
+% zero-rate temp drift 0.010 dps/degC bounds slow wander, so allow a
+% ~0.012 dps/sqrt(s) walk -- enough to track thermal bias over ~100 s
+% without letting the accel update steer it fast.
+p.estimator.ekf.biasRandomWalk = 2.0e-4;               % rad/s/sqrt(s)
+% Residual accel noise while the in-motion update window is open:
+% the chassis is provably near-inertial then, so the sigma covers
+% accel noise, contact jitter, and the relPos wobble the gravity
+% model ignores.  At standstill only noise + mount misalignment.
+p.estimator.ekf.modelSigmaMove = 0.15;                 % m/s^2
+p.estimator.ekf.modelSigmaStatic = 0.05;               % m/s^2
+% Ball-velocity derivative low-pass: raw encoder flicker
+% differentiates hot (~+-20 m/s^2 raw); 0.25 s leaves ~+-0.1 residue.
+p.estimator.ekf.accelFilterTimeConstant = 0.25;        % s
+% relPos-acceleration low-pass for the slosh witness: the wobble runs
+% at ~1.5 Hz; 0.08 s keeps the witness responsive without flicker.
+p.estimator.ekf.relAccFilterTimeConstant = 0.08;       % s
+% Gyro-rate derivative low-pass for the tip-onset witness: raw gyro
+% noise differentiates to ~+-0.4 rad/s^2 at 200 Hz; 0.10 s stays fast
+% enough to catch ramp-onset tipping within a few samples.
+p.estimator.ekf.gyroDotFilterTimeConstant = 0.10;      % s
+% Inertial-segment gate on |predicted chassis accel| [m/s^2]: the
+% prediction = a_ball + relPos_ddot + z*thetaddot; near zero means
+% parked or steady cruise, where the specific force is pure gravity
+% and the gravity update is valid IN MOTION.  Above the bound
+% (ramps, slosh, braking) the update waits -- attitude rides on the
+% gyro, unbiased over the few seconds a transient lasts.
+p.estimator.ekf.accelGate = 0.15;                      % m/s^2
+% Instant-onset witness [rad/s]: every accel channel is filtered and
+% lags a tip onset ~0.1-0.2 s; the raw roll/pitch rate does not.
+% Creep and cruise keep |w_rp| below ~0.1 while any real tip exceeds
+% it within samples.
+p.estimator.ekf.gyroRateGate = 0.15;                   % rad/s
+% Debounce on the inertial-segment gate [s]: all accel witnesses are
+% filtered and lag a ramp onset ~0.1-0.2 s; requiring the quiet
+% condition to persist before updates resume removes every transient
+% leak while leaving sustained cruise fully correctable.
+% Wheel-slew witness: motors drive the wheels the instant a leg
+% starts -- the only channel reacting before the filtered accel
+% witnesses.  Quantization flicker differentiates hot raw, so the
+% slew is low-passed at 0.05 s and gated above the flicker residue.
+p.estimator.ekf.wheelSlewFilterTimeConstant = 0.05;    % s
+p.estimator.ekf.wheelSlewGate = 3.0;                   % rad/s^2
+p.estimator.ekf.inertialSettleTime = 0.30;             % s
+% Per-update cap on the injected attitude step [rad]: bounds how much
+% a leaked update can inject before the filtered accel witnesses
+% close the gate (~0.1-0.2 s after onset).  Sized at the legacy
+% corrector's 0.5 rad/s rate-clamp equivalent (0.004 rad per 5 ms
+% sample); the earlier 0.02 rad cap let a single onset window inject
+% ~0.03 rad of phantom tilt (offline-measured), which then stayed
+% frozen into the estimate while the loop ran the tilt away.
+p.estimator.ekf.maxTiltStep = 0.004;                   % rad
+% Roll/pitch gyro-bias states in the error-state vector.  Set 0 while
+% validating: a wrongly-accumulated bias subtracts real rate from the
+% gyro and the integrated tilt under-reads exactly when it matters.
+p.estimator.ekf.biasEnabled = 1;                       % 0/1
+% A/B experiment: 1 runs the proven legacy gated correction inside the
+% EKF predict path, isolating whether failures come from the Kalman
+% update or elsewhere in the EKF wiring.
+p.estimator.ekf.useLegacyCorrection = 0;               % 0/1
+% Extreme-residual veto [m/s^2]: with the witness gate open the
+% residual IS attitude error however large, so vetoing at the
+% accel-level scale deadlocked the estimate (once lag passed ~0.03
+% rad every update was rejected and the rover fell with a frozen
+% estimate).  1.5 m/s^2 ~ 0.15 rad is beyond any plausible one-sample
+% attitude error; larger means sensor fault or a slipping/airborne
+% contact the still-reading encoders cannot see.
+p.estimator.ekf.residualGate = 1.50;                   % m/s^2
+% Attitude-covariance floor [rad^2]: keeps the Kalman gain alive --
+% without it P collapses to the gyro-noise floor within ~1 s and the
+% estimate lags real tilt excursions.  (5 mrad)^2 ~ gain bandwidth
+% ~0.1 s at the static R.
+p.estimator.ekf.tiltVarFloor = (5.0e-3)^2;             % rad^2
+p.estimator.ekf.initTiltStd = 0.05;    % rad, startup alignment
+p.estimator.ekf.initBiasStd = 0.02;    % rad/s, LSM6DSO zero-rate +-1 dps
+
 % Cascaded velocity/balance/yaw controller.
 p.controller.sampleTime = p.estimator.sampleTime;
 p.controller.velocityKp = [0.35; 0.35];

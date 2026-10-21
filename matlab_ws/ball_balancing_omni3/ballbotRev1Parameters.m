@@ -209,15 +209,16 @@ p.controller.slipLimitWheelSpeed = p.motor.noLoadSpeed* ...
 p.controller.slipLimitSpeed = min( ...
     p.controller.slipLimitWheelSpeed*p.wheel.radius/ ...
     sin(p.wheel.contactLatitude), p.controller.theoreticalMaxSpeed);
-% Command clamp: capped at the demonstrated envelope, NOT the slip
-% limit.  Measured matrix (stateless drag-FF controller): <=0.3 m/s
-% survives at every rolling friction in the 0.005-0.015 band; the
-% rf005 corner tracks ~50% hot but holds, rf008+ tracks within ~12%.
-% At 0.4 m/s the low-drag corner (rf005) already overspeeds to the
-% motor no-load ceiling (~0.97 m/s) and tips; >=0.6 tips at every
-% friction.  The theoretical slip limit (~0.71 m/s) stays documented
-% as a hardware bound, not an achievable command.
-p.controller.maxSpeed = 0.30;
+% Command clamp: capped at the EKF-validated envelope.  Measured
+% matrix (stateless drag-FF + motion-model EKF): 0.40 m/s completes
+% the ramp+cruise window at every rolling friction in the 0.005-0.015
+% band (rf015 tracks 0.407 m/s, rf008 +11% hot, rf005 +45% hot but
+% survives -- the pre-EKF attitude under-read that failed this corner
+% at 15.8 s is gone).  >=0.6 m/s still tips at every friction
+% (overshoot reaches the ~0.97 m/s motor no-load ceiling during the
+% ramp).  The theoretical slip limit (~0.71 m/s) stays documented as
+% a hardware bound, not an achievable command.
+p.controller.maxSpeed = 0.40;
 % Cruise at the slip-limit speed consumes ~20.4 rad/s of wheel speed;
 % allow the command to reach the full motor speed envelope.
 p.controller.lqi.maximumWheelSpeedCommand = ...
@@ -675,21 +676,22 @@ p.controller.torqueDrive.ballYawTorqueLimit = 0.025;
 % keeps the drift fully damped without measurable budget cost.
 p.controller.torqueDrive.yawDampingGain = 0.30;
 
-% Mounted-IMU realism (LSM6DSV16X on X-NUCLEO-IKS4A1, sampled at the
+% Mounted-IMU realism (LSM6DSO, on-board or shield-mounted at the
 % 200 Hz estimator rate).  ballbotImuFromJoint applies these when
-% enabled: datasheet noise densities (gyro 2.8 mdps/sqrt(Hz), accel
-% 60 ug/sqrt(Hz)) converted to per-sample sigma by ND/sqrt(2*Ts), and
-% 16-bit word quantization at the selected full scales (+/-2000 dps,
-% +/-4 g).  Bias vectors carry the constant zero-rate offsets; the yaw
-% bias test injection remains on p.simulation.imuYawBias and adds on
-% top.  vibration* injects a sinusoidal specific-force disturbance for
-% the vibration scenario (C-12); amplitude 0 disables.  noiseSeed fixes
-% the noise stream so runs are reproducible (reset via clear functions,
-% which the scratch scripts already do).
+% enabled: datasheet noise densities (gyro 3.8 mdps/sqrt(Hz), accel
+% 75 ug/sqrt(Hz) at +-4 g, both high-performance mode) converted to
+% per-sample sigma by ND/sqrt(2*Ts), and 16-bit word quantization at
+% the selected full scales (+/-2000 dps, +/-4 g).  Bias vectors carry
+% the constant zero-rate offsets; the yaw bias test injection remains
+% on p.simulation.imuYawBias and adds on top.  vibration* injects a
+% sinusoidal specific-force disturbance for the vibration scenario
+% (C-12); amplitude 0 disables.  noiseSeed fixes the noise stream so
+% runs are reproducible (reset via clear functions, which the scratch
+% scripts already do).
 p.imu.enabled = true;
 p.imu.noiseSeed = 20261015;
-p.imu.gyroNoiseDensity = 2.8e-3*pi/180;          % rad/s/sqrt(Hz)
-p.imu.accelNoiseDensity = 60e-6*p.gravity;       % m/s^2/sqrt(Hz)
+p.imu.gyroNoiseDensity = 3.8e-3*pi/180;          % rad/s/sqrt(Hz)
+p.imu.accelNoiseDensity = 75e-6*p.gravity;       % m/s^2/sqrt(Hz)
 p.imu.gyroQuantum = 4000*(pi/180)/65536;         % +/-2000 dps, 16 bit
 p.imu.accelQuantum = 8*p.gravity/65536;          % +/-4 g, 16 bit
 p.imu.gyroBias = [0; 0; 0];

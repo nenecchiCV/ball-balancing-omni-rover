@@ -675,8 +675,20 @@ if torqueDrive
             % drift unbraked (measured: 10 deg starts fell ~15 s with
             % the gate active in settle).
             coastBallSpeed = norm(ballVelocityBody);
+            % Speed floor: the face-plant mechanism lives in the
+            % ~0.9 m/s regime; below ~0.5 m/s a braking lean still
+            % pitches the chassis back effectively, and gating there
+            % instead locks a post-recovery creep open indefinitely
+            % (measured: 10 deg recovery left the assembly coasting
+            % ~0.3 m/s for 9 s at tilt 0.01 -- lean thrust balancing
+            % rolling drag -- until a random excursion fell at 12 s).
+            coastFloor = 0.5;
+            if isfield(p.controller.torqueDrive, "overspeedCoastFloor")
+                coastFloor = p.controller.torqueDrive.overspeedCoastFloor;
+            end
             if coastBallSpeed > norm(commandVelocityBodyUser) + ...
-                    p.controller.torqueDrive.overspeedCoastMargin
+                    p.controller.torqueDrive.overspeedCoastMargin && ...
+                    coastBallSpeed > coastFloor
                 coastDir = ballVelocityBody/coastBallSpeed;
                 accelerationDemand = accelerationDemand - ...
                     dot(accelerationDemand, coastDir)*coastDir;
