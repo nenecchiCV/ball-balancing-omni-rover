@@ -1,10 +1,13 @@
 % Cycle verification run: move/stop/yaw-separated profile at slip-limit
 % speed.  Optional overrides applied to ballbotParams after PreLoadFcn.
 % Saves key signals to cycle_result_<tag>.mat.
-function scratch_cycle(stopTime, tag, ov)
+function scratch_cycle(stopTime, tag, ov, modelName)
 if nargin < 1, stopTime = 28; end
 if nargin < 2, tag = 'def'; end
-mdl = 'ball_balancing_omni3_multibody_lqi_rev1';
+if nargin < 4 || isempty(modelName)
+    modelName = 'ball_balancing_omni3_multibody_lqi_rev1';
+end
+mdl = modelName;
 % Never trust an inherited ballbotParams: pooled batch workers keep the
 % base workspace between jobs, and a stale set can silently zero the
 % command profile.  Regenerate deterministically, then apply overrides.

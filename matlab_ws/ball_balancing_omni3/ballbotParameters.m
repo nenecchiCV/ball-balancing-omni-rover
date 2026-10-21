@@ -547,6 +547,10 @@ p.estimator.ekf.initBiasStd = 0.02;    % rad/s, LSM6DSO zero-rate +-1 dps
 
 % Cascaded velocity/balance/yaw controller.
 p.controller.sampleTime = p.estimator.sampleTime;
+% Rev2 multi-rate: inner wheel servo rate.  The STM32G474RE (170 MHz
+% M4F) schedules this as a faster discrete task under R2024b Embedded
+% Coder's "treat each discrete rate as separate task" mode.
+p.controller.servoSampleTime = 0.001;
 p.controller.velocityKp = [0.35; 0.35];
 p.controller.velocityKi = [0.04; 0.04];
 p.controller.relativePositionKp = [0; 0];
