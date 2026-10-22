@@ -182,8 +182,10 @@ p.servo.maxSpeed = p.motor.noLoadSpeed;
 rhoABS = 1050;
 l1DiscMass = rhoABS*43.994e-6;   % L1 disc net of openings + 30 x Ø3.5 M3-clearance holes incl. rotated spacer pattern (Fusion measured 43.994 cm^3)
 l1DiscInertia = l1DiscMass*(3*0.080^2 + 0.003^2)/12;
-frameDiscMass = rhoABS*59.203e-6; % L2/L3 discs net of 6 x Ø3.5 spacer holes + Ø20 center hole (Fusion measured 59.203 cm^3 each; obsolete spacer-hole fill stubs removed)
+frameDiscMass = rhoABS*59.203e-6; % L2 disc net of 6 x Ø3.5 spacer holes + Ø20 center hole (Fusion measured 59.203 cm^3; obsolete spacer-hole fill stubs removed)
 frameDiscInertia = frameDiscMass*(3*0.080^2 + 0.003^2)/12;
+l3DiscMass = rhoABS*60.146e-6;    % L3 disc: same as L2 but Ø20 center hole filled (unneeded); Fusion measured 60.146 cm^3
+l3DiscInertia = l3DiscMass*(3*0.080^2 + 0.003^2)/12;
 spacerMass = rhoABS*1.1074e-6;   % Spacer_M3x50 tube OD 6.2 / bore 3.2 x 50 mm (Fusion measured 1.1074 cm^3)
 spacerInertia = spacerMass*(3*(0.0031^2+0.0016^2) + 0.050^2)/12;
 mountMass = rhoABS*51.443e-6;    % MotorMount_v23 plate-width square-tube mount + rectangular fastening plate + wedge fills + motor-end bottom-corner chamfer on the face-plate plane (parallel to the ball-wheel contact tangent; M2.5 face holes + central Ø25 boss; single body, 60 faces), measured 51.443 cm^3
@@ -216,7 +218,7 @@ chassisParts = [ ...
 %    mass[kg]        comZ above ball center [m]  Ixx about own COM [kg m^2]
     l1DiscMass      0.0985                      l1DiscInertia
     frameDiscMass   0.1515                      frameDiscInertia
-    frameDiscMass   0.2045                      frameDiscInertia
+    l3DiscMass      0.2045                      l3DiscInertia
     6*spacerMass    0.12525                     6*spacerInertia
     6*spacerMass    0.17825                     6*spacerInertia
     3*mountMass     mountComAboveBall           3*mountTiltI
