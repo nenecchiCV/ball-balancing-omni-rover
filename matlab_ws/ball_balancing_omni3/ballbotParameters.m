@@ -188,14 +188,14 @@ l3DiscMass = rhoABS*60.146e-6;    % L3 disc: same as L2 but Ø20 center hole fil
 l3DiscInertia = l3DiscMass*(3*0.080^2 + 0.003^2)/12;
 spacerMass = rhoABS*1.1074e-6;   % Spacer_M3x50 tube OD 6.2 / bore 3.2 x 50 mm (Fusion measured 1.1074 cm^3)
 spacerInertia = spacerMass*(3*(0.0031^2+0.0016^2) + 0.050^2)/12;
-mountMass = rhoABS*51.443e-6;    % MotorMount_v23 plate-width square-tube mount + rectangular fastening plate + wedge fills + motor-end bottom-corner chamfer on the face-plate plane (parallel to the ball-wheel contact tangent; M2.5 face holes + central Ø25 boss; single body, 60 faces), measured 51.443 cm^3
+mountMass = rhoABS*50.743e-6;    % MotorMount_v23 plate-width square-tube mount + rectangular fastening plate + wedge fills + motor-end bottom-corner chamfer on the face-plate plane (parallel to the ball-wheel contact tangent; M2.5 flat-head screw through-holes on a flat face plate, no boss/pockets; single body, 52 faces), measured 50.743 cm^3
 adapterMass = rhoABS*1.2171e-6;  % WheelAdapter_v4 measured volume 1.217 cm^3 (tube s'=-1.0..11.5)
 % Fusion-measured own-CG inertias scaled to ABS mass (the y/tangential
 % axis entry is used for tilt; the z axis entry is used in the yaw sum).
-% v23 CG-frame tensor (steel) Ixx/Iyy/Izz = 2.012/1.181/1.761
+% v23 CG-frame tensor (steel) Ixx/Iyy/Izz = 1.976/1.175/1.753
 % kg*cm^2 (Ixz = -0.12) -> ABS scale 0.1338.
-mountTiltI = 1.58e-5;  % per MotorMount_v23 (own-CG, ABS-scaled)
-mountYawI = 2.36e-5;
+mountTiltI = 1.57e-5;  % per MotorMount_v23 (own-CG, ABS-scaled)
+mountYawI = 2.35e-5;
 adapterTiltI = adapterMass*(3*0.006^2 + 0.0125^2)/12;
 adapterYawI = adapterMass*0.006^2/2;
 % Drivetrain CG heights [m above ball center] and radial arms [m] for
@@ -204,11 +204,11 @@ adapterYawI = adapterMass*0.006^2/2;
 % measurements of the placed occurrences.
 motorComAboveBall = 0.0790;   % Fusion motor CG z = 129.0 mm above ground
 wheelComAboveBall = 0.0403;
-mountComAboveBall = 0.0783;   % Fusion v23 CG z = 128.3 mm above ground (78.3 above ball centre z=50)
+mountComAboveBall = 0.0787;   % Fusion v23 CG z = 128.7 mm above ground (78.7 above ball centre z=50)
 adapterComAboveBall = 0.0447;   % Fusion adapter CG z = 94.7 mm above ground
 motorYawArm = 0.0371;         % Fusion motor CG radial arm
 wheelYawArm = 0.0620;
-mountYawArm = 0.0556;         % Fusion v23 CG radial arm
+mountYawArm = 0.0557;         % Fusion v23 CG radial arm
 adapterYawArm = 0.0592;       % Fusion adapter CG radial arm
 motorTiltI = p.motor.mass*(p.motor.dimensions(1)^2 + ...
     p.motor.dimensions(2)^2)/12;
