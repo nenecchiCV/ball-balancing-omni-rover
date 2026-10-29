@@ -1,6 +1,6 @@
 {
   "valid": true,
-  "revision": "v23 (Fusion 360: single-body square-tube mount MotorMount_v23 — outer box sized to the fastening plate: 48x48 mm square tube (y=±24, n'=±24 outer) with thick walls (9 mm sides, 9 mm bottom, 7 mm frame side), bore 30x32 mm (y=±15, n'=-15..+17) wrapping the Ø25 motor can; face plate carries a Ø25 central boss (s'=14..~18.4) holding the fastener pattern: Ø8 nose hole + PCD17 Ø2.9 through-holes (M2.5) + Ø6.0 washer pockets; the +n' wall (inner face n'=17, outer n'=24 — clears motor tail connector n'<=15.5) extends toward the frame to s'=64 and is trimmed at z=147, where a horizontal fastening plate meets Frame_L1 bottom face flush; plate is a uniform rectangle x=34..72.5 x y=±34; frame-side diagonal gap between the +n' wall outer face (57° slope) and the plate bottom z=141 is wedge-filled (triangle x=57.75..72.5, y±24) so the fastening-plate face can sit flat on the print bed; motor-end bottom corner (34,±24,88.78) chamfered on a plane PARALLEL TO THE BALL-WHEEL CONTACT TANGENT (face normal (0.839,0,0.545) = ball-centre->wheel-centre direction = axle direction; face parallel to the face plate; leg ~17.2 mm up the x=34 end face to z=105.97), deepened a further +1.358 mm along the face normal so the chamfer plane lies coplanar with the face-plate outer surface; Ø3.5 vertical fastening holes at (44.5,±29) and (62,±29) through the plate for M3 bolt+nut+Ø6-washer sandwiches (4 per station); U-slot (x=33..53, y=±13.5) clears the tail connector; non-stiffness regions inboard of the plate inner edge (x<34) and outboard of the outer edge (x>72.5) removed by vertical cuts; 3 occurrences; motor/wheel positions unchanged; lambda=33; plan-B inward)",
+  "revision": "v23 (Fusion 360: single-body square-tube mount MotorMount_v23 — outer box sized to the fastening plate: 48x48 mm square tube (y=±24, n'=±24 outer) with thick walls (9 mm sides, 9 mm bottom, 7 mm frame side), bore 30x32 mm (y=±15, n'=-15..+17) wrapping the Ø25 motor can; face plate is FLAT on both sides (wheel-side face coplanar with the plate outer face — former Ø25 raised boss and Ø6.0 washer pockets removed for flat-head screws; motor-contact face flat) carrying Ø8 nose hole + PCD17 Ø2.9 through-holes (M2.5); the +n' wall (inner face n'=17, outer n'=24 — clears motor tail connector n'<=15.5) extends toward the frame to s'=64 and is trimmed at z=147, where a horizontal fastening plate meets Frame_L1 bottom face flush; plate is a uniform rectangle x=34..72.5 x y=±34; frame-side diagonal gap between the +n' wall outer face (57° slope) and the plate bottom z=141 is wedge-filled (triangle x=57.75..72.5, y±24) so the fastening-plate face can sit flat on the print bed; motor-end bottom corner (34,±24,88.78) chamfered on a plane PARALLEL TO THE BALL-WHEEL CONTACT TANGENT (face normal (0.839,0,0.545) = ball-centre->wheel-centre direction = axle direction; face parallel to the face plate; leg ~17.2 mm up the x=34 end face to z=105.97), deepened a further +1.358 mm along the face normal so the chamfer plane lies coplanar with the face-plate outer surface; Ø3.5 vertical fastening holes at (44.5,±29) and (62,±29) through the plate for M3 bolt+nut+Ø6-washer sandwiches (4 per station); U-slot (x=33..53, y=±13.5) clears the tail connector; non-stiffness regions inboard of the plate inner edge (x<34) and outboard of the outer edge (x>72.5) removed by vertical cuts; 3 occurrences; motor/wheel positions unchanged; lambda=33; plan-B inward)",
   "solids_count": {
     "mount_v23": [1, 1, 1],
     "motor": [2, 2, 2],
@@ -9,10 +9,10 @@
     "frame_L3": [1]
   },
   "face_count": {
-    "note": "単一ソリッド、60面。外形=締結プレート寸法(48mm幅)+一様長方形プレート x=34..72.5×y=±34、フレーム側斜め隙間を楔充填、モーター端部下端角はボール・ホイール接線に平行な面で面取り(+1.358 mm 深化でフェイス板外面と同一面)。M4→M3 移行で締結穴は Ø3.5(44.5,±29)+(62,±29) の4穴/ステーション、Frame_L1 に対応12穴。フェイス板は M2.5 化の充填→開け直しで中央 Ø25 ボス構造へ再構成: ノーズ Ø8 + 4×Ø2.9 貫通 + 4×Ø6.0 ワッシャポケット",
-    "mount_v23_volume_mm3": 51443.3
+    "note": "単一ソリッド、52面。外形=締結プレート寸法(48mm幅)+一様長方形プレート x=34..72.5×y=±34、フレーム側斜め隙間を楔充填、モーター端部下端角はボール・ホイール接線に平行な面で面取り(+1.358 mm 深化でフェイス板外面と同一面)。M4→M3 移行で締結穴は Ø3.5(44.5,±29)+(62,±29) の4穴/ステーション、Frame_L1 に対応12穴。フェイス板は平ネジ採用のため両面フラット化(Ø25ボス+Ø6.0ワッシャポケット除去): ノーズ Ø8 + 4×Ø2.9 貫通(M2.5)",
+    "mount_v23_volume_mm3": 50743.3
   },
-  "arrangement": "plan-B inward: motor slides into the square tube (30x32 bore) from the open tail end along the axle; motor front face seated at plate back; M2.5 bolts + washers inserted from wheel-side Ø6.0 pockets through boss Ø2.9 holes into PCD17 gearbox taps; thick tube walls wrap the can (radial gap 2.5 mm on -n' and both sides, 4.5 mm on +n'); the +n' wall itself extends toward the frame (s' up to 64, top trimmed at z=147) — the frame-side tube wall reaches Frame_L1 directly; uniform rectangular fastening plate (x=34..72.5, y=±34, z=141..147) clamped to Frame_L1 by M3 bolts+Ø6 washers+nuts through vertical Ø3.5 holes at (44.5,±29) and (62,±29) — 4 per station; flange U-slot (x=33..53, y=±13.5) clears the motor tail connector (n'<=15.5); regions of the box inboard of the plate inner edge (x<34) and outboard of the outer edge (x>72.5) are removed by vertical cuts; the diagonal gap between the +n' wall end and the plate outer edge is wedge-filled (x=57.75..72.5) so the plate face-down print orientation has continuous support to the bed; the motor-end bottom corner is chamfered on a plane parallel to the ball-wheel contact tangent (face normal (0.839,0,0.545)); Ø4.2 output shaft on axis into WheelAdapter_v4 bore Ø4.2 (adapter tube spans s'=-1.0..+11.5, shaft tip s'=7.8 -> 3.7 mm engagement); motor tail passes through Ø48 clearance hole in Frame_L1",
+  "arrangement": "plan-B inward: motor slides into the square tube (30x32 bore) from the open tail end along the axle; motor front face seated against the flat motor-side face of the plate; M2.5 flat-head screws inserted from the flat wheel-side plate face through Ø2.9 holes into PCD17 gearbox taps; thick tube walls wrap the can (radial gap 2.5 mm on -n' and both sides, 4.5 mm on +n'); the +n' wall itself extends toward the frame (s' up to 64, top trimmed at z=147) — the frame-side tube wall reaches Frame_L1 directly; uniform rectangular fastening plate (x=34..72.5, y=±34, z=141..147) clamped to Frame_L1 by M3 bolts+Ø6 washers+nuts through vertical Ø3.5 holes at (44.5,±29) and (62,±29) — 4 per station; flange U-slot (x=33..53, y=±13.5) clears the motor tail connector (n'<=15.5); regions of the box inboard of the plate inner edge (x<34) and outboard of the outer edge (x>72.5) are removed by vertical cuts; the diagonal gap between the +n' wall end and the plate outer edge is wedge-filled (x=57.75..72.5) so the plate face-down print orientation has continuous support to the bed; the motor-end bottom corner is chamfered on a plane parallel to the ball-wheel contact tangent (face normal (0.839,0,0.545)); Ø4.2 output shaft on axis into WheelAdapter_v4 bore Ø4.2 (adapter tube spans s'=-1.0..+11.5, shaft tip s'=7.8 -> 3.7 mm engagement); motor tail passes through Ø48 clearance hole in Frame_L1",
   "wheel_geometry": {
     "contact_latitude_deg": [33.0, 33.0, 33.0],
     "wheel_center_radius_mm": [62.06, 62.06, 62.06],
@@ -41,9 +41,8 @@
   },
   "hole_alignment": {
     "gearbox_taps": "motor front face M2.5 taps at PCD17 (±8.5,0)/(0,±8.5) local; verified coaxial with boss holes",
-    "plate_holes": "4x Ø2.9 through the face-plate boss (M2.5 clearance), coaxial with PCD17 tap pattern; Ø8 nose hole on axis",
-    "washer_pockets": "4x Ø6.0 on wheel-side boss face (M2.5 washer Ø5.5 seat, ~1.3 mm deep)",
-    "boss": "Ø25 central boss on the face plate carries the whole fastener pattern",
+    "plate_holes": "4x Ø2.9 through the flat face plate (M2.5 clearance for flat-head screws), coaxial with PCD17 tap pattern; Ø8 nose hole on axis",
+    "face_plate": "face plate flat on both sides: wheel-side face coplanar with the plate outer face (Ø25 boss + Ø6.0 washer pockets removed, ~2.0 mm), motor-contact face flat",
     "tab_vs_frame": "Ø3.5 vertical holes (44.5,±29)+(62,±29) z=141..147 on the uniform rectangular plate (x=34..72.5, y=±34) match Frame_L1 Ø3.5 holes at all 3 stations (12 frame holes total); M3 bolt + Ø6 washer + nut sandwich; plate top z=147 flush with L1 bottom",
     "spacer_holes": "all frame spacer holes Ø3.5 (M3) at r=65 on the +30-deg-rotated pattern {0,+-60,+-120,180}: Frame_L2/L3 6 each on clean rebuilt discs (obsolete fill stubs removed; L2 z=200..203, L3 z=253..256, each with Ø20 centre hole), Frame_L1 30 holes total (incl. mount holes and other M3-clearance holes); Spacer_M3x50 tube OD 6.2 / bore Ø3.2 x 50 mm, 12 occurrences at the rotated positions, faces flush to frames (z=150..200 and 203..253)"
   },
@@ -58,7 +57,7 @@
   "printability": {
     "orientation": "単一品 — 締結プレート上面(z=147、Frame_L1 接触面)をベッド面とする伏せ姿勢が基本。フレーム側の斜め隙間(+n′壁外面とプレート下面の間)は楔充填済みで、伏せ時に筒のフレーム側端がベッドへ面一で届く。モーター端部下端角は接線平行面取りのため伏せ時に斜面がベッドへ接する(印刷層方向に注意)。筒開口は横向き。サポート要否はスライサーで確認",
     "separation": "一体成型(分割案・クレードル案は廃止) — 継手ボルト不要",
-    "hole_orientation": "板 Ø8/Ø2.9/Ø6.0 は車軸方向(斜交穴)、締結プレート Ø3.5 は垂直穴",
+    "hole_orientation": "板 Ø8/Ø2.9 は車軸方向(斜交穴)、締結プレート Ø3.5 は垂直穴",
     "material_note": "Fusion 上は鋼材質(仮置き)。実印刷は ABS/PETG/PLA 想定; ballbotParameters.m は rhoABS=1050 で体積換算済み"
   },
   "envelope_mm": {
@@ -67,13 +66,13 @@
     "note": "モーターが内側に格納されたため外形はフレーム径支配。締結プレート y=±34・穴 (62,±29) はフレーム径160mm内に収まる"
   },
   "mass_properties": {
-    "mount_v23_volume_mm3": 51443.3,
-    "mount_v23_mass_steel_g": 403.8,
-    "mount_v23_mass_abs_g": 54.02,
-    "mount_v23_cg_mm": {"x": 55.63, "y": 0.0, "z": 128.32},
-    "mount_v23_cg_above_ball_mm": 78.3,
-    "mount_v23_cg_radial_mm": 55.6,
-    "mount_v23_cg_frame_inertia_steel_kgcm2": {"Ixx": 2.012, "Iyy": 1.181, "Izz": 1.761, "Ixz": -0.12},
+    "mount_v23_volume_mm3": 50743.3,
+    "mount_v23_mass_steel_g": 398.3,
+    "mount_v23_mass_abs_g": 53.28,
+    "mount_v23_cg_mm": {"x": 55.66, "y": 0.0, "z": 128.67},
+    "mount_v23_cg_above_ball_mm": 78.7,
+    "mount_v23_cg_radial_mm": 55.7,
+    "mount_v23_cg_frame_inertia_steel_kgcm2": {"Ixx": 1.976, "Iyy": 1.175, "Izz": 1.753, "Ixz": -0.12},
     "motor_volume_mm3": 27046.0,
     "motor_cg_above_ball_mm": 79.0,
     "motor_cg_radial_mm": 37.1,
@@ -94,7 +93,7 @@
       "frame_holes": "12x Ø3.5 vertical in Frame_L1 plate at station-rotated positions of (44.5,±29) and (62,±29) mm"
     },
     "gearbox_face": {
-      "type": "M2.5 bolts + Ø5.5 washers through face-plate boss Ø2.9 holes into PCD17 gearbox taps — primary motor retention; tube walls wrap the can; wheel-side Ø6.0 pockets seat heads+washers",
+      "type": "M2.5 flat-head screws through flat face-plate Ø2.9 holes into PCD17 gearbox taps — primary motor retention; tube walls wrap the can; flat wheel-side plate face seats screw heads",
       "plate_holes": "4x Ø2.9, coaxial with PCD17 tap pattern (measured)",
       "taps": "4x M2.5 on gearbox front face"
     },
@@ -107,11 +106,11 @@
   },
   "assumptions": [
     "締結プレート上面(z=147)は Frame_L1 下面に面一で接し、プレート上の Ø3.5 穴(44.5,±29)+(62,±29)を通す M3 ボルト+Ø6ワッシャ+ナットで挟み締結",
-    "モーターは尾部側開口から角筒内(内寸30×32)へ車軸方向に挿入し、前面をフェイス板ボス裏面へ当接。ホイール側の Ø6.0 ワッシャポケットから M2.5 ボルト+Ø5.5ワッシャでギヤボックス前面タップへ締結",
+    "モーターは尾部側開口から角筒内(内寸30×32)へ車軸方向に挿入し、前面をフェイス板のフラットなモーター側面へ当接。ホイール側のフラット板面から M2.5 平ネジでギヤボックス前面タップへ締結",
     "フレーム間接続は Spacer_M3x50(OD6.2/ボアØ3.2/50mm)×12 + M3ボルト+Ø6ワッシャ+ナット。スペーサー穴は全層で +30° 回転パターン {0,±60,±120,180}・Ø3.5 で開け直し済み",
     "モーター尾部コネクタは延長壁内面(n'=17)およびフランジU字スロット(x=33..53・y±13.5)を通過し、エンコーダ配線も Frame_L1 の Ø48 クリアランス穴を通過",
     "締結プレートは一様長方形 x=34..72.5×y=±34(v20 の主部+翼段差を解消)。プレート内外端より先の材料は垂直面で除去済み(剛性に寄与しない領域)",
-    "モーター端部下端角はボール・ホイール接線に平行な面(法線=車軸方向 (0.839,0,0.545)、フェイス板と平行)で面取りし、接線垂直方向へ +1.358 mm 深化してフェイス板外面と同一面に一致させた(面統合で42面、その後の締結規格改訂・フェイス板再構成で現行60面)。+n′壁外面とプレート下面の間の斜め隙間は楔充填 — プレート面を下にした印刷姿勢で筒のフレーム側端がベッドへ届く(フェイス板の穴・筒内空・床面は維持)",
+    "モーター端部下端角はボール・ホイール接線に平行な面(法線=車軸方向 (0.839,0,0.545)、フェイス板と平行)で面取りし、接線垂直方向へ +1.358 mm 深化してフェイス板外面と同一面に一致させた(面統合で42面、その後の締結規格改訂・フェイス板再構成・ボス/ポケット除去で現行52面)。+n′壁外面とプレート下面の間の斜め隙間は楔充填 — プレート面を下にした印刷姿勢で筒のフレーム側端がベッドへ届く(フェイス板の穴・筒内空・床面は維持)",
     "ギアボックス前面タップの実寸(径・有効深さ)は実機採寸で確定する",
     "ホイールの軸方向位置は実機ハブの Dカット止めネジで確定(アダプタ側に追加の軸位置決め構造は無し)",
     "v15 3部品、v14、v16、v17、v18、v20、v21、v22 のオカレンスは削除/更新済み。現行は MotorMount_v23 ×3",
@@ -126,7 +125,7 @@
       "オカレンス変換の保存時巻き戻し: APIで設定したtransform2が保存時に旧姿勢へ戻る現象が残存したため、各ステーションの最終姿勢をコンポーネント幾何へ直接焼き込んだ FIT0521_P0/P1/P2(オカレンス変換=恒等)へ再構築。保存+再オープンで姿勢維持を検証済み",
       "omnirover3wd_reference ディレクトリ削除(オムニホイール以外は本機と無関係)"
     ],
-    "verification": "スペーサー穴 +30° 回転・全 M4→M3+Ø6ワッシャ移行(フェイス板のみ M2.5)・Frame_L2/L3 旧充填スタブ除去(清浄円板再構築、各59.203 cm3・単一ボディ)実施後、保存+閉じる/再オープン(v50)で全オカレンス位置(スペーサー12個=回転パターン・asBuiltJoint12個維持)・マウント単一ボディ(60面,51.443 cm3)・Frame L1/L2/L3 回転穴パターン Ø3.5・全フレーム/マウント/スペーサー間干渉0を維持することを確認",
+    "verification": "スペーサー穴 +30° 回転・全 M4→M3+Ø6ワッシャ移行(フェイス板のみ M2.5)・Frame_L2/L3 旧充填スタブ除去(清浄円板再構築、各59.203 cm3・単一ボディ)・フェイス板フラット化(Ø25ボス+Ø6.0ポケット除去、両面フラット)実施後、保存+閉じる/再オープン(v53)で全オカレンス位置(スペーサー12個=回転パターン・asBuiltJoint12個維持)・マウント単一ボディ(52面,50.743 cm3)・Frame L1/L2/L3 回転穴パターン Ø3.5・全フレーム/マウント/スペーサー間干渉0を維持することを確認",
     "residual_note": "Fusionクラウドのドキュメント・バージョン履歴にはλ65版(v1-v17)が残るが、現行ドキュメントからの再計算パスは除去済み。"
   }
 }

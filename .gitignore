@@ -43,3 +43,5 @@ slprj/
 tmp/
 
 .tools/
+# stray files from shell redirects to Windows NUL
+**/nul
