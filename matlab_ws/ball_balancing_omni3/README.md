@@ -17,6 +17,7 @@
 | `ball_balancing_omni3_multibody_lqi_rev1.slx` | `ballbotRev1Parameters` |
 | `ball_balancing_omni3_multibody_lqi_rev1_r2024b.slx` | `ballbotRev1Parameters`（rev1 の R2024b エクスポート） |
 | `ball_balancing_omni3_multibody_lqi_rev2.slx` | `ballbotRev1Parameters`（共用） |
+| `ball_balancing_omni3_multibody_lqi_rev2_r2024b.slx` | `ballbotRev1Parameters`（rev2 の R2024b エクスポート） |
 | `ball_balancing_omni3_stm32_lqi_rev1.slx` | `ballbotRev1Parameters`（rev1 Controller の STM32 向け抽出、R2024b 形式） |
 
 ## STM32 制御モデル
