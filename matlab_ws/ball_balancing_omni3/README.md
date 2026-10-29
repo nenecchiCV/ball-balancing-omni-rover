@@ -17,6 +17,22 @@
 | `ball_balancing_omni3_multibody_lqi_rev1.slx` | `ballbotRev1Parameters` |
 | `ball_balancing_omni3_multibody_lqi_rev1_r2024b.slx` | `ballbotRev1Parameters`（rev1 の R2024b エクスポート） |
 | `ball_balancing_omni3_multibody_lqi_rev2.slx` | `ballbotRev1Parameters`（共用） |
+| `ball_balancing_omni3_stm32_lqi_rev1.slx` | `ballbotRev1Parameters`（rev1 Controller の STM32 向け抽出、R2024b 形式） |
+
+## STM32 制御モデル
+
+`ball_balancing_omni3_stm32_lqi_rev1.slx` は rev1 の `Controller` サブシステムを実機向けに抽出した制御モデルです（R2024b 形式、離散固定ステップ 5 ms / 200 Hz）。推定・制御の計算路は rev1 と同一で、シミュレーション専用の truth 系（`TruthGate`・`TruthPose`）と計測系（Scope・ToWorkspace）を外し、センサー・アクチュエータのインターフェースをルート Inport/Outport として公開しています。
+
+| 端子 | 幅 | 内容 | ハードウェア対応 |
+|---|---|---|---|
+| `IMU` | 6 | `[比力BodyXYZ(m/s²); 角速度BodyXYZ(rad/s)]` | LSM6DSO（X-NUCLEO-IKS01A3、I2C） |
+| `WheelDisplacement` | 3 | 車輪回転変位 (rad) | FIT0521 エンコーダ TIM2/3/4（カウント×2π/341.2 の換算はドライバ側） |
+| `Command` | 3 | `[vx; vy; yawRate]` | 外部指令 |
+| `Enable` | 1 | 制御有効フラグ | 状態機械・安全入力 |
+| `WheelDuty` | 3 | 符号付き duty [-1,1] | MDD3A MxA=PWM(≤20 kHz)・MxB=DIR へ |duty|/符号で出力 |
+| `EstimatedState` | 14 | 推定状態 | テレメトリ |
+| `Mode` | 1 | 制御モード | テレメトリ |
+| `YawBiasDiagnostics` | 3 | ヨーバイアス診断 | テレメトリ |
 
 ## rev2 マルチレートモデル
 
