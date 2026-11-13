@@ -1,0 +1,138 @@
+/*
+ * Ball-balancing robot on NUCLEO-G474RE
+ * ピン割当の正本は spec/requirements/hardware_config.md
+ */
+
+#include <zephyr/dt-bindings/pwm/pwm.h>
+#include <zephyr/dt-bindings/sensor/lsm6dso.h>
+
+/ {
+	aliases {
+		imu0 = &lsm6dso;
+		pwm-m0 = &pwm16;
+		pwm-m1 = &pwm17;
+		pwm-m2 = &pwm4;
+		qdec0 = &qdec0;
+		qdec1 = &qdec1;
+		qdec2 = &qdec2;
+		control-tick = &timers6;
+	};
+
+	bb_pins: bb-pins {
+		compatible = "bb,pins";
+		dir0-gpios = <&gpioa 10 GPIO_ACTIVE_HIGH>;
+		dir1-gpios = <&gpiob 3 GPIO_ACTIVE_HIGH>;
+		dir2-gpios = <&gpioa 4 GPIO_ACTIVE_HIGH>;
+		led-gpios = <&gpioa 5 GPIO_ACTIVE_HIGH>;
+		estop-gpios = <&gpioc 0 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+		estop-btn-gpios = <&gpioc 13 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+		/* motor PWM: 20 kHz キャリア */
+		pwms = <&pwm16 1 PWM_KHZ(20) PWM_POLARITY_NORMAL>,
+		       <&pwm17 1 PWM_KHZ(20) PWM_POLARITY_NORMAL>,
+		       <&pwm4 1 PWM_KHZ(20) PWM_POLARITY_NORMAL>;
+	};
+};
+
+/* IMU: LSM6DSO on I2C1 (PB8/PB9) */
+&i2c1 {
+	pinctrl-0 = <&i2c1_scl_pb8 &i2c1_sda_pb9>;
+	pinctrl-names = "default";
+	status = "okay";
+
+	lsm6dso: lsm6dso@6b {
+		compatible = "st,lsm6dso";
+		reg = <0x6b>;
+		status = "okay";
+		accel-range = <LSM6DSO_DT_FS_4G>;
+		accel-odr = <LSM6DSO_DT_ODR_833Hz>;
+		gyro-range = <LSM6DSO_DT_FS_2000DPS>;
+		gyro-odr = <LSM6DSO_DT_ODR_833Hz>;
+	};
+};
+
+/* Wheel encoders (qdec childでエンコーダモード設定。
+ * counts-per-revolution は 2 の累乗にし、ARR=65535 の16bit自由周回とする) */
+&timers2 {
+	status = "okay";
+	st,prescaler = <0>;
+
+	qdec0: qdec {
+		compatible = "st,stm32-qdec";
+		status = "okay";
+		pinctrl-0 = <&tim2_ch1_pa0 &tim2_ch2_pa1>;
+		pinctrl-names = "default";
+		st,encoder-mode = <3>;
+		st,counts-per-revolution = <16384>;
+		st,input-filter-level = <0>;
+	};
+};
+
+&timers3 {
+	status = "okay";
+	st,prescaler = <0>;
+
+	qdec1: qdec {
+		compatible = "st,stm32-qdec";
+		status = "okay";
+		pinctrl-0 = <&tim3_ch1_pa6 &tim3_ch2_pa7>;
+		pinctrl-names = "default";
+		st,encoder-mode = <3>;
+		st,counts-per-revolution = <16384>;
+		st,input-filter-level = <0>;
+	};
+};
+
+&timers1 {
+	status = "okay";
+	st,prescaler = <0>;
+
+	qdec2: qdec {
+		compatible = "st,stm32-qdec";
+		status = "okay";
+		pinctrl-0 = <&tim1_ch1_pa8 &tim1_ch2_pa9>;
+		pinctrl-names = "default";
+		st,encoder-mode = <3>;
+		st,counts-per-revolution = <16384>;
+		st,input-filter-level = <0>;
+	};
+};
+
+/* Motor PWM: TIM16 CH1/PB4, TIM17 CH1/PB5, TIM4 CH1/PB6 */
+&timers16 {
+	status = "okay";
+	st,prescaler = <0>;
+
+	pwm16: pwm {
+		status = "okay";
+		pinctrl-0 = <&tim16_ch1_pb4>;
+		pinctrl-names = "default";
+	};
+};
+
+&timers17 {
+	status = "okay";
+	st,prescaler = <0>;
+
+	pwm17: pwm {
+		status = "okay";
+		pinctrl-0 = <&tim17_ch1_pb5>;
+		pinctrl-names = "default";
+	};
+};
+
+&timers4 {
+	status = "okay";
+	st,prescaler = <0>;
+
+	pwm4: pwm {
+		status = "okay";
+		pinctrl-0 = <&tim4_ch1_pb6>;
+		pinctrl-names = "default";
+	};
+};
+
+/* 1 kHz 制御ティック（ドライバ不使用、IRQ_CONNECTで占有） */
+&timers6 {
+	status = "okay";
+	st,prescaler = <169>; /* 170 MHz / 170 = 1 MHz カウント */
+};

@@ -1,0 +1,3 @@
+[submodule "firmware_ws/ball_balancing_omni3_stm32/third_party/etl"]
+	path = firmware_ws/ball_balancing_omni3_stm32/third_party/etl
+	url = https://github.com/ETLCPP/etl.git

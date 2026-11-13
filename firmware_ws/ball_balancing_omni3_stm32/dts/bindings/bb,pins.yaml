@@ -1,0 +1,34 @@
+description: Ball-balancing robot board GPIO/PWM assignments
+compatible: "bb,pins"
+
+include: base.yaml
+
+properties:
+  dir0-gpios:
+    type: phandle-array
+    required: true
+    description: Motor 0 direction output pin
+  dir1-gpios:
+    type: phandle-array
+    required: true
+    description: Motor 1 direction output pin
+  dir2-gpios:
+    type: phandle-array
+    required: true
+    description: Motor 2 direction output pin
+  led-gpios:
+    type: phandle-array
+    required: true
+    description: Status LED output pin
+  estop-gpios:
+    type: phandle-array
+    required: true
+    description: External emergency stop input (active low)
+  estop-btn-gpios:
+    type: phandle-array
+    required: true
+    description: Board button emergency stop input (active low)
+  pwms:
+    type: phandle-array
+    required: true
+    description: PWM outputs for motor 0/1/2 (channel, period, flags)

@@ -1,0 +1,134 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "configure",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "-S", ".",
+        "-B", "build-zephyr",
+        "-G", "Ninja",
+        "-DBOARD=nucleo_g474re",
+        "-DCMAKE_BUILD_TYPE=Debug",
+        "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+      ],
+      "options": {
+        "env": {
+          "ZEPHYR_TOOLCHAIN_VARIANT": "zephyr",
+          "ZEPHYR_SDK_INSTALL_DIR": "C:/tools/zephyr-sdk-0.17.4"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "build",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--build", "build-zephyr"],
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "lint",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "-DCLANG_TIDY=clang-tidy",
+        "-DCOMPILE_COMMANDS=build-zephyr/compile_commands.json",
+        "-DSRC_ROOT=ball_balancing_omni3_stm32/src",
+        "-P", "cmake/run_clang_tidy.cmake"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "format-check",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "-DCLANG_FORMAT=clang-format",
+        "-DSRC_ROOT=${workspaceFolder}/src",
+        "-DTEST_ROOT=${workspaceFolder}/tests/host/src",
+        "-P", "cmake/run_clang_format.cmake"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "host-test",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "-S", "tests/host",
+        "-B", "build-tests",
+        "-G", "Ninja",
+        "-DCMAKE_CXX_COMPILER=clang++"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "host-test-run",
+      "type": "shell",
+      "command": "cmake --build build-tests && ./build-tests/bb_feature_tests.exe",
+      "dependsOn": ["host-test"],
+      "problemMatcher": []
+    },
+    {
+      "label": "configure-test",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "-S", "tests/onboard",
+        "-B", "tests/onboard/build",
+        "-G", "Ninja",
+        "-DBOARD=nucleo_g474re",
+        "-DCMAKE_BUILD_TYPE=Debug"
+      ],
+      "options": {
+        "env": {
+          "ZEPHYR_TOOLCHAIN_VARIANT": "zephyr",
+          "ZEPHYR_SDK_INSTALL_DIR": "C:/tools/zephyr-sdk-0.17.4"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "build-test",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--build", "tests/onboard/build"],
+      "dependsOn": ["configure-test"],
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "flash-test",
+      "type": "shell",
+      "command": "openocd",
+      "args": [
+        "-f", "interface/stlink.cfg",
+        "-f", "target/stm32g4x.cfg",
+        "-c", "program tests/onboard/build/zephyr/zephyr.elf verify reset exit"
+      ],
+      "dependsOn": ["build-test"],
+      "problemMatcher": []
+    },
+    {
+      "label": "flash",
+      "type": "shell",
+      "command": "openocd",
+      "args": [
+        "-f", "interface/stlink.cfg",
+        "-f", "target/stm32g4x.cfg",
+        "-c", "program build-zephyr/zephyr/zephyr.elf verify reset exit"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "openocd-server",
+      "type": "shell",
+      "command": "openocd",
+      "args": ["-f", "interface/stlink.cfg", "-f", "target/stm32g4x.cfg"],
+      "isBackground": true,
+      "problemMatcher": []
+    }
+  ]
+}
