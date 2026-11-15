@@ -1,0 +1,27 @@
+# UART-wireless converter アプリケーション Kconfig
+
+mainmenu "uart_wireless_converter_esp32"
+
+source "Kconfig.zephyr"
+
+choice UWC_TRANSPORT
+	prompt "Wireless transport"
+	default UWC_TRANSPORT_BLE
+	help
+	  無線トランスポートの実装選択。device/link の link クラスを
+	  ビルド時に切替える。UART 側インターフェースは不変。
+
+config UWC_TRANSPORT_BLE
+	bool "BLE (NUS-equivalent transparent UART)"
+	select BT
+	select BT_PERIPHERAL
+	help
+	  BLE ペリフェラルとして NUS 相当の GATT サービスを提供し、
+	  UART バイトストリームを透過する。
+
+config UWC_TRANSPORT_WIFI
+	bool "Wi-Fi SoftAP + TCP (future)"
+	help
+	  Wi-Fi SoftAP 上の TCP ソケットで UART を透過する将来実装。
+
+endchoice

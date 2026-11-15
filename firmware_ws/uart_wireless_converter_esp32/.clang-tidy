@@ -1,0 +1,78 @@
+# 本プロジェクトは MATLAB リファレンス実装の移植を正本とする。
+# 命名規則: 原則すべて snake_case、定数のみ UPPER_SNAKE（constexpr）。
+# 制限付きC++: 例外・RTTI・動的確保・STL 禁止。STL 相当は ETL を使うため
+# <math.h> 等の C ヘッダは意図的に採用する（-nostdinc++ 環境）。
+# バグ発見系のチェックは維持し、方針と衝突するスタイル強制系は緩める。
+Checks: >
+  bugprone-*,
+  cert-*,
+  cppcoreguidelines-*,
+  hicpp-*,
+  misc-*,
+  modernize-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  -modernize-use-trailing-return-type,
+  -modernize-deprecated-headers,
+  -hicpp-deprecated-headers,
+  -readability-magic-numbers,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -hicpp-named-parameter,
+  -readability-named-parameter,
+  -readability-uppercase-literal-suffix,
+  -hicpp-uppercase-literal-suffix,
+  -cert-dcl03-c,
+  -misc-include-cleaner,
+  -altera-*,
+  -android-*,
+  -readability-identifier-length,
+  -readability-braces-around-statements,
+  -hicpp-braces-around-statements,
+  -readability-function-cognitive-complexity,
+  -readability-function-size,
+  -modernize-avoid-c-arrays,
+  -cppcoreguidelines-avoid-c-arrays,
+  -hicpp-avoid-c-arrays,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-pro-type-cstyle-cast,
+  -hicpp-signed-bitwise,
+  -bugprone-easily-swappable-parameters,
+  -performance-no-int-to-ptr,
+  -readability-use-anyofallof,
+  -readability-make-member-function-const,
+  -cppcoreguidelines-pro-bounds-avoid-unchecked-container-access,
+  -readability-math-missing-parentheses,
+  -modernize-use-designated-initializers,
+  -cppcoreguidelines-avoid-do-while,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -hicpp-no-array-decay,
+  -cppcoreguidelines-pro-type-vararg,
+  -hicpp-vararg,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-pro-type-const-cast,
+  -hicpp-use-auto,
+  -modernize-use-auto,
+  -portability-avoid-pragma-once,
+  -modernize-use-std-numbers,
+  -misc-header-include-cycle
+WarningsAsErrors: ''
+# Windows ではヘッダ報告パスが "src\dir/file.hpp" のように逆区切り混在
+# となるため、区切りは [/\\] で両方を拾う。
+HeaderFilterRegex: '(src|tests)[/\\].*\.hpp'
+CheckOptions:
+  readability-identifier-naming.ClassCase: lower_case
+  readability-identifier-naming.StructCase: lower_case
+  readability-identifier-naming.FunctionCase: lower_case
+  readability-identifier-naming.VariableCase: lower_case
+  readability-identifier-naming.MemberCase: lower_case
+  readability-identifier-naming.PrivateMemberSuffix: _
+  readability-identifier-naming.ProtectedMemberSuffix: _
+  readability-identifier-naming.ClassMemberSuffix: _
+  readability-identifier-naming.LocalConstantCase: lower_case
+  readability-identifier-naming.GlobalConstantCase: UPPER_CASE
+  readability-identifier-naming.StaticConstantCase: UPPER_CASE
+  readability-identifier-naming.ConstexprVariableCase: UPPER_CASE
+  readability-identifier-naming.EnumConstantCase: UPPER_CASE
+  readability-identifier-naming.MacroDefinitionCase: UPPER_CASE

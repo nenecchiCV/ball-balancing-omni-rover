@@ -1,0 +1,17 @@
+/*
+ * UART-wireless converter on XIAO ESP32-C6 (HP core)
+ * ピン割当の正本は spec/requirements/hardware_config.md
+ */
+
+/ {
+	aliases {
+		/* G474 (USART1: PC4/PC5) へ接続する物理 UART。
+		 * XIAO コネクタ D6=GPIO16(TX) / D7=GPIO17(RX) */
+		host-uart = &uart0;
+	};
+};
+
+/* uart0: G474 USART1 とのバイトストリームリンク */
+&uart0 {
+	current-speed = <115200>;
+};
