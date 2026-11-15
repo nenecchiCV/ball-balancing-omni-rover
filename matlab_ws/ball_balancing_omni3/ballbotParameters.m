@@ -95,7 +95,7 @@ p.battery.cutoffVoltage = 6.0;
 p.battery.capacityAh = 5.0;
 p.battery.internalResistance = 0.09;
 p.battery.mass = 0.423;
-p.battery.dimensions = [0.140, 0.050, 0.025];
+p.battery.dimensions = [0.138, 0.048, 0.025]; % measured envelope 138 x 48 x 25 mm
 
 % Two Cytron MDD3A boards provide the three required PWM/DIR channels.
 p.driver.boardCount = 2;
@@ -160,7 +160,7 @@ p.servo.maxSpeed = p.motor.noLoadSpeed;
 % 2.5x thickened against measured frame warpage, its former Ø98 centre
 % opening filled inward so the plate itself clamps the motor tails via
 % 57deg tilted Ø25.6 bores + encoder-board slots; L2/L3 D160x3 at
-% z = 201.5/254.5 mm above ground), six M3x50 + six M3x20.5 ABS
+% z = 176.5/241.5 mm above ground), six M3x62 + six M3x20.5 ABS
 % spacers (OD 6.2 / bore 3.2 mm) at
 % r = 65 mm on the 30-deg-rotated pattern {0,+-60,+-120,180}, three ABS
 % MotorMount_v23 inward-pod square-tube mounts below L1 (single-body
@@ -170,9 +170,10 @@ p.servo.maxSpeed = p.motor.noLoadSpeed;
 % bottom corner chamfered on the face-plate plane (parallel to the
 % ball-wheel contact tangent, +1.358 mm deeper so the chamfer merges
 % with the plate face); wheel
-% adapters included), and the L1/L2
-% electronics payload (Zeee 7.2 V NiMH pack centred on L1, two MDD3A
-% drivers, Nucleo+IKS4A1 stack).
+% adapters included), and the L2/L3
+% electronics payload (Zeee 7.2 V NiMH pack in the BatteryTray_L3hang
+% bolted under Frame_L3 above the IMU, two MDD3A drivers, Nucleo+shield
+% stack on M3x12 standoffs).
 % Heights below are measured above the ball center (ground z = 50 mm).
 % lambda = 33 deg PLAN-B INWARD pod geometry (57 deg vehicle-axis tilt,
 % motors stowed inward-up toward the axis through L1 clearance holes).
@@ -190,12 +191,13 @@ frameDiscMass = rhoABS*56.559e-6; % L2 disc net of 6 x Ø3.5 spacer holes + 3 x 
 frameDiscInertia = frameDiscMass*(3*0.080^2 + 0.003^2)/12;
 l3DiscMass = rhoABS*60.146e-6;    % L3 disc: same as L2 but Ø20 center hole filled (unneeded); Fusion measured 60.146 cm^3
 l3DiscInertia = l3DiscMass*(3*0.080^2 + 0.003^2)/12;
-spacerMass = rhoABS*1.1074e-6;   % Spacer_M3x50 tube OD 6.2 / bore 3.2 x 50 mm (Fusion measured 1.1074 cm^3)
-spacerInertia = spacerMass*(3*(0.0031^2+0.0016^2) + 0.050^2)/12;
+spacerMass = rhoABS*1.3732e-6;   % Spacer_M3x62 tube OD 6.2 / bore 3.2 x 62 mm - L2-L3 gap extended +12 mm for the under-L3 battery tray (Fusion measured 1.3732 cm^3)
+spacerInertia = spacerMass*(3*(0.0031^2+0.0016^2) + 0.062^2)/12;
 spacer20Mass = rhoABS*0.454e-6;  % Spacer_M3x20p5 L1-L2 gap spacer for the 7.5 mm L1 (Fusion measured 0.454 cm^3)
 spacer20Inertia = spacer20Mass*(3*(0.0031^2+0.0016^2) + 0.0205^2)/12;
 mountMass = rhoABS*50.743e-6;    % MotorMount_v23 plate-width square-tube mount + rectangular fastening plate + wedge fills + motor-end bottom-corner chamfer on the face-plate plane (parallel to the ball-wheel contact tangent; M2.5 flat-head screw through-holes on a flat face plate, no boss/pockets; single body, 52 faces), measured 50.743 cm^3
 adapterMass = rhoABS*1.2171e-6;  % WheelAdapter_v4 measured volume 1.217 cm^3 (tube s'=-1.0..11.5)
+trayMass = rhoABS*43.417e-6;     % BatteryTray_L3hang under-L3 battery tray, 4 corner tabs bolted through new L3 holes (Fusion measured 43.417 cm^3, CG z = 220.1 mm above ground)
 % Fusion-measured own-CG inertias scaled to ABS mass (the y/tangential
 % axis entry is used for tilt; the z axis entry is used in the yaw sum).
 % v23 CG-frame tensor (steel) Ixx/Iyy/Izz = 1.976/1.175/1.753
@@ -223,15 +225,16 @@ wheelTiltI = p.wheel.mass*(3*p.wheel.radius^2 + ...
 chassisParts = [ ...
 %    mass[kg]        comZ above ball center [m]  Ixx about own COM [kg m^2]
     l1DiscMass      0.1008                      l1DiscInertia
-    frameDiscMass   0.1515                      frameDiscInertia
-    l3DiscMass      0.2045                      l3DiscInertia
+    frameDiscMass   0.1265                      frameDiscInertia
+    l3DiscMass      0.1915                      l3DiscInertia
     6*spacer20Mass  0.11475                     6*spacer20Inertia
-    6*spacerMass    0.17825                     6*spacerInertia
+    6*spacerMass    0.159                       6*spacerInertia
     3*mountMass     mountComAboveBall           3*mountTiltI
     3*adapterMass   adapterComAboveBall         3*adapterTiltI
-    0.423           0.1125                      0.423*(0.140^2+0.025^2)/12
+    trayMass        0.1701                      trayMass*(0.144^2+0.031^2)/12
+    0.423           0.1737                      0.423*(0.138^2+0.025^2)/12
     0.030           0.103                       0.030*(0.050^2+0.030^2)/12
-    0.090           0.156                       0.090*(0.133^2+0.080^2)/12
+    0.090           0.143                       0.090*(0.133^2+0.080^2)/12
     0.010           0.110                       0];
 p.rover.bodyMass = sum(chassisParts(:, 1));
 p.rover.bodyComAboveBall = ...

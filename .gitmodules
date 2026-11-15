@@ -1,3 +1,6 @@
 [submodule "firmware_ws/ball_balancing_omni3_stm32/third_party/etl"]
 	path = firmware_ws/ball_balancing_omni3_stm32/third_party/etl
 	url = https://github.com/ETLCPP/etl.git
+[submodule "firmware_ws/uart_wireless_converter_esp32/third_party/etl"]
+	path = firmware_ws/uart_wireless_converter_esp32/third_party/etl
+	url = https://github.com/ETLCPP/etl.git
