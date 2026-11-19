@@ -14,6 +14,9 @@
 | FR-06 | 非常停止入力でモータを即時遮断する | [functional/FR-06.md](functional/FR-06.md) |
 | FR-07 | 移動指令（速度・ヨーレート）を生成・適用する | [functional/FR-07.md](functional/FR-07.md) |
 | FR-08 | 診断情報を UART で出力する | [functional/FR-08.md](functional/FR-08.md) |
+| FR-09 | USART1 でロボットリンクプロトコルを受付・応答する | [functional/FR-09.md](functional/FR-09.md) |
+| FR-10 | 目標位置への位置制御を行う | [functional/FR-10.md](functional/FR-10.md) |
+| FR-11 | 自己位置・ログをプロトコルイベントとして送出する | [functional/FR-11.md](functional/FR-11.md) |
 
 ## 非機能要求
 
