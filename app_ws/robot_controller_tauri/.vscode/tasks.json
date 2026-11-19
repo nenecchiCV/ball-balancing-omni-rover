@@ -1,0 +1,47 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "npm: install",
+      "type": "shell",
+      "command": "npm install",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "app: dev (tauri dev)",
+      "type": "shell",
+      "command": "npm run tauri dev",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "app: build (next build)",
+      "type": "shell",
+      "command": "npm run build",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "app: typecheck (tsc)",
+      "type": "shell",
+      "command": "npx tsc --noEmit",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "app: cargo check",
+      "type": "shell",
+      "command": "cargo check",
+      "options": { "cwd": "${workspaceFolder}/src-tauri" },
+      "problemMatcher": []
+    },
+    {
+      "label": "app: cargo test",
+      "type": "shell",
+      "command": "cargo test",
+      "options": { "cwd": "${workspaceFolder}/src-tauri" },
+      "problemMatcher": []
+    }
+  ]
+}

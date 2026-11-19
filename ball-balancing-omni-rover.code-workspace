@@ -9,6 +9,10 @@
       "path": "firmware_ws"
     },
     {
+      "name": "app_ws",
+      "path": "app_ws"
+    },
+    {
       "name": "root",
       "path": "./"
     }

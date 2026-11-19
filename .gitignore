@@ -42,6 +42,9 @@ slprj/
 
 tmp/
 
+# Devin ローカル上書き設定（環境依存の MCP エンドポイント等）
+.devin/mcp_config.local.json
+
 .tools/
 # stray files from shell redirects to Windows NUL
 **/nul

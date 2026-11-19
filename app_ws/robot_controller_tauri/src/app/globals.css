@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0b0e12;
+  --color-panel: #161b22;
+  --color-line: #2a323d;
+  --color-text: #d7dee7;
+  --color-muted: #8b98a8;
+  --color-accent: #4ea1ff;
+  --color-ok: #5be07a;
+  --color-warn: #ffb454;
+  --color-err: #ff6b6b;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: "Segoe UI", "Yu Gothic UI", system-ui, sans-serif;
+}
+
+@layer components {
+  .card {
+    @apply mb-4 rounded-lg border border-line bg-panel p-4;
+  }
+  .row {
+    @apply flex flex-wrap items-center gap-3;
+  }
+  .muted {
+    @apply text-[13px] text-muted;
+  }
+  .btn {
+    @apply cursor-pointer rounded-md border-0 bg-[#2456a6] px-4 py-2 text-sm text-white disabled:cursor-default disabled:opacity-40;
+  }
+  .btn-secondary {
+    @apply cursor-pointer rounded-md border-0 bg-[#333a44] px-4 py-2 text-sm text-white disabled:cursor-default disabled:opacity-40;
+  }
+  .num {
+    @apply w-[110px] rounded-md border border-line bg-[#0e1218] px-2.5 py-2 text-sm text-text;
+  }
+  .list {
+    @apply w-full border-collapse text-sm;
+  }
+  .list th,
+  .list td {
+    @apply border-b border-line px-2.5 py-2 text-left;
+  }
+}
