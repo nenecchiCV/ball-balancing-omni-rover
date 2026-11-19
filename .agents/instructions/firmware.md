@@ -50,6 +50,7 @@
 ## ツールと自動実行
 
 - ビルド・デバッグ・書き込み・静的解析は VSCode タスク（`.vscode/tasks.json`）として定義し、タスクが呼ぶコマンドをターミナルからそのまま実行できる形にする。AI エージェントは VSCode GUI なしで同等コマンドを実行して検証する。
+- 開発環境は `.devcontainer/`（Zephyr 4.3 + SDK 0.17.4 + LLVM + OpenOCD + openocd-esp32）に Docker 化されている。コンテナ利用時は `docker exec <container> bash -lc "<command>"` か devcontainer 内ターミナルで上記コマンドをそのまま実行する。環境確認は `.devcontainer/check-env.sh`。USB デバイスを要する書き込み・デバッグの経路（ホスト側実行 / usbipd）は `.devcontainer/README.md` を参照。
 - リンター・静的解析は clang-tidy を標準とし、`.clang-tidy` にポリシーを置く。整形は clang-format（`.clang-format`）とする。
 - 制御アルゴリズムの正本は `matlab_ws/` の Simulink/MATLAB コードとする。移植時に挙動を変えた部分は詳細設計に「適応事項」として記録する。
 

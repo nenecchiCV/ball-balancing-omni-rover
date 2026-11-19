@@ -1,0 +1,37 @@
+{
+  "name": "ball-balancing-omni-rover (Zephyr 4.3 + Tauri app)",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "workspaceFolder": "/workspaces/ball-balancing-omni-rover",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/ball-balancing-omni-rover,type=bind",
+  "remoteUser": "ubuntu",
+  "runArgs": [
+    "--privileged"
+  ],
+  "remoteEnv": {
+    "ZEPHYR_TOOLCHAIN_VARIANT": "zephyr",
+    "ZEPHYR_SDK_INSTALL_DIR": "/opt/zephyr-sdk-0.17.4",
+    "ZEPHYR_BASE": "/opt/zephyr_ws/zephyr",
+    "ZEPHYR_WS_DIR": "/opt/zephyr_ws"
+  },
+  "forwardPorts": [
+    3000
+  ],
+  "postCreateCommand": "git submodule update --init --recursive",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools",
+        "llvm-vs-code-extensions.vscode-clangd",
+        "ms-vscode.cmake-tools",
+        "marus25.cortex-debug",
+        "xaver.clang-format",
+        "rust-lang.rust-analyzer",
+        "tauri-apps.tauri-vscode",
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  }
+}

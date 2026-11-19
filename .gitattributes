@@ -1,0 +1,2 @@
+# devcontainer 内で実行するシェルスクリプトは LF 固定
+*.sh text eol=lf
