@@ -40,7 +40,9 @@ imu t=<ms> acc=[x y z] gyr=[x y z] euler_deg=[roll pitch yaw] valid=<0|1>
 - `valid=1` が継続する。
 - 水平静置で |roll|, |pitch| が数度以内で安定。
 - 傾けた方向と euler の符号変化が物理的に一致する。不一致の場合は
-  `lsm6dso::config::axis_map`（またはハーネス配線）を修正する。
+  `lsm6dso::config::accel_axis_map` / `gyro_axis_map`（またはハーネス配線）を
+  修正する。角速度は機体軸まわりの右ねじ正転で正になることを
+  各軸について確認する（`test imu` の `gyr` 出力）。
 
 ## 対応コンポーネント
 

@@ -7,7 +7,8 @@ LSM6DSO IMU（Zephyr センサドライバ経由）。`lsm6dso` static class（I
 ```cpp
 struct config {
     const struct device* dev;
-    mat33 axis_map;  // 既定は単位行列。実装向きで確定
+    mat33 accel_axis_map;  // 既定は単位行列。実装向きで確定
+    mat33 gyro_axis_map;   // 加速度と符号規約が異なる場合があるため別マップ
 };
 using sample = imu_sample;
 ```
@@ -15,12 +16,13 @@ using sample = imu_sample;
 ## 公開関数
 
 - `static bool init(const config&)` — `device_is_ready` でドライバを検査し、軸写像行列を保持する。
-- `static sample read()` — `sensor_sample_fetch` + `sensor_channel_get(ACCEL_XYZ/GYRO_XYZ)` で取得し、`axis_map_` で軸写像した `imu_sample` を返す。取得失敗時は `valid=false`。
+- `static sample read()` — `sensor_sample_fetch` + `sensor_channel_get(ACCEL_XYZ/GYRO_XYZ)` で取得し、加速度は `accel_axis_map_`、角速度は `gyro_axis_map_` で軸写像した `imu_sample` を返す。取得失敗時は `valid=false`。
 
 ## 内部状態
 
-`dev_`（デバイスハンドル）、`axis_map_`（軸写像行列）。
+`dev_`（デバイスハンドル）、`accel_axis_map_` / `gyro_axis_map_`（軸写像行列）。
 
 ## MATLAB との対応
 
-`imuData` の読取り。生値に対し実装向きの軸変換 `axis_map_` を適用する点のみ追加。
+`imuData` の読取り。生値に対し実装向きの軸変換を適用する点のみ追加。
+軸写像の確定値は `spec/requirements/hardware_config.md` を参照。

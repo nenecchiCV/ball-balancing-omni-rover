@@ -74,7 +74,8 @@ SHELL_CMD_REGISTER(bb, &SUB_BB, "ball balancing robot commands", NULL);
 
 bool robot_application::init(const config& cfg) {
   p_ = cfg.params;
-  imu_axis_map_ = cfg.imu_axis_map;
+  imu_accel_axis_map_ = cfg.imu_accel_axis_map;
+  imu_gyro_axis_map_ = cfg.imu_gyro_axis_map;
 
   // peripheral
   led_pin_.init({GPIO_DT_SPEC_GET(PINS_NODE, led_gpios), true});
@@ -94,7 +95,8 @@ bool robot_application::init(const config& cfg) {
       {reinterpret_cast<TIM_TypeDef*>(DT_REG_ADDR(DT_NODELABEL(timers3)))});
 
   // device
-  imu_ok_ = lsm6dso::init({DEVICE_DT_GET(DT_ALIAS(imu0)), imu_axis_map_});
+  imu_ok_ = lsm6dso::init(
+      {DEVICE_DT_GET(DT_ALIAS(imu0)), imu_accel_axis_map_, imu_gyro_axis_map_});
   motors_[0].init({&pwm_a_[0], &pwm_b_[0]});
   motors_[1].init({&pwm_a_[1], &pwm_b_[1]});
   motors_[2].init({&pwm_a_[2], &pwm_b_[2]});

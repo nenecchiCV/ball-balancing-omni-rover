@@ -7,7 +7,8 @@
 ```cpp
 struct config {
     const param_set* params;
-    mat33 imu_axis_map;
+    mat33 imu_accel_axis_map;
+    mat33 imu_gyro_axis_map;
 };
 struct telemetry_snapshot {
     balance_controller::output ctrl;

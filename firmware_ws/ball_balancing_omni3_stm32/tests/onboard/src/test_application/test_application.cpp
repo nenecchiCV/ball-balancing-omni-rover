@@ -43,9 +43,12 @@ bool test_application::init() {
   enc_count_[2].init(
       {reinterpret_cast<TIM_TypeDef*>(DT_REG_ADDR(DT_NODELABEL(timers3)))});
 
-  // device
-  const bool imu_ok =
-      lsm6dso::init({DEVICE_DT_GET(DT_ALIAS(imu0)), mat_identity3()});
+  // device — main.cpp と同じ実機軸マップ（hardware_config.md 参照）:
+  // 加速度は全軸反転、角速度は反転後の機体座標で無変換が右ネジ正転。
+  const bool imu_ok = lsm6dso::init(
+      {DEVICE_DT_GET(DT_ALIAS(imu0)),
+       {{{-1.0F, 0.0F, 0.0F}, {0.0F, -1.0F, 0.0F}, {0.0F, 0.0F, -1.0F}}},
+       mat_identity3()});
   motors_[0].init({&pwm_a_[0], &pwm_b_[0]});
   motors_[1].init({&pwm_a_[1], &pwm_b_[1]});
   motors_[2].init({&pwm_a_[2], &pwm_b_[2]});

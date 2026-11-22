@@ -51,7 +51,8 @@ class robot_application {
 
   struct config {
     const param_set* params;
-    mat33 imu_axis_map;
+    mat33 imu_accel_axis_map;
+    mat33 imu_gyro_axis_map;
   };
 
   static bool init(const config& cfg);
@@ -73,7 +74,8 @@ class robot_application {
   static void diag_task_cb();
 
   static inline const param_set* p_ = nullptr;
-  static inline mat33 imu_axis_map_{};
+  static inline mat33 imu_accel_axis_map_{};
+  static inline mat33 imu_gyro_axis_map_{};
 
   // peripheral（複数インスタンスを要するクラスのみ保持）
   static inline gpio_pin led_pin_;

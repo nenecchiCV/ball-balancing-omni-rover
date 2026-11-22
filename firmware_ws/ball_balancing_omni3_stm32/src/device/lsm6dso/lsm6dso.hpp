@@ -17,9 +17,14 @@ class lsm6dso {
 
   struct config {
     const struct device* dev = nullptr;
-    mat33 axis_map = {{{1.0F, 0.0F, 0.0F},
-                       {0.0F, 1.0F, 0.0F},
-                       {0.0F, 0.0F, 1.0F}}};  // 実装向きで確定
+    // 実装向きで確定する軸写像（hardware_config.md 参照）。
+    // 加速度と角速度で符号規約が異なる場合があるため別マップとする。
+    mat33 accel_axis_map = {{{1.0F, 0.0F, 0.0F},
+                             {0.0F, 1.0F, 0.0F},
+                             {0.0F, 0.0F, 1.0F}}};
+    mat33 gyro_axis_map = {{{1.0F, 0.0F, 0.0F},
+                            {0.0F, 1.0F, 0.0F},
+                            {0.0F, 0.0F, 1.0F}}};
   };
 
   using sample = imu_sample;
@@ -29,7 +34,8 @@ class lsm6dso {
 
  private:
   static inline const struct device* dev_ = nullptr;
-  static inline mat33 axis_map_{};
+  static inline mat33 accel_axis_map_{};
+  static inline mat33 gyro_axis_map_{};
 };
 
 }  // namespace bb

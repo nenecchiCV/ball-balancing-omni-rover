@@ -4,7 +4,8 @@ namespace bb {
 
 bool lsm6dso::init(const config& cfg) {
   dev_ = cfg.dev;
-  axis_map_ = cfg.axis_map;
+  accel_axis_map_ = cfg.accel_axis_map;
+  gyro_axis_map_ = cfg.gyro_axis_map;
   return device_is_ready(dev_);
 }
 
@@ -24,8 +25,8 @@ lsm6dso::sample lsm6dso::read() {
   const vec3 gyro_raw = {static_cast<float>(sensor_value_to_double(&gyro[0])),
                          static_cast<float>(sensor_value_to_double(&gyro[1])),
                          static_cast<float>(sensor_value_to_double(&gyro[2]))};
-  s.gyro = mul(axis_map_, gyro_raw);
-  s.specific_force = mul(axis_map_, accel_raw);
+  s.gyro = mul(gyro_axis_map_, gyro_raw);
+  s.specific_force = mul(accel_axis_map_, accel_raw);
   s.valid = true;
   return s;
 }
