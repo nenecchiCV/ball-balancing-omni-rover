@@ -13,6 +13,7 @@
 |---|---|---|---|
 | host_uart | `host_uart` | static | UART0（ホスト UART）の割込駆動送受信。RX→リング・TX 送出の薄いラッパ |
 | debug_console | `debug_console` | static | `usb_serial` console へのテキスト送出（`printk` ラッパ） |
+| status_led | `status_led` | static | ユーザー LED（`led0`、GPIO15）の点灯/消灯/点滅制御。点滅は遅延ワークで駆動（FR-05） |
 
 ## device（無線トランスポート）
 
@@ -25,7 +26,7 @@
 | コンポーネント | クラス | 形態 | 責務 |
 |---|---|---|---|
 | uart_bridge | `uart_bridge` | static | 双方向のリングバッファ排出と `link::send` 呼出し。ブリッジスレッドで稼働（FR-01） |
-| link_monitor | `link_monitor` | static | 接続遷移・転送統計・最終活動時刻の記録と snapshot 提供（FR-02, FR-03） |
+| link_monitor | `link_monitor` | static | 接続遷移・転送統計・最終活動時刻の記録と snapshot 提供、リンク状態の LED 表示駆動（FR-02, FR-03, FR-05） |
 
 ## manager（機能管理）
 

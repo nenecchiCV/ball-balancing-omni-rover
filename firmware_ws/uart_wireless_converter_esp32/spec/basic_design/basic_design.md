@@ -20,7 +20,7 @@
 | `manager` | 機能管理・コンポーネント配線 | `converter_application` |
 | `feature` | 機能（中継・リンク監視） | `uart_bridge`, `link_monitor` |
 | `device` | 無線トランスポート実装 | `link`（`link_ble.cpp`/`link_wifi.cpp`） |
-| `peripheral` | MCU ペリフェラル制御 | `host_uart`, `debug_console` |
+| `peripheral` | MCU ペリフェラル制御 | `host_uart`, `debug_console`, `status_led` |
 | `common` | 純粋ユーティリティ・定数 | （現時点では該当なし） |
 
 ### トランスポート抽象（FR-04）
@@ -40,6 +40,7 @@
 [G474 USART1] <--UART0--> [host_uart] <--ring--> [uart_bridge] <--API--> [link (BLE)]
                                                                     ↑ NUS 相当 GATT
 [usb_serial] <-console/shell-> [debug_console]              [link_monitor] = 状態・統計
+[GPIO15 led0] <--GPIO--> [status_led] <-mode- [link_monitor]
 ```
 
 - **ホスト→アプリ**: UART0 RX（割込）→ 静的 `ring_buf`（`host_to_link`）→ ブリッジ → `link::send()` で BLE Notification。ペイロードは接続中 MTU（実効 MTU-3）を超えない単位に分割する。
@@ -54,6 +55,7 @@
 | BT コンテキスト（Zephyr 内部） | RX 特性 Write → `link_to_host` リングへ移し `bridge_sem` を give / 接続イベントを `link_monitor` へ通知 | スタックスレッドでブロックしない |
 | ブリッジスレッド（`uart_bridge`） | `bridge_sem` 待ち+短周期タイムアウトで両リングを排出 | ポーリング間隔は NFR-01 の目標内 |
 | shell スレッド | `uwc` コマンド処理 | `link_monitor` の snapshot 参照のみ |
+| LED 点滅ワーク（system workqueue） | BLINK モード中に 500 ms 周期で LED をトグル | 専用スレッドなし、`k_work_delayable` で駆動（FR-05） |
 | main スレッド | `init` 後 `converter_application::run()` へ委譲 | — |
 
 ## 通信
@@ -79,6 +81,7 @@
 - **GATT 定義**: NUS 相当サービスは `BT_GATT_SERVICE_DEFINE` で静的に登録し、RX Write コールバックで `link_to_host` リングへ積む。TX Notification は接続中 `att` の実効 MTU に合わせて分割する。
 - **初期化**: `converter_application` が `init()` で `host_uart`・`link`・`uart_bridge`・`link_monitor` を配線し、BLE を起動して advertising を開始する。`run()` はブリッジループに制御を渡す。
 - **エラーポリシー**: ペリフェラル・スタックの起動失敗は `init` の戻り値 false で表し、`usb_serial` シェル上で診断可能なログを残す。実行中の一時的な送出失敗は統計として記録し、機能は継続する。
+- **状態表示**: `link` の遷移イベントを `link_monitor` が `status_led` の表示モードへ写像し、ユーザー LED（`led0`、GPIO15）を advertising 中は 1 s 周期点滅、接続中は常時点灯、初期化前は消灯とする（FR-05）。点滅の周期生成は専用スレッドを持たず `k_work_delayable`（system workqueue）で行う。
 
 ## 安全性
 

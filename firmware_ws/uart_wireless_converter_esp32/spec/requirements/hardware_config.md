@@ -16,6 +16,7 @@
 | ホスト UART TX | UART0 TX | GPIO16 | D6 | G474 USART1 RX（PC5）へ |
 | ホスト UART RX | UART0 RX | GPIO17 | D7 | G474 USART1 TX（PC4）へ。DTS で bias-pull-up 済み |
 | 診断/書き込み | USB-Serial-JTAG（`usb_serial`） | USB-C | — | Zephyr console/shell + esptool 書き込み |
+| ユーザー LED | GPIO 出力 | GPIO15 | —（基板実装） | アクティブ Low。ボード dts の `led0`（`yellow_led`）alias をそのまま使用し、overlay への追加は不要。FR-05 のリンク状態表示に使用 |
 | 無線 | ESP32-C6 内蔵 RF | — | — | `esp32_bt_hci`（BLE）/ `wifi` ノード |
 
 ## インターフェース仕様

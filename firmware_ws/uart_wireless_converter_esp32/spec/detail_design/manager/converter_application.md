@@ -12,7 +12,7 @@ struct config {
 
 ## 公開関数
 
-- `static bool init(const config&)` — `host_uart`・`link`・`uart_bridge`・`link_monitor` を `DT_ALIAS(host-uart)` の UART デバイスとリングバッファで配線して初期化し、BLE（または選択トランスポート）を起動する。失敗時は false。
+- `static bool init(const config&)` — `host_uart`・`status_led`（`DT_ALIAS(led0)` の GPIO）・`link`・`uart_bridge`・`link_monitor` をリングバッファ等で配線して初期化し、BLE（または選択トランスポート）を起動する。失敗時は false。
 - `[[noreturn]] static void run()` — `uart_bridge::run()` へ制御を渡す。
 - `static link_monitor::stats stats()` — shell からの統計照会用。
 - `static void reset_stats()` — `uwc stats reset` 用に `link_monitor` の統計をクリアする。

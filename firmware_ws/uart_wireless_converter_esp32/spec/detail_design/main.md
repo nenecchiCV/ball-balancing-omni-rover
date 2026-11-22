@@ -19,6 +19,7 @@
 ### peripheral
 - [host_uart](peripheral/host_uart.md)
 - [debug_console](peripheral/debug_console.md)
+- [status_led](peripheral/status_led.md)
 
 ### device
 - [link](device/link.md)

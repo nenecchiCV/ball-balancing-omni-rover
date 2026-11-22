@@ -21,7 +21,7 @@ struct stats {
 ## 公開関数
 
 - `static void init()` — カウンタ・状態を初期化する。
-- `static void on_event(link::event ev)` — `link` の `event_cb` から呼ばれ、状態遷移を記録する。
+- `static void on_event(link::event ev)` — `link` の `event_cb` から呼ばれ、状態遷移を記録する。あわせて `status_led` の表示モードを更新する（`WAITING_STARTED`→`BLINK`、`CONNECTED`→`SOLID`、`DISCONNECTED`→`OFF`、FR-05）。LED 制御は `irq_lock` 区間の外で行う。
 - `static void note_tx(uint32_t bytes)` / `static void note_rx(uint32_t bytes)` — 転送バイト数と活動時刻を更新する。
 - `static void note_drop(uint32_t bytes)` / `static void note_send_fail()` — 破棄・送出失敗を記録する。
 - `static stats snapshot()` — shell 参照用に `irq_lock()` で整合コピーを返す。

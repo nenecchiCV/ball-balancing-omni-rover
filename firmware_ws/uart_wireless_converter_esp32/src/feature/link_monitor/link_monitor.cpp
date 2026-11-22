@@ -3,6 +3,8 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 
+#include "peripheral/status_led/status_led.hpp"
+
 namespace uwc {
 
 void link_monitor::init() {
@@ -25,6 +27,21 @@ void link_monitor::on_event(link::event ev) {
       break;
   }
   irq_unlock(key);
+
+  // リンク状態をユーザー LED に反映する（FR-05）
+  switch (ev) {
+    case link::event::WAITING_STARTED:
+      status_led::set_mode(status_led::mode::BLINK);
+      break;
+    case link::event::CONNECTED:
+      status_led::set_mode(status_led::mode::SOLID);
+      break;
+    case link::event::DISCONNECTED:
+      status_led::set_mode(status_led::mode::OFF);
+      break;
+    default:
+      break;
+  }
 }
 
 void link_monitor::note_tx(uint32_t bytes) {

@@ -23,6 +23,7 @@ target_sources(app PRIVATE
 
   src/peripheral/host_uart/host_uart.cpp
   src/peripheral/debug_console/debug_console.cpp
+  src/peripheral/status_led/status_led.cpp
 
   src/feature/uart_bridge/uart_bridge.cpp
   src/feature/link_monitor/link_monitor.cpp

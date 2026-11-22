@@ -3,6 +3,7 @@
 #include <string.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
+#include <zephyr/drivers/gpio.h>
 #include <zephyr/shell/shell.h>
 #include <zephyr/sys/printk.h>
 
@@ -11,12 +12,15 @@
 #include "feature/uart_bridge/uart_bridge.hpp"
 #include "peripheral/debug_console/debug_console.hpp"
 #include "peripheral/host_uart/host_uart.hpp"
+#include "peripheral/status_led/status_led.hpp"
 
 namespace uwc {
 
 namespace {
 constexpr uint32_t BRIDGE_POLL_MS = 1;
-}
+// ユーザー LED（led0、GPIO15）。ボード dts の alias をそのまま使用する。
+const struct gpio_dt_spec LED0_SPEC = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
+}  // namespace
 
 bool converter_application::init(const config& cfg) {
   ARG_UNUSED(cfg);
@@ -24,6 +28,12 @@ bool converter_application::init(const config& cfg) {
   ring_buf_init(&link_to_host_, sizeof(l2h_mem_), l2h_mem_);
 
   link_monitor::init();
+
+  const status_led::config led_cfg = {.led = &LED0_SPEC};
+  if (!status_led::init(led_cfg)) {
+    debug_console::write_line("uwc: status_led init failed");
+    return false;
+  }
 
   if (!uart_bridge::init({&host_to_link_, &link_to_host_, BRIDGE_POLL_MS})) {
     debug_console::write_line("uwc: bridge init failed");

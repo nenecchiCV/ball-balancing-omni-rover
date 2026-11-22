@@ -10,6 +10,7 @@
 | FR-02 | 無線リンクの接続ライフサイクルを管理する | [functional/FR-02.md](functional/FR-02.md) |
 | FR-03 | 診断・統計を USB シリアルの shell で提供する | [functional/FR-03.md](functional/FR-03.md) |
 | FR-04 | 無線トランスポートを BLE/Wi-Fi で切替可能とする | [functional/FR-04.md](functional/FR-04.md) |
+| FR-05 | 無線リンクの状態を基板ユーザー LED で表示する | [functional/FR-05.md](functional/FR-05.md) |
 
 ## 非機能要求
 
