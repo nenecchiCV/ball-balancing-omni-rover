@@ -1,0 +1,30 @@
+test estop
+estop test: press external E-stop (PC0) or user button (PC13)
+estop t=1730429 ext_level=0 btn_level=0 requested=0
+
+started estop
+uart:~$ estop t=1731431 ext_level=0 btn_level=0 requested=0
+
+estop t=1732435 ext_level=0 btn_level=0 requested=0
+
+estop t=1733438 ext_level=0 btn_level=0 requested=0
+
+estop t=1734442 ext_level=0 btn_level=0 requested=0
+
+estop t=1735445 ext_level=0 btn_level=0 requested=0
+
+estop t=1736449 ext_level=0 btn_level=0 requested=0
+
+estop t=1737452 ext_level=0 btn_level=0 requested=0
+
+estop t=1738456 ext_level=0 btn_level=0 requested=0
+
+estop t=1739459 ext_level=0 btn_level=0 requested=0
+
+estop t=1740463 ext_level=0 btn_level=0 requested=0
+
+*** Booting Zephyr OS build v4.3.0 ***
+
+uart:~$ test stop
+stopped
+uart:~$ 

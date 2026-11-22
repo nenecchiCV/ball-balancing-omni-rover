@@ -1,0 +1,12 @@
+testop t=24524 ext_level=0 btn_level=0 requested=0
+
+estop t=25527 ext_level=0 btn_level=0 requested=0
+
+test stop
+ttest: command not found
+uart:~$ estop t=26531 ext_level=0 btn_level=0 requested=0
+
+estop t=27534 ext_level=0 btn_level=0 requested=0
+
+estop t=28538 ext_level=0 btn_level=0 requested=0
+

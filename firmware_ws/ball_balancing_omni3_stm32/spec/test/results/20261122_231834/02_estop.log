@@ -1,0 +1,38 @@
+ttick n=1000 mean_us=999 min_us=692 max_us=1001 missed=0
+
+tick n=1000 mean_us=999 min_us=998 max_us=1001 missed=0
+
+tick n=1000 mean_us=999 min_us=998 max_us=1001 missed=0
+
+tick n=1000 mean_us=999 min_us=998 max_us=1000 missed=0
+
+tick n=1000 mean_us=999 min_us=998 max_us=1001 missed=0
+
+tick n=1000 mean_us=999 min_us=998 max_us=1001 missed=0
+
+tick n=1000 mean_us=999 min_us=998 max_us=1001 missed=0
+
+tick n=1000 mean_us=999 min_us=998 max_us=1001 missed=0
+
+tick n=1000 mean_us=999 min_us=988 max_us=1012 missed=0
+
+tick n=1000 mean_us=999 min_us=998 max_us=1000 missed=0
+
+tick n=1000 mean_us=999 min_us=991 max_us=1009 missed=0
+
+tick n=1000 mean_us=999 min_us=990 max_us=1010 missed=0
+
+tick n=1000 mean_us=999 min_us=998 max_us=1001 missed=0
+
+tick n=1000 mean_us=999 min_us=990 max_us=1010 missed=0
+
+tick n=1000 mean_us=4270702 min_us=992 max_us=4269703782 missed=4269702
+
+test stop
+ttest: command not found
+uart:~$ tick n=1000 mean_us=999 min_us=997 max_us=1010 missed=0
+
+tick n=1000 mean_us=999 min_us=998 max_us=1000 missed=0
+
+tick n=1000 mean_us=999 min_us=998 max_us=1000 missed=0
+

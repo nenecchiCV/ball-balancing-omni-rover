@@ -1,0 +1,7 @@
+test tick
+tick test: period stats every 1 s (expected ~1000 us)
+started tick
+uart:~$ test stop
+tick test: stopped
+stopped
+uart:~$ 

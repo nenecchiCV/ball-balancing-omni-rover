@@ -1,0 +1,707 @@
+test deadzone 1 0.6 15
+deadzone: dir=+1 max=0.60 ramp=15.0 s; wheels unloaded, hold the chassis
+dz,t_s,duty,w0,w1,w2
+
+started deadzone
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 1uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 1uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 1uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 1uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 1uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 2uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 2uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 0uart:~$ .uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 2uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 0uart:~$ .uart:~$ 6uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 2uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 0uart:~$ .uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 2uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 0uart:~$ .uart:~$ 7uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 3uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 0uart:~$ .uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 3uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 0uart:~$ .uart:~$ 8uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 3uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 0uart:~$ .uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 3uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 0uart:~$ .uart:~$ 9uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 3uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ .uart:~$ 1uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ .uart:~$ 1uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ .uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ .uart:~$ 2uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 5uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ .uart:~$ 3uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 5uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ .uart:~$ 3uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 5uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ .uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 5uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ .uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 5uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ .uart:~$ 5uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 6uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ .uart:~$ 5uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 6uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ .uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 6uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ .uart:~$ 6uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 6uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ .uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 6uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ .uart:~$ 7uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 7uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ .uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 7uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ .uart:~$ 8uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 7uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 7uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 7uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 2uart:~$ .uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 8uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 2uart:~$ .uart:~$ 0uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 8uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 2uart:~$ .uart:~$ 1uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 8uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 2uart:~$ .uart:~$ 1uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 8uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 2uart:~$ .uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 8uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 2uart:~$ .uart:~$ 2uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 9uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 2uart:~$ .uart:~$ 3uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 9uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 2uart:~$ .uart:~$ 3uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 9uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 2uart:~$ .uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 9uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 2uart:~$ .uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 9uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 2uart:~$ .uart:~$ 5uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 2uart:~$ .uart:~$ 5uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 0uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 2uart:~$ .uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 0uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 2uart:~$ .uart:~$ 6uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 0uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 2uart:~$ .uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 0uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 2uart:~$ .uart:~$ 7uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 1uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 1uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 1uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 2uart:~$ .uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 1uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 2uart:~$ .uart:~$ 9uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 1uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 3uart:~$ .uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 3uart:~$ .uart:~$ 0uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 3uart:~$ .uart:~$ 1uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 3uart:~$ .uart:~$ 1uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 3uart:~$ .uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 3uart:~$ .uart:~$ 2uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 3uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 3uart:~$ .uart:~$ 3uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 3uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 3uart:~$ .uart:~$ 3uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 3uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 3uart:~$ .uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 3uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 3uart:~$ .uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 3uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 3uart:~$ .uart:~$ 5uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 4uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 3uart:~$ .uart:~$ 5uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 4uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 4uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 4uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 3uart:~$ .uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 4uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 3uart:~$ .uart:~$ 7uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 5uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 3uart:~$ .uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 5uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 3uart:~$ .uart:~$ 8uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 5uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 3uart:~$ .uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 5uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 3uart:~$ .uart:~$ 9uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 5uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 4uart:~$ .uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 6uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 4uart:~$ .uart:~$ 0uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 6uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 4uart:~$ .uart:~$ 1uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 6uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 4uart:~$ .uart:~$ 1uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 6uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 4uart:~$ .uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 6uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 4uart:~$ .uart:~$ 2uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 7uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 4uart:~$ .uart:~$ 3uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 7uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 4uart:~$ .uart:~$ 3uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 7uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 4uart:~$ .uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 7uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 4uart:~$ .uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 7uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 4uart:~$ .uart:~$ 5uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 8uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 4uart:~$ .uart:~$ 5uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 8uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 8uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 8uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 2uart:~$ .uart:~$ 7uart:~$ 6uart:~$ 2uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 4uart:~$ .uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 8uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 2uart:~$ .uart:~$ 7uart:~$ 6uart:~$ 2uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 4uart:~$ .uart:~$ 7uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 9uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 2uart:~$ .uart:~$ 7uart:~$ 6uart:~$ 2uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 4uart:~$ .uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 9uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 2uart:~$ .uart:~$ 7uart:~$ 6uart:~$ 2uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 4uart:~$ .uart:~$ 8uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 9uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 2uart:~$ .uart:~$ 7uart:~$ 6uart:~$ 2uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 4uart:~$ .uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 9uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 2uart:~$ .uart:~$ 7uart:~$ 6uart:~$ 2uart:~$ ,uart:~$ 2uart:~$ .uart:~$ 7uart:~$ 6uart:~$ 2uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 4uart:~$ .uart:~$ 9uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 9uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 2uart:~$ .uart:~$ 7uart:~$ 6uart:~$ 2uart:~$ ,uart:~$ 2uart:~$ .uart:~$ 7uart:~$ 6uart:~$ 2uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 5uart:~$ .uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 2uart:~$ .uart:~$ 7uart:~$ 6uart:~$ 2uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 5uart:~$ .uart:~$ 0uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 2uart:~$ .uart:~$ 7uart:~$ 6uart:~$ 2uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 5uart:~$ .uart:~$ 1uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 2uart:~$ .uart:~$ 7uart:~$ 6uart:~$ 2uart:~$ ,uart:~$ 2uart:~$ .uart:~$ 7uart:~$ 6uart:~$ 2uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 5uart:~$ .uart:~$ 1uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 5uart:~$ .uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 2uart:~$ .uart:~$ 7uart:~$ 6uart:~$ 2uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 2uart:~$ .uart:~$ 7uart:~$ 6uart:~$ 2uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 5uart:~$ .uart:~$ 2uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 1uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 2uart:~$ .uart:~$ 7uart:~$ 6uart:~$ 2uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 5uart:~$ .uart:~$ 3uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 1uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 5uart:~$ .uart:~$ 3uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 1uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 2uart:~$ .uart:~$ 7uart:~$ 6uart:~$ 2uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 2uart:~$ .uart:~$ 7uart:~$ 6uart:~$ 2uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 5uart:~$ .uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 1uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 2uart:~$ .uart:~$ 7uart:~$ 6uart:~$ 2uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 5uart:~$ .uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 1uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 2uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 2uart:~$ .uart:~$ 7uart:~$ 6uart:~$ 2uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 2uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 5uart:~$ .uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 2uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 5uart:~$ .uart:~$ 6uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 2uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 5uart:~$ .uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 2uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 5uart:~$ .uart:~$ 7uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 3uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 5uart:~$ .uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 3uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 5uart:~$ .uart:~$ 8uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 3uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 5uart:~$ .uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 3uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 5uart:~$ .uart:~$ 9uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 3uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 6uart:~$ .uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 4uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 6uart:~$ .uart:~$ 0uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 4uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 6uart:~$ .uart:~$ 1uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 4uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 6uart:~$ .uart:~$ 1uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 4uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 6uart:~$ .uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 4uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 6uart:~$ .uart:~$ 2uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 5uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 6uart:~$ .uart:~$ 3uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 5uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 6uart:~$ .uart:~$ 3uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 5uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 5uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 5uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 8uart:~$ 3uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 6uart:~$ .uart:~$ 5uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 6uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 6uart:~$ .uart:~$ 5uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 6uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 6uart:~$ .uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 6uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 6uart:~$ .uart:~$ 6uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 6uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 6uart:~$ .uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 6uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 6uart:~$ .uart:~$ 7uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 7uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 6uart:~$ .uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 7uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 6uart:~$ .uart:~$ 8uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 7uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 6uart:~$ .uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 7uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 6uart:~$ .uart:~$ 9uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 7uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 7uart:~$ .uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 7uart:~$ .uart:~$ 0uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 7uart:~$ .uart:~$ 1uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 7uart:~$ .uart:~$ 1uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 7uart:~$ .uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 7uart:~$ .uart:~$ 2uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 9uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 9uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 9uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 7uart:~$ .uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 9uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 7uart:~$ .uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 9uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 7uart:~$ .uart:~$ 5uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 7uart:~$ .uart:~$ 5uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 0uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 7uart:~$ .uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 0uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 7uart:~$ .uart:~$ 6uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 0uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 7uart:~$ .uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 0uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 7uart:~$ .uart:~$ 7uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 1uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 7uart:~$ .uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 1uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 7uart:~$ .uart:~$ 8uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 1uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 7uart:~$ .uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 1uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 7uart:~$ .uart:~$ 9uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 1uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 8uart:~$ .uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 2uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 8uart:~$ .uart:~$ 0uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 2uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 8uart:~$ .uart:~$ 1uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 2uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 8uart:~$ .uart:~$ 1uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 2uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 2uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 3uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 8uart:~$ .uart:~$ 3uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 3uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 8uart:~$ .uart:~$ 3uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 3uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 8uart:~$ .uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 3uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 8uart:~$ .uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 3uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 8uart:~$ .uart:~$ 5uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 4uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 8uart:~$ .uart:~$ 5uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 4uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 8uart:~$ .uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 4uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 8uart:~$ .uart:~$ 6uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 4uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 8uart:~$ .uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 4uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 8uart:~$ .uart:~$ 7uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 5uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 8uart:~$ .uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 5uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 8uart:~$ .uart:~$ 8uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 5uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 5uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 8uart:~$ .uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 5uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 8uart:~$ .uart:~$ 9uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 5uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 9uart:~$ .uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 9uart:~$ .uart:~$ 0uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 9uart:~$ .uart:~$ 1uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 9uart:~$ .uart:~$ 1uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 7uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 9uart:~$ .uart:~$ 3uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 7uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 9uart:~$ .uart:~$ 3uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 7uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 9uart:~$ .uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 7uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 9uart:~$ .uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 7uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 9uart:~$ .uart:~$ 5uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 8uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 9uart:~$ .uart:~$ 5uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 8uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 9uart:~$ .uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 8uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 9uart:~$ .uart:~$ 6uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 8uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 9uart:~$ .uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 8uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 9uart:~$ .uart:~$ 7uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 9uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 9uart:~$ .uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 9uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 9uart:~$ .uart:~$ 8uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 9uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 9uart:~$ .uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 9uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 9uart:~$ .uart:~$ 9uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 9uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 0uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 0uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 0uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 0uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 0uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 6uart:~$ 6uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 2uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 1uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 1uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 3uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 1uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 1uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 1uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 2uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 2uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 2uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 6uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 2uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 2uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 7uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 3uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 3uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 8uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 3uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 3uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 9uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 3uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 1uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 8uart:~$ .uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 1uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 4uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 2uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 5uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 3uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 5uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 3uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 5uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 5uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 5uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 5uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 6uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 5uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 6uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 6uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 6uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 6uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 6uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 7uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 7uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 7uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 8uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 7uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 9uart:~$ .uart:~$ 2uart:~$ 0uart:~$ 7uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 7uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 7uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 8uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 0uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 8uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 1uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 8uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 1uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 8uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 8uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 2uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 9uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 3uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 9uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 3uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 9uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 9uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 4uart:~$ 9uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 5uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 5uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 0uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 0uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 6uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 0uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 0uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 7uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 1uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 1uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 1uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 1uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 9uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 1uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 0uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 1uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 1uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 2uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 3uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 3uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 3uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 3uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 3uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 3uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 3uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 5uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 4uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 5uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 4uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 4uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 6uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 4uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 4uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 7uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 5uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 5uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 8uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 5uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 5uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 9uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 5uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 4uart:~$ .uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 6uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 4uart:~$ .uart:~$ 0uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 6uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 4uart:~$ .uart:~$ 1uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 6uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 4uart:~$ .uart:~$ 1uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 6uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 4uart:~$ .uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 6uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 4uart:~$ .uart:~$ 2uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 7uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 4uart:~$ .uart:~$ 3uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 7uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 4uart:~$ .uart:~$ 3uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 7uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 4uart:~$ .uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 7uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 4uart:~$ .uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 7uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 4uart:~$ .uart:~$ 5uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 8uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 4uart:~$ .uart:~$ 5uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 8uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 8uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 4uart:~$ .uart:~$ 6uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 8uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 4uart:~$ .uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 8uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 8uart:~$ 1uart:~$ 1uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 4uart:~$ .uart:~$ 7uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 9uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 4uart:~$ .uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 9uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 4uart:~$ .uart:~$ 8uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 9uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 8uart:~$ 1uart:~$ 1uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 4uart:~$ .uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 9uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 4uart:~$ .uart:~$ 9uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 9uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 8uart:~$ 1uart:~$ 1uart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 8uart:~$ 1uart:~$ 1uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 5uart:~$ .uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 6uart:~$ 0uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 8uart:~$ 1uart:~$ 1uart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 8uart:~$ 1uart:~$ 1uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 5uart:~$ .uart:~$ 0uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 9uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 8uart:~$ 1uart:~$ 1uart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 8uart:~$ 1uart:~$ 1uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 5uart:~$ .uart:~$ 1uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 9uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 8uart:~$ 1uart:~$ 1uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 5uart:~$ .uart:~$ 1uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 9uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 8uart:~$ 1uart:~$ 1uart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 8uart:~$ 1uart:~$ 1uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 5uart:~$ .uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 9uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 8uart:~$ 1uart:~$ 1uart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 8uart:~$ 1uart:~$ 1uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 5uart:~$ .uart:~$ 2uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 9uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 8uart:~$ 1uart:~$ 1uart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 8uart:~$ 1uart:~$ 1uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 5uart:~$ .uart:~$ 3uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 8uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 5uart:~$ .uart:~$ 3uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 8uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 8uart:~$ 1uart:~$ 1uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 5uart:~$ .uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 8uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 3uart:~$ .uart:~$ 8uart:~$ 1uart:~$ 1uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 5uart:~$ .uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 8uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 8uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 5uart:~$ .uart:~$ 5uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 7uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 5uart:~$ .uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 7uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 5uart:~$ .uart:~$ 6uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 7uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 5uart:~$ .uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 7uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 5uart:~$ .uart:~$ 7uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 7uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 5uart:~$ .uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 6uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 5uart:~$ .uart:~$ 8uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 6uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 5uart:~$ .uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 6uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 5uart:~$ .uart:~$ 9uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 6uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 6uart:~$ .uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 6uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 6uart:~$ .uart:~$ 0uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 5uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 6uart:~$ .uart:~$ 1uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 5uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 6uart:~$ .uart:~$ 1uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 5uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 6uart:~$ .uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 5uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 6uart:~$ .uart:~$ 2uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 5uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 6uart:~$ .uart:~$ 3uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 4uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 6uart:~$ .uart:~$ 3uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 4uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 4uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 2uart:~$ .uart:~$ 8uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 6uart:~$ .uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 4uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 6uart:~$ .uart:~$ 5uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 4uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 6uart:~$ .uart:~$ 5uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 3uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 6uart:~$ .uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 3uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 6uart:~$ .uart:~$ 6uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 3uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 6uart:~$ .uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 3uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 6uart:~$ .uart:~$ 7uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 3uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 6uart:~$ .uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 6uart:~$ .uart:~$ 8uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 6uart:~$ .uart:~$ 9uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 6uart:~$ .uart:~$ 9uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 7uart:~$ .uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 2uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 7uart:~$ .uart:~$ 0uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 1uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 7uart:~$ .uart:~$ 1uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 1uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 7uart:~$ .uart:~$ 1uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 1uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 7uart:~$ .uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 1uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 7uart:~$ .uart:~$ 2uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 1uart:~$ 0uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 0uart:~$ 8uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 7uart:~$ .uart:~$ 3uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 0uart:~$ 6uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 9uart:~$ 7uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 7uart:~$ .uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 0uart:~$ 4uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ 
+uart:~$ 
+uart:~$ duart:~$ zuart:~$ ,uart:~$ 1uart:~$ 7uart:~$ .uart:~$ 4uart:~$ 5uart:~$ ,uart:~$ 0uart:~$ .uart:~$ 5uart:~$ 0uart:~$ 2uart:~$ 0uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 1uart:~$ .uart:~$ 0uart:~$ 4uart:~$ 9uart:~$ ,uart:~$ 1uart:~$ 0uart:~$ .uart:~$ 1uart:~$ 2uart:~$ 8uart:~$ 
+uart:~$ 
+uart:~$ test stop
+deadzone: stopped
+stopped
+uart:~$ 

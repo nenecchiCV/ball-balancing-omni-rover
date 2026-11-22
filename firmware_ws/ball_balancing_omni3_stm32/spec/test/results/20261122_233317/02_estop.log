@@ -1,0 +1,53 @@
+test estop
+estop test: press external E-stop (PC0) or user button (PC13)
+estop t=459650 ext_level=0 btn_level=0 requested=0
+
+started estop
+uart:~$ estop t=460653 ext_level=0 btn_level=0 requested=0
+
+estop t=461656 ext_level=0 btn_level=0 requested=0
+
+estop t=462658 ext_level=0 btn_level=0 requested=0
+
+estop t=463662 ext_level=0 btn_level=0 requested=0
+
+estop t=464665 ext_level=0 btn_level=0 requested=0
+
+estop t=465669 ext_level=0 btn_level=0 requested=0
+
+estop t=466673 ext_level=0 btn_level=0 requested=0
+
+estop t=467676 ext_level=0 btn_level=0 requested=0
+
+estop t=468680 ext_level=0 btn_level=0 requested=0
+
+estop t=469683 ext_level=0 btn_level=0 requested=0
+
+estop t=470687 ext_level=0 btn_level=0 requested=0
+
+estop t=471690 ext_level=0 btn_level=0 requested=0
+
+estop t=472693 ext_level=0 btn_level=0 requested=0
+
+estop t=473696 ext_level=0 btn_level=0 requested=0
+
+estop t=474700 ext_level=0 btn_level=0 requested=0
+
+estop t=475703 ext_level=0 btn_level=0 requested=0
+
+estop t=476707 ext_level=0 btn_level=0 requested=0
+
+estop t=477710 ext_level=0 btn_level=0 requested=0
+
+estop t=478714 ext_level=0 btn_level=0 requested=0
+
+estop t=479717 ext_level=0 btn_level=0 requested=0
+
+estop t=480721 ext_level=0 btn_level=0 requested=0
+
+estop t=481724 ext_level=0 btn_level=0 requested=0
+
+test stop
+estop test: stopped
+stopped
+uart:~$ 

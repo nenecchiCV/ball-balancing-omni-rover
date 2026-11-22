@@ -1,0 +1,35 @@
+test tick
+tick test: period stats every 1 s (expected ~1000 us)
+started tick
+uart:~$ test
+active=tick overrun=3441
+usage: test <name> [args...] / test stop
+  estop — E-stop 入力の変化表示
+  tick — 1 kHz ティック周期の統計
+  imu — IMU+推定器の姿勢出力
+  enc [spin] — エンコーダ方向・カウント表示
+  omni <vx> <vy> <yaw> — 速度・回転指令
+  deadzone [dir] [max] [sec] — 不感帯同定掃引
+  echo — USART1 バイトエコー（無線変換疎通用）
+uart:~$ tick n=1000 mean_us=999 min_us=728 max_us=1001 missed=0
+
+tick n=1000 mean_us=999 min_us=998 max_us=1001 missed=0
+
+test
+active=tick overrun=3443
+usage: test <name> [args...] / test stop
+  estop — E-stop 入力の変化表示
+  tick — 1 kHz ティック周期の統計
+  imu — IMU+推定器の姿勢出力
+  enc [spin] — エンコーダ方向・カウント表示
+  omni <vx> <vy> <yaw> — 速度・回転指令
+  deadzone [dir] [max] [sec] — 不感帯同定掃引
+  echo — USART1 バイトエコー（無線変換疎通用）
+uart:~$ tick n=1000 mean_us=999 min_us=997 max_us=1000 missed=0
+
+tick n=1000 mean_us=999 min_us=998 max_us=1001 missed=0
+
+test stop
+tick test: stopped
+stopped
+uart:~$ 

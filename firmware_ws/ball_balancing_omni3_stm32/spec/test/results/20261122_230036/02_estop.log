@@ -1,0 +1,21 @@
+test estop
+estop test: press external E-stop (PC0) or user button (PC13)
+estop t=207244 ext_level=0 btn_level=0 requested=0
+
+started estop
+uart:~$ estop t=208247 ext_level=0 btn_level=0 requested=0
+
+estop t=209250 ext_level=0 btn_level=0 requested=0
+
+estop t=210254 ext_level=0 btn_level=0 requested=0
+
+estop t=211257 ext_level=0 btn_level=0 requested=0
+
+estop t=212261 ext_level=0 btn_level=0 requested=0
+
+estop t=213265 ext_level=0 btn_level=0 requested=0
+
+estop t=214268 ext_level=0 btn_level=0 requested=0
+
+estop t=215272 ext_level=0 btn_level=0 requested=0
+

@@ -1,0 +1,11 @@
+test
+active=none overrun=1639 isr=158799 loop=156022 upd=5894 phase=0
+usage: test <name> [args...] / test stop
+  estop — E-stop 入力の変化表示
+  tick — 1 kHz ティック周期の統計
+  imu — IMU+推定器の姿勢出力
+  enc [spin] — エンコーダ方向・カウント表示
+  omni <vx> <vy> <yaw> — 速度・回転指令
+  deadzone [dir] [max] [sec] — 不感帯同定掃引
+  echo — USART1 バイトエコー（無線変換疎通用）
+uart:~$ 

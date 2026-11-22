@@ -1,0 +1,35 @@
+test estop
+estop test: press external E-stop (PC0) or user button (PC13)
+estop t=279865 ext_level=0 btn_level=0 requested=0
+
+started estop
+uart:~$ euart:~$ suart:~$ tuart:~$ ouart:~$ puart:~$  uart:~$ tuart:~$ =uart:~$ 2uart:~$ 8uart:~$ 0uart:~$ 8uart:~$ 6uart:~$ 8uart:~$  uart:~$ euart:~$ xuart:~$ tuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ buart:~$ tuart:~$ nuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ ruart:~$ euart:~$ quart:~$ uuart:~$ euart:~$ suart:~$ tuart:~$ euart:~$ duart:~$ =uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ euart:~$ suart:~$ tuart:~$ ouart:~$ puart:~$  uart:~$ tuart:~$ =uart:~$ 2uart:~$ 8uart:~$ 1uart:~$ 9uart:~$ 8uart:~$ 4uart:~$  uart:~$ euart:~$ xuart:~$ tuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ buart:~$ tuart:~$ nuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ ruart:~$ euart:~$ quart:~$ uuart:~$ euart:~$ suart:~$ tuart:~$ euart:~$ duart:~$ =uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ euart:~$ suart:~$ tuart:~$ ouart:~$ puart:~$  uart:~$ tuart:~$ =uart:~$ 2uart:~$ 8uart:~$ 3uart:~$ 1uart:~$ 0uart:~$ 1uart:~$  uart:~$ euart:~$ xuart:~$ tuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ buart:~$ tuart:~$ nuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ ruart:~$ euart:~$ quart:~$ uuart:~$ euart:~$ suart:~$ tuart:~$ euart:~$ duart:~$ =uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ euart:~$ suart:~$ tuart:~$ ouart:~$ puart:~$  uart:~$ tuart:~$ =uart:~$ 2uart:~$ 8uart:~$ 4uart:~$ 2uart:~$ 1uart:~$ 7uart:~$  uart:~$ euart:~$ xuart:~$ tuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ buart:~$ tuart:~$ nuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ ruart:~$ euart:~$ quart:~$ uuart:~$ euart:~$ suart:~$ tuart:~$ euart:~$ duart:~$ =uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ euart:~$ suart:~$ tuart:~$ ouart:~$ puart:~$  uart:~$ tuart:~$ =uart:~$ 2uart:~$ 8uart:~$ 5uart:~$ 3uart:~$ 3uart:~$ 4uart:~$  uart:~$ euart:~$ xuart:~$ tuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ buart:~$ tuart:~$ nuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ ruart:~$ euart:~$ quart:~$ uuart:~$ euart:~$ suart:~$ tuart:~$ euart:~$ duart:~$ =uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ euart:~$ suart:~$ tuart:~$ ouart:~$ puart:~$  uart:~$ tuart:~$ =uart:~$ 2uart:~$ 8uart:~$ 6uart:~$ 4uart:~$ 5uart:~$ 0uart:~$  uart:~$ euart:~$ xuart:~$ tuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ buart:~$ tuart:~$ nuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ ruart:~$ euart:~$ quart:~$ uuart:~$ euart:~$ suart:~$ tuart:~$ euart:~$ duart:~$ =uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ euart:~$ suart:~$ tuart:~$ ouart:~$ puart:~$  uart:~$ tuart:~$ =uart:~$ 2uart:~$ 8uart:~$ 7uart:~$ 5uart:~$ 6uart:~$ 7uart:~$  uart:~$ euart:~$ xuart:~$ tuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ buart:~$ tuart:~$ nuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ ruart:~$ euart:~$ quart:~$ uuart:~$ euart:~$ suart:~$ tuart:~$ euart:~$ duart:~$ =uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ euart:~$ suart:~$ tuart:~$ ouart:~$ puart:~$  uart:~$ tuart:~$ =uart:~$ 2uart:~$ 8uart:~$ 8uart:~$ 6uart:~$ 8uart:~$ 3uart:~$  uart:~$ euart:~$ xuart:~$ tuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ buart:~$ tuart:~$ nuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ ruart:~$ euart:~$ quart:~$ uuart:~$ euart:~$ suart:~$ tuart:~$ euart:~$ duart:~$ =uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ euart:~$ suart:~$ tuart:~$ ouart:~$ puart:~$  uart:~$ tuart:~$ =uart:~$ 2uart:~$ 8uart:~$ 9uart:~$ 8uart:~$ 0uart:~$ 0uart:~$  uart:~$ euart:~$ xuart:~$ tuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ buart:~$ tuart:~$ nuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ ruart:~$ euart:~$ quart:~$ uuart:~$ euart:~$ suart:~$ tuart:~$ euart:~$ duart:~$ =uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ euart:~$ suart:~$ tuart:~$ ouart:~$ puart:~$  uart:~$ tuart:~$ =uart:~$ 2uart:~$ 9uart:~$ 0uart:~$ 9uart:~$ 1uart:~$ 7uart:~$  uart:~$ euart:~$ xuart:~$ tuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ buart:~$ tuart:~$ nuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ ruart:~$ euart:~$ quart:~$ uuart:~$ euart:~$ suart:~$ tuart:~$ euart:~$ duart:~$ =uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ euart:~$ suart:~$ tuart:~$ ouart:~$ puart:~$  uart:~$ tuart:~$ =uart:~$ 2uart:~$ 9uart:~$ 2uart:~$ 0uart:~$ 3uart:~$ 3uart:~$  uart:~$ euart:~$ xuart:~$ tuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ buart:~$ tuart:~$ nuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ ruart:~$ euart:~$ quart:~$ uuart:~$ euart:~$ suart:~$ tuart:~$ euart:~$ duart:~$ =uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ euart:~$ suart:~$ tuart:~$ ouart:~$ puart:~$  uart:~$ tuart:~$ =uart:~$ 2uart:~$ 9uart:~$ 3uart:~$ 1uart:~$ 5uart:~$ 0uart:~$  uart:~$ euart:~$ xuart:~$ tuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ buart:~$ tuart:~$ nuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ ruart:~$ euart:~$ quart:~$ uuart:~$ euart:~$ suart:~$ tuart:~$ euart:~$ duart:~$ =uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ euart:~$ suart:~$ tuart:~$ ouart:~$ puart:~$  uart:~$ tuart:~$ =uart:~$ 2uart:~$ 9uart:~$ 4uart:~$ 2uart:~$ 6uart:~$ 6uart:~$  uart:~$ euart:~$ xuart:~$ tuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ buart:~$ tuart:~$ nuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ ruart:~$ euart:~$ quart:~$ uuart:~$ euart:~$ suart:~$ tuart:~$ euart:~$ duart:~$ =uart:~$ 0uart:~$ 
+uart:~$ 
+uart:~$ euart:~$ suart:~$ tuart:~$ ouart:~$ puart:~$  uart:~$ tuart:~$ =uart:~$ 2uart:~$ 9uart:~$ 5uart:~$ 3uart:~$ 8uart:~$ 3uart:~$  uart:~$ euart:~$ xuart:~$ tuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ buart:~$ tuart:~$ nuart:~$ _uart:~$ luart:~$ euart:~$ vuart:~$ euart:~$ luart:~$ =uart:~$ 0uart:~$  uart:~$ ruart:~$ euart:~$ quart:~$ uuart:~$ eest stop
+estop test: stopped
+stopped
+uart:~$ 
