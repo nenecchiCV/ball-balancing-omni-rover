@@ -1,6 +1,7 @@
 #include "peripheral/control_tick/control_tick.hpp"
 
 #include <soc.h>
+#include <stm32_ll_bus.h>
 #include <stm32_ll_tim.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/irq.h>
@@ -23,6 +24,9 @@ K_SEM_DEFINE(tick_sem, 0, 1);
 }  // namespace
 
 bool control_tick::init() {
+  // timers6 は Zephyr ドライバに紐付かないため、ペリフェラルクロックは
+  // ここで明示的に供給する（供給なしのレジスタ書込みは破棄される）。
+  LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM6);
   // 1 MHz / (ARR+1) = 1 kHz
   LL_TIM_SetPrescaler(TIMER, DT_PROP(DT_NODELABEL(timers6), st_prescaler));
   LL_TIM_SetAutoReload(TIMER, 999U);
