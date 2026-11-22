@@ -39,6 +39,9 @@ class test_runner {
   static bool active();
   static const char* active_name();
   static uint32_t overrun_count();
+  static uint32_t loop_iters();
+  static uint32_t upd_calls();
+  static uint32_t phase();
 
   // 登録テーブル（`test` 一覧表示用）。
   static const test_entry* entries();
@@ -55,6 +58,8 @@ class test_runner {
   static inline uint32_t phase_ = 0;
   static inline uint32_t overruns_ = 0;
   static inline uint32_t led_phase_ = 0;
+  static inline uint32_t loop_iters_ = 0;
+  static inline uint32_t upd_calls_ = 0;
   static inline bool stop_requested_ = false;
 };
 

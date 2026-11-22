@@ -21,6 +21,9 @@ TIM_TypeDef* const TIMER =
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 K_SEM_DEFINE(tick_sem, 0, 1);
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+volatile uint32_t isr_ticks = 0;
+
 }  // namespace
 
 bool control_tick::init() {
@@ -57,8 +60,13 @@ struct k_sem* control_tick::sem() {
   return &tick_sem;
 }
 
+uint32_t control_tick::isr_count() {
+  return isr_ticks;
+}
+
 void control_tick::tick_isr_cb(const void* arg) {
   ARG_UNUSED(arg);
+  ++isr_ticks;
   LL_TIM_ClearFlag_UPDATE(TIMER);
   k_sem_give(&tick_sem);
 }

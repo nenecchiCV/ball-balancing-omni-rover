@@ -82,6 +82,7 @@ uart:~$ test stop       # 現在のテストを停止
 | `test enc` / `test enc spin` | エンコーダ方向 | 10 Hz | [encoder_direction.md](encoder_direction.md) |
 | `test omni <vx> <vy> <yaw>` | オムニ速度・回転指令 | 1 kHz 駆動 / 10 Hz 表示 | [omni_drive.md](omni_drive.md) |
 | `test deadzone [dir] [max] [sec]` | モータ不感帯同定 | 1 kHz 掃引 / 20 Hz CSV | [motor_deadzone.md](motor_deadzone.md) |
+| `test echo` | USART1 バイトエコー（無線変換疎通用） | 常時エコー / 1 Hz 統計 | [uart_echo.md](uart_echo.md) |
 
 ## 安全上の注意
 

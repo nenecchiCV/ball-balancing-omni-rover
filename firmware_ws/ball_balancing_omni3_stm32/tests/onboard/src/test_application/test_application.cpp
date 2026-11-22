@@ -16,6 +16,7 @@
 #include "peripheral/control_tick/control_tick.hpp"
 #include "test_runner/test_runner.hpp"
 #include "tick_timing_test/tick_timing_test.hpp"
+#include "uart_echo_test/uart_echo_test.hpp"
 
 namespace bb {
 
@@ -78,6 +79,7 @@ bool test_application::init() {
                       {&motors_[0], &motors_[1], &motors_[2]}});
   omni_drive_test::init({p_, {&motors_[0], &motors_[1], &motors_[2]}});
   motor_deadzone_test::init({{&motors_[0], &motors_[1], &motors_[2]}});
+  (void)uart_echo_test::init();
 
   // runner + tick
   control_tick::init();

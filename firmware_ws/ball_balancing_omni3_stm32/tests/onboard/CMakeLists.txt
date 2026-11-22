@@ -62,4 +62,5 @@ target_sources(app PRIVATE
   src/encoder_test/encoder_test.cpp
   src/omni_drive_test/omni_drive_test.cpp
   src/motor_deadzone_test/motor_deadzone_test.cpp
+  src/uart_echo_test/uart_echo_test.cpp
 )

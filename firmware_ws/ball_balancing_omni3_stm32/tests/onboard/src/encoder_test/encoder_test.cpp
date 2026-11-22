@@ -1,6 +1,8 @@
 #include "encoder_test/encoder_test.hpp"
 
+#include <etl/algorithm.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "device/estop_input/estop_input.hpp"
@@ -11,8 +13,8 @@
 namespace bb {
 
 namespace {
-constexpr float UPDATE_DT = 0.1F;           // period=100 tick = 100 ms
-constexpr float SPIN_DUTY = 0.15F;          // spin モードの駆動デューティ
+constexpr float UPDATE_DT = 0.1F;      // period=100 tick = 100 ms
+constexpr float DEFAULT_SPIN_DUTY = 0.40F;  // 不感帯(~0.28)を確実に超える既定値
 constexpr uint32_t SPIN_PHASE_TICKS = 30U;  // 3 s / 100 ms
 
 void apply_duty(mdd3a_motor* const* motors, float duty) {
@@ -32,10 +34,19 @@ bool encoder_test::start_cb(int argc, char** argv) {
   spin_ = (argc >= 1) && (strcmp(argv[0], "spin") == 0);
   if (argc >= 1 && !spin_) return false;
   spin_phase_ = 0;
+  spin_duty_ = DEFAULT_SPIN_DUTY;
+  if (argc >= 2) {
+    spin_duty_ = etl::clamp(strtof(argv[1], nullptr), 0.05F, 0.8F);
+  }
   if (spin_) {
-    debug_uart::write_line(
-        "enc spin: duty +0.15 (3 s) then -0.15 (3 s); "
-        "expect rate sign == duty sign");
+    char line[96];
+    const int n =
+        snprintf(line, sizeof(line),
+                 "enc spin: duty +%.2f (3 s) then -%.2f (3 s); "
+                 "expect rate sign == duty sign\r\n",
+                 static_cast<double>(spin_duty_),
+                 static_cast<double>(spin_duty_));
+    debug_uart::write(line, static_cast<uint32_t>(n));
   } else {
     debug_uart::write_line(
         "enc test: rotate each wheel by hand in the expected positive "
@@ -62,9 +73,9 @@ void encoder_test::update_cb() {
   if (spin_) {
     // 0-30 更新: +duty、30-60 更新: -duty、以降: 終了。
     if (spin_phase_ < SPIN_PHASE_TICKS) {
-      duty = SPIN_DUTY;
+      duty = spin_duty_;
     } else if (spin_phase_ < 2U * SPIN_PHASE_TICKS) {
-      duty = -SPIN_DUTY;
+      duty = -spin_duty_;
     } else {
       apply_duty(motors_, 0.0F);
       debug_uart::write_line("enc spin: done");

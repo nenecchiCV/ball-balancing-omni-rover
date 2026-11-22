@@ -13,6 +13,7 @@
 #include "peripheral/control_tick/control_tick.hpp"
 #include "peripheral/timebase/timebase.hpp"
 #include "tick_timing_test/tick_timing_test.hpp"
+#include "uart_echo_test/uart_echo_test.hpp"
 
 namespace bb {
 
@@ -31,7 +32,7 @@ const test_runner::test_entry TESTS[] = {
      &tick_timing_test::update_cb, &tick_timing_test::stop_cb, 1U},
     {"imu", "imu — IMU+推定器の姿勢出力", &imu_attitude_test::start_cb,
      &imu_attitude_test::update_cb, &imu_attitude_test::stop_cb, 5U},
-    {"enc", "enc [spin] — エンコーダ方向・カウント表示",
+    {"enc", "enc [spin [duty]] — エンコーダ方向・カウント表示",
      &encoder_test::start_cb, &encoder_test::update_cb, &encoder_test::stop_cb,
      100U},
     {"omni", "omni <vx> <vy> <yaw> — 速度・回転指令",
@@ -40,6 +41,9 @@ const test_runner::test_entry TESTS[] = {
     {"deadzone", "deadzone [dir] [max] [sec] — 不感帯同定掃引",
      &motor_deadzone_test::start_cb, &motor_deadzone_test::update_cb,
      &motor_deadzone_test::stop_cb, 1U},
+    {"echo", "echo — USART1 バイトエコー（無線変換疎通用）",
+     &uart_echo_test::start_cb, &uart_echo_test::update_cb,
+     &uart_echo_test::stop_cb, 1000U},
 };
 
 const test_runner::test_entry* find_entry(const char* name) {
@@ -51,9 +55,13 @@ const test_runner::test_entry* find_entry(const char* name) {
 
 int test_cmd_cb(const struct shell* sh, size_t argc, char** argv) {
   if (argc < 2) {
-    shell_print(sh, "active=%s overrun=%lu",
+    shell_print(sh, "active=%s overrun=%lu isr=%lu loop=%lu upd=%lu phase=%lu",
                 test_runner::active() ? test_runner::active_name() : "none",
-                static_cast<unsigned long>(test_runner::overrun_count()));
+                static_cast<unsigned long>(test_runner::overrun_count()),
+                static_cast<unsigned long>(control_tick::isr_count()),
+                static_cast<unsigned long>(test_runner::loop_iters()),
+                static_cast<unsigned long>(test_runner::upd_calls()),
+                static_cast<unsigned long>(test_runner::phase()));
     shell_print(sh, "usage: test <name> [args...] / test stop");
     for (size_t i = 0; i < test_runner::entry_count(); ++i) {
       const auto& e = test_runner::entries()[i];
@@ -127,6 +135,18 @@ uint32_t test_runner::overrun_count() {
   return overruns_;
 }
 
+uint32_t test_runner::loop_iters() {
+  return loop_iters_;
+}
+
+uint32_t test_runner::upd_calls() {
+  return upd_calls_;
+}
+
+uint32_t test_runner::phase() {
+  return phase_;
+}
+
 void test_runner::apply_stop_locked() {
   if (active_ != nullptr && active_->stop_cb != nullptr) {
     active_->stop_cb();
@@ -139,12 +159,14 @@ void test_runner::apply_stop_locked() {
 void test_runner::run() {
   for (;;) {
     control_tick::wait();
+    ++loop_iters_;
     k_mutex_lock(&runner_mutex, K_FOREVER);
     if (stop_requested_) {
       apply_stop_locked();
     }
     if (active_ != nullptr && ++phase_ >= active_->period_ticks) {
       phase_ = 0;
+      ++upd_calls_;
       active_->update_cb();
     }
     k_mutex_unlock(&runner_mutex);

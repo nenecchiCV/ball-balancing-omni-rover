@@ -20,6 +20,8 @@ class control_tick {
   static void wait();
   // ISR 直接呼び出し用のセマフォ。
   static struct k_sem* sem();
+  // ISR 発火回数（診断用）。
+  static uint32_t isr_count();
 
  private:
   static void tick_isr_cb(const void* arg);
