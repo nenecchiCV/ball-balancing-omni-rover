@@ -21,8 +21,9 @@ struct telemetry_snapshot {
 
 ## 公開関数
 
-- `static bool init(const config&)` — 全コンポーネントへ設定を注入し初期化する。ピン・PWM・QDEC・IMU はすべて devicetree（`bb,pins`/`timersN`/`imu0` エイリアス）から `DT_*` マクロで取得する。最後に `control_tick::init()` + `start()` で 1 kHz ティックを開始する。IMU 検出失敗時は false。
+- `static bool init(const config&)` — 全コンポーネントへ設定を注入し初期化する。ピン・PWM・QDEC・IMU はすべて devicetree（`bb,pins`/`timersN`/`imu0` エイリアス）から `DT_*` マクロで取得する。`odometry`/`position_controller`/`link_session` も初期化し、リンクスレッド開始用 `link_init_sem` を give する。最後に `control_tick::init()` + `start()` で 1 kHz ティックを開始する。IMU 検出失敗時は false。
 - `[[noreturn]] static void run()` — `task_scheduler` に `inner_task_cb`/`outer_task_cb`/`diag_task_cb` を渡して実行する。
+- `static link_session::stats link_stats()` — `bb link` 診断用カウンタを返す。
 - `static telemetry_snapshot snapshot()` — shell スレッドからの状態参照用に `irq_lock()` で整合コピーを返す。
 - `set_telemetry(bool)` / `telemetry_enabled()` — CSV テレメトリ送出の切替（`volatile` フラグ）。
 
@@ -32,10 +33,26 @@ struct telemetry_snapshot {
 |---|---|
 | `bb status` | モード・IMU 健全性・オイラー角・輪速・トルク・オーバーラン・最大実行時間を表示（`status_cmd_cb`） |
 | `bb telem [on\|off]` | 200 ms 周期の CSV テレメトリ送出を切替える（`telem_cmd_cb`） |
+| `bb link` | ロボットリンクの受信フレーム数・CRC ドロップ・UART オーバーラン・TX ドロップ・最終受信時刻を表示（`link_cmd_cb`） |
+
+## リンクスレッド
+
+`K_THREAD_DEFINE` で生成される低優先度スレッド（`K_PRIO_PREEMPT(7)`）。`link_init_sem` で `init()` 完了を待ってから `link_session::run_once()` を無限ループで呼ぶ。制御スレッド（main）より低優先度のため、UART 受信処理が 1 kHz/200 Hz タスクをプリエンプトしない。
+
+## 外側タスクの指令選択（FR-09/FR-10）
+
+`outer_task_cb` は `odometry::update` で推定器の `velocity_world2` を積分し、`link_session::command()` の結果で指令源を切替える:
+
+1. `link_active=false`（一度もフレームを受けていない）→ 従来どおり `command_profile` の出力。
+2. `link_mode::VELOCITY` → `velocity_cmd`（500 ms WDG 失効時はゼロ化済み）。
+3. `link_mode::POSITION` → `position_controller::update(pose)` の出力。
+4. `link_mode::STANDBY` → 零指令。
+
+その後 `balance_controller::step` へ渡し、`link_session::publish_state`（メールボックス更新）と `generate_events`（EVT_POSE/EVT_STATUS/EVT_LOG 生成）を呼ぶ。qualified は `updated_qualification_time >= bias_qualification_time` で評価する。
 
 ## 内部状態
 
-- 複数インスタンスコンポーネントの static メンバ（`dir_pins_`/`led_pin_`/`estop_*_pin_`/`pwm_ch_`/`enc_count_`/`motors_`/`encoders_`）
+- 複数インスタンスコンポーネントの static メンバ（`led_pin_`/`estop_*_pin_`/`pwm_a_`/`pwm_b_`/`enc_count_`/`motors_`/`encoders_`）
 - 直近の推定・制御・サーボ出力・`enable` フラグ等の ZOH コンテキスト（同一制御スレッド内で更新・消費されるため排他不要）
 
 ## MATLAB との対応・適応事項

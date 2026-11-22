@@ -15,6 +15,9 @@
 #include "device/wheel_encoder/wheel_encoder.hpp"
 #include "feature/balance_controller/balance_controller.hpp"
 #include "feature/command_profile/command_profile.hpp"
+#include "feature/link_session/link_session.hpp"
+#include "feature/odometry/odometry.hpp"
+#include "feature/position_controller/position_controller.hpp"
 #include "feature/state_estimator/state_estimator.hpp"
 #include "feature/wheel_servo/wheel_servo.hpp"
 #include "feature/wheel_speed_meter/wheel_speed_meter.hpp"
@@ -66,6 +69,9 @@ class robot_application {
   static bool telemetry_enabled() {
     return telem_enabled_;
   }
+
+  // `bb link` 診断用カウンタ。
+  static link_session::stats link_stats();
 
  private:
   // task_scheduler の hooks へ登録するタスクコールバック。

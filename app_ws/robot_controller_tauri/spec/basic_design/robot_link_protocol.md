@@ -1,8 +1,8 @@
-# ロボットリンクプロトコル（API 仮定義）
+# ロボットリンクプロトコル
 
 `robot_controller_tauri`（セントラル）と `ball_balancing_omni3_stm32`（プロトコル終端）の間のアプリケーションプロトコルを定義する。転送は `uart_wireless_converter_esp32` の BLE NUS 透過バイトストリーム上で行い、変換器は内容を解釈しない。
 
-- ステータス: **仮定義（rev A）**。ファームウェア側実装（`ball_balancing_omni3_stm32` FR-09〜FR-11）と実機検証で確定する。
+- ステータス: **両端実装済み（rev A）**。`ball_balancing_omni3_stm32` 側は FR-09〜FR-11 として `link_protocol`/`link_uart`/`link_session`/`odometry`/`position_controller` で実装済み。残る確定事項は実機 BLE 検証のみ。
 - プロトコルバージョン: `1`
 
 ## 設計方針

@@ -107,3 +107,19 @@ uart:~$ test stop       # 現在のテストを停止
 - ログ行はテスト名の接頭辞で始め、数値は `snprintf` + `debug_uart::write` で出す。
 - モータを動かすテストは必ず `estop_input::requested()` を監視し、`stop_cb` で
   デューティをゼロにする。
+
+## ホストテスト（`tests/host/`）
+
+Zephyr 非依存の純粋ロジックはホスト（clang++）で単体検証する。実行は
+`cmake -B build-tests -G Ninja -DCMAKE_CXX_COMPILER=clang++ -S tests/host` →
+`cmake --build build-tests` → `ctest --test-dir build-tests --output-on-failure`。
+
+| 対象 | 検証内容 | 要件 |
+|---|---|---|
+| `link_protocol` | CRC16 既知ベクトル、エンコード配置、復号往復、分割投入、ゴミ/CRC 破損/過大 LEN 後の再同期、LE f32/u32 ヘルパ | FR-09 |
+| `odometry` | 速度積分、原点オフセット、RESET_ODOMETRY 相当の原点再設定、init リセット | FR-10, FR-11 |
+| `position_controller` | 誤差比例指令、slew 制限、`max_speed` 飽和、到達判定・ホールド、`hold_at`、目標解除 | FR-10 |
+
+`link_session`（Zephyr 依存の振分け・送出）と `link_uart`（ドライバ）は
+ホスト対象外とし、`bb link` シェルコマンドのカウンタと実機ログで検証する
+（オンボード側の専用テストは今後追加）。

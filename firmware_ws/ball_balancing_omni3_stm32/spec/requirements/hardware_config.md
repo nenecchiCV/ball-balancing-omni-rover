@@ -30,6 +30,7 @@
 | 非常停止（基板ボタン） | GPIO 入力（EXTI） | PC13 | B1 | ユーザボタン、押下 = 停止要求 |
 | 状態表示 LED | GPIO 出力 | PA5 | D13 | Nucleo 緑 LED |
 | 診断 UART | USART2 TX/RX | PA2 / PA3 | （ST-LINK VCP） | 115200 8N1、テレメトリ出力 |
+| リンク UART | USART1 TX/RX | PC4 / PC5 | モルフォ CN10 | 115200 8N1、`uart_wireless_converter_esp32`（GPIO16 TX→PC5 RX、GPIO17 RX←PC4 TX）への BLE リンク |
 | 制御タイムベース | TIM6 | — | — | 1 kHz 周期割込（内側タスク）。外側 200 Hz は 5 カウント分周 |
 
 ## タイミング要件

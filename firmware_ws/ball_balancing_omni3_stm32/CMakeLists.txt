@@ -36,6 +36,9 @@ target_sources(app PRIVATE
   src/peripheral/timebase/timebase.cpp
   src/peripheral/control_tick/control_tick.cpp
   src/peripheral/debug_uart/debug_uart.cpp
+  src/peripheral/link_uart/link_uart.cpp
+
+  src/common/link_protocol/link_protocol.cpp
 
   src/device/lsm6dso/lsm6dso.cpp
   src/device/wheel_encoder/wheel_encoder.cpp
@@ -48,6 +51,9 @@ target_sources(app PRIVATE
   src/feature/wheel_servo/wheel_servo.cpp
   src/feature/command_profile/command_profile.cpp
   src/feature/wheel_speed_meter/wheel_speed_meter.cpp
+  src/feature/odometry/odometry.cpp
+  src/feature/position_controller/position_controller.cpp
+  src/feature/link_session/link_session.cpp
 
   src/manager/robot_application/robot_application.cpp
   src/manager/task_scheduler/task_scheduler.cpp

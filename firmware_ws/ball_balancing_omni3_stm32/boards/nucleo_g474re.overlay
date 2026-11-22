@@ -17,6 +17,9 @@
 		qdec1 = &qdec1;
 		qdec2 = &qdec2;
 		control-tick = &timers6;
+		/* ボード標準 dts が PC4(TX)/PC5(RX) 115200 で有効化済み。
+		 * ESP32 無線変換器経由の BLE リンク用。 */
+		link-uart = &usart1;
 	};
 
 	bb_pins: bb-pins {

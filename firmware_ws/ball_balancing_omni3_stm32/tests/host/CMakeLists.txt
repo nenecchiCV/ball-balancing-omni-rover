@@ -19,17 +19,25 @@ get_filename_component(FW_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../.. ABSOLUTE)
 
 add_executable(
   bb_feature_tests
+  ${FW_ROOT}/src/common/link_protocol/link_protocol.cpp
   ${FW_ROOT}/src/feature/balance_controller/balance_controller.cpp
   ${FW_ROOT}/src/feature/command_profile/command_profile.cpp
+  ${FW_ROOT}/src/feature/odometry/odometry.cpp
+  ${FW_ROOT}/src/feature/position_controller/position_controller.cpp
   ${FW_ROOT}/src/feature/state_estimator/state_estimator.cpp
   ${FW_ROOT}/src/feature/wheel_servo/wheel_servo.cpp
   src/test_balance_controller.cpp
   src/test_command_profile.cpp
+  src/test_link_protocol.cpp
   src/test_main.cpp
+  src/test_odometry.cpp
+  src/test_position_controller.cpp
   src/test_state_estimator.cpp
   src/test_wheel_servo.cpp)
 
-target_include_directories(bb_feature_tests PRIVATE ${FW_ROOT}/src
+# stubs/ には <zephyr/irq.h> 等のホスト用スタブを置く（実ファイル側に
+# 同名ヘッダが無いため解決順は問わない）。
+target_include_directories(bb_feature_tests PRIVATE stubs ${FW_ROOT}/src
                                                     ${FW_ROOT}/third_party/etl/include src)
 
 enable_testing()

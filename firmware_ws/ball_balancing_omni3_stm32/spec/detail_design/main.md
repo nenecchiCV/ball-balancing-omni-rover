@@ -30,6 +30,7 @@
 - [vector_math](common/vector_math.md)
 - [control_params](common/control_params.md)
 - [imu_sample](common/imu_sample.md)
+- [link_protocol](common/link_protocol.md)
 
 ### peripheral
 - [gpio_pin](peripheral/gpio_pin.md)
@@ -38,6 +39,7 @@
 - [control_tick](peripheral/control_tick.md)
 - [timebase](peripheral/timebase.md)
 - [debug_uart](peripheral/debug_uart.md)
+- [link_uart](peripheral/link_uart.md)
 
 ### device
 - [lsm6dso](device/lsm6dso.md)
@@ -52,6 +54,9 @@
 - [balance_controller](feature/balance_controller.md)
 - [wheel_servo](feature/wheel_servo.md)
 - [command_profile](feature/command_profile.md)
+- [link_session](feature/link_session.md)
+- [odometry](feature/odometry.md)
+- [position_controller](feature/position_controller.md)
 
 ### manager
 - [task_scheduler](manager/task_scheduler.md)

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include "common/vector_math/vector_math.hpp"
 
 namespace bb {
@@ -262,6 +264,19 @@ struct param_set {
     float yaw_pulse_duration = 0.0F;
     float profile_yaw_rate = 0.2F;
   } command;
+
+  // FR-10 位置外ループ（ファーム側の追加パラメータ、MATLAB 非対応）。
+  struct position {
+    float kp = 1.0F;              // 位置誤差→速度比例ゲイン [1/s]
+    float accel_limit = 0.5F;     // 指令速度の変化率上限 [m/s^2]
+    float arrive_radius = 0.03F;  // 到達判定半径 [m]
+  } position;
+
+  // FR-09 ロボットリンク安全監視。
+  struct link {
+    uint32_t watchdog_ms = 500;  // SET_VELOCITY 指令の有効期限
+    uint32_t idle_ms = 1000;     // UART 無受信フェイルセーフ
+  } link;
 };
 
 inline const param_set& get_params() {

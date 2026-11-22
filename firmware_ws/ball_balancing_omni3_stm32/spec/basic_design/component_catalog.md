@@ -10,6 +10,7 @@
 | vector_math | `vec2`/`vec3`/`vec4`/`vec10`/`mat33`/`mat55` 等 | 固定長ベクトル・行列演算、quaternion・回転・skew・3x3 逆行列 |
 | control_params | `param_set` 構造体群 | MATLAB `p` 構造に対応する全定数の集約 |
 | imu_sample | `imu_sample` 構造体 | IMU 1 サンプルのデータ構造（比力・ジャイロ・有効フラグ）。device 非依存で feature が直接参照する |
+| link_protocol | `link_protocol` 名前空間 + `frame_decoder` | ロボットリンクプロトコルのフレーム符号化/復号・CRC16・メッセージ型（純粋ロジック、ホストテスト対象） |
 
 ## peripheral（ペリフェラル制御）
 
@@ -21,6 +22,7 @@
 | control_tick | `control_tick` | static | TIM6 1 kHz 更新割込 → `k_sem` 発行の制御タイムベース（`init`/`start`/`stop`/`wait`） |
 | timebase | `timebase` | static | `k_uptime` ミリ秒時刻 + DWT サイクル μs 計測 |
 | debug_uart | `debug_uart` | static | 診断テキスト送出（`printk`/console バックエンド） |
+| link_uart | `link_uart` | static | USART1 割込駆動 RX リング + TX リング（非ブロッキング送受信、`k_sem` 受信通知） |
 
 ## device（IC・センサ/アクチュエータ）
 
@@ -41,6 +43,9 @@
 | balance_controller | `balance_controller` | static | LQI 外側タスク + モード/安全判定（FR-03, FR-05） |
 | wheel_servo | `wheel_servo` | static | 1 kHz 推進サーボ + duty 反転（FR-04） |
 | command_profile | `command_profile` | static | サイクル指令生成（FR-07） |
+| link_session | `link_session` | static | ロボットリンクのフレーム振分け・モード/指令スロット・購読・ウォッチドッグ・イベント生成・リンクスレッドポンプ（FR-09, FR-11） |
+| odometry | `odometry` | static | ワールド速度の積分による位置推定・原点オフセット管理（FR-10, FR-11） |
+| position_controller | `position_controller` | static | 位置外ループ（目標位置→ワールド速度指令生成、FR-10） |
 
 ## manager（機能管理）
 

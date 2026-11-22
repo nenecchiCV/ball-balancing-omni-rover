@@ -19,7 +19,7 @@
 | 要素 | 機器 | 概要 |
 |---|---|---|
 | 無線変換器 | XIAO ESP32-C6（`uart_wireless_converter_esp32`） | BLE ペリフェラル。デバイス名 `uwc-esp32c6` で advertising する |
-| ロボット制御 MCU | NUCLEO-G474RE（`ball_balancing_omni3_stm32`） | USART1（PC4 RX / PC5 TX、115200 8N1）で ESP32 と接続。プロトコルの最終処理者 |
+| ロボット制御 MCU | NUCLEO-G474RE（`ball_balancing_omni3_stm32`） | USART1（PC4 TX / PC5 RX、115200 8N1）で ESP32 と接続。プロトコルの最終処理者 |
 
 ## BLE インターフェース仕様
 
