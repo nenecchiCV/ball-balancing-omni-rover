@@ -17,14 +17,14 @@
 | 機能 | ペリフェラル | ピン | Arduino 端子 | 備考 |
 |---|---|---|---|---|
 | ENC0 A/B | TIM2 CH1/CH2（エンコーダモード） | PA0 / PA1 | A0 / A1 | ホイール0（P0、+X 方向） |
-| ENC1 A/B | TIM3 CH1/CH2（エンコーダモード） | PA6 / PA7 | D12 / D11 | ホイール1 |
-| ENC2 A/B | TIM1 CH1/CH2（エンコーダモード） | PA8 / PA9 | D7 / D8 | ホイール2 |
-| PWM0 | TIM16 CH1 | PB4 | D5 | MDD3A-A M1A |
-| PWM1 | TIM17 CH1 | PB5 | D4 | MDD3A-B M1A |
+| ENC1 A/B | TIM1 CH1/CH2（エンコーダモード） | PA8 / PA9 | D7 / D8 | ホイール1 |
+| ENC2 A/B | TIM3 CH1/CH2（エンコーダモード） | PA6 / PA7 | D12 / D11 | ホイール2 |
+| PWM0 | TIM17 CH1 | PB5 | D4 | MDD3A-A M1A |
+| PWM1 | TIM16 CH1 | PB4 | D5 | MDD3A-B M1A |
 | PWM2 | TIM4 CH1 | PB6 | D10 | MDD3A-B M2A |
-| DIR0 | GPIO 出力 | PA10 | D2 | MDD3A-A M1B |
-| DIR1 | GPIO 出力 | PB3 | D3 | MDD3A-B M1B |
-| DIR2 | GPIO 出力 | PA4 | A2 | MDD3A-B M2B |
+| DIR0 | GPIO 出力 | PB3 | D3 | MDD3A-A M1B。PWM0=D4 と隣接するよう配置 |
+| DIR1 | GPIO 出力 | PB10 | D6 | MDD3A-B M1B。PWM1=D5 と隣接 |
+| DIR2 | GPIO 出力 | PC7 | D9 | MDD3A-B M2B。PWM2=D10 と隣接 |
 | I2C1 SCL/SDA | I2C1 | PB8 / PB9 | D15 / D14 | IMU 接続。アドレス 0x6B/0x6A を起動時に走査 |
 | 非常停止（外部） | GPIO 入力（プルアップ、EXTI） | PC0 | A5 | 低レベル = 停止要求 |
 | 非常停止（基板ボタン） | GPIO 入力（EXTI） | PC13 | B1 | ユーザボタン、押下 = 停止要求 |

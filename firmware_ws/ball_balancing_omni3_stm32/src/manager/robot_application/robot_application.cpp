@@ -89,9 +89,9 @@ bool robot_application::init(const config& cfg) {
   enc_count_[0].init(
       {reinterpret_cast<TIM_TypeDef*>(DT_REG_ADDR(DT_NODELABEL(timers2)))});
   enc_count_[1].init(
-      {reinterpret_cast<TIM_TypeDef*>(DT_REG_ADDR(DT_NODELABEL(timers3)))});
-  enc_count_[2].init(
       {reinterpret_cast<TIM_TypeDef*>(DT_REG_ADDR(DT_NODELABEL(timers1)))});
+  enc_count_[2].init(
+      {reinterpret_cast<TIM_TypeDef*>(DT_REG_ADDR(DT_NODELABEL(timers3)))});
 
   // device
   imu_ok_ = lsm6dso::init({DEVICE_DT_GET(DT_ALIAS(imu0)), imu_axis_map_});

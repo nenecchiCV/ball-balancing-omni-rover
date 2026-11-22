@@ -9,8 +9,8 @@
 / {
 	aliases {
 		imu0 = &lsm6dso;
-		pwm-m0 = &pwm16;
-		pwm-m1 = &pwm17;
+		pwm-m0 = &pwm17;
+		pwm-m1 = &pwm16;
 		pwm-m2 = &pwm4;
 		qdec0 = &qdec0;
 		qdec1 = &qdec1;
@@ -20,15 +20,15 @@
 
 	bb_pins: bb-pins {
 		compatible = "bb,pins";
-		dir0-gpios = <&gpioa 10 GPIO_ACTIVE_HIGH>;
-		dir1-gpios = <&gpiob 3 GPIO_ACTIVE_HIGH>;
-		dir2-gpios = <&gpioa 4 GPIO_ACTIVE_HIGH>;
+		dir0-gpios = <&gpiob 3 GPIO_ACTIVE_HIGH>;
+		dir1-gpios = <&gpiob 10 GPIO_ACTIVE_HIGH>;
+		dir2-gpios = <&gpioc 7 GPIO_ACTIVE_HIGH>;
 		led-gpios = <&gpioa 5 GPIO_ACTIVE_HIGH>;
 		estop-gpios = <&gpioc 0 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 		estop-btn-gpios = <&gpioc 13 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 		/* motor PWM: 20 kHz キャリア */
-		pwms = <&pwm16 1 PWM_KHZ(20) PWM_POLARITY_NORMAL>,
-		       <&pwm17 1 PWM_KHZ(20) PWM_POLARITY_NORMAL>,
+		pwms = <&pwm17 1 PWM_KHZ(20) PWM_POLARITY_NORMAL>,
+		       <&pwm16 1 PWM_KHZ(20) PWM_POLARITY_NORMAL>,
 		       <&pwm4 1 PWM_KHZ(20) PWM_POLARITY_NORMAL>;
 	};
 };
@@ -71,7 +71,7 @@
 	status = "okay";
 	st,prescaler = <0>;
 
-	qdec1: qdec {
+	qdec2: qdec {
 		compatible = "st,stm32-qdec";
 		status = "okay";
 		pinctrl-0 = <&tim3_ch1_pa6 &tim3_ch2_pa7>;
@@ -86,7 +86,7 @@
 	status = "okay";
 	st,prescaler = <0>;
 
-	qdec2: qdec {
+	qdec1: qdec {
 		compatible = "st,stm32-qdec";
 		status = "okay";
 		pinctrl-0 = <&tim1_ch1_pa8 &tim1_ch2_pa9>;
@@ -97,7 +97,7 @@
 	};
 };
 
-/* Motor PWM: TIM16 CH1/PB4, TIM17 CH1/PB5, TIM4 CH1/PB6 */
+/* Motor PWM: TIM17 CH1/PB5 (M0), TIM16 CH1/PB4 (M1), TIM4 CH1/PB6 (M2) */
 &timers16 {
 	status = "okay";
 	st,prescaler = <0>;
