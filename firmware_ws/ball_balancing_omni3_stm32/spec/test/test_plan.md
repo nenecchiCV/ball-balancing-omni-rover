@@ -42,6 +42,15 @@ tests/onboard/
   `printk`（`debug_uart` 経由）で出力する。shell プロンプトとは別系統の出力が
   混在するため、行先頭のテスト接頭辞（`estop`/`tick`/`imu`/`enc`/`omni`/`dz`）で区別する。
 
+### 起動確認（ハートビート）
+
+- **要件**: ファームウェア実行中、USER LED（LD2, PA5）は常に 1 秒周期で点滅する。
+- `status_led::pattern::SLOW_BLINK`（500 ms トグル）を `test_application::init()` で
+  無条件に設定し、`test_runner` の 1 kHz ループから `status_led::update()` を呼ぶ。
+- 書き込み・リセット直後から点滅すれば MCU がファームウェアを実行している。
+  点滅しない場合は書き込み失敗・起動前クラッシュ・電源系統を疑う。
+- IMU 健全性などの状態区別は LED では行わず、`test imu` 等のログで確認する。
+
 ## ビルドと書き込み
 
 ```bash

@@ -39,9 +39,9 @@ bool test_application::init() {
   enc_count_[0].init(
       {reinterpret_cast<TIM_TypeDef*>(DT_REG_ADDR(DT_NODELABEL(timers2)))});
   enc_count_[1].init(
-      {reinterpret_cast<TIM_TypeDef*>(DT_REG_ADDR(DT_NODELABEL(timers3)))});
-  enc_count_[2].init(
       {reinterpret_cast<TIM_TypeDef*>(DT_REG_ADDR(DT_NODELABEL(timers1)))});
+  enc_count_[2].init(
+      {reinterpret_cast<TIM_TypeDef*>(DT_REG_ADDR(DT_NODELABEL(timers3)))});
 
   // device
   const bool imu_ok =
@@ -57,8 +57,9 @@ bool test_application::init() {
                      p_->encoder.counts_per_rev});
   (void)estop_input::init({&estop_ext_pin_, &estop_btn_pin_});
   status_led::init({&led_pin_});
-  status_led::set(imu_ok ? status_led::pattern::SLOW_BLINK
-                         : status_led::pattern::FAST_BLINK);
+  // 起動中の生存確認ハートビート: 無条件に 1 秒周期点滅とする。
+  // IMU 健全性は `test imu` のログで確認する。
+  status_led::set(status_led::pattern::SLOW_BLINK);
 
   // feature（テストで使うもののみ）
   wheel_speed_meter::init({{&encoders_[0], &encoders_[1], &encoders_[2]},
