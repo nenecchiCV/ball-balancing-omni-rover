@@ -105,7 +105,7 @@ USB デバイスに触るプロセスだけ Windows 側で動かします。
 |---|---|---|
 | STM32 書き込み | `openocd -f interface/stlink.cfg -f target/stm32g4x.cfg -c "program ... verify reset exit"` | ビルドのみ |
 | STM32 デバッグ | `openocd -f interface/stlink.cfg -f target/stm32g4x.cfg -c "bindto 0.0.0.0"` | `Debug STM32 (host OpenOCD)`（gdb が `host.docker.internal:3333` に接続） |
-| ESP32 書き込み | `esptool --chip esp32c6 write_flash 0x1000 build-zephyr/zephyr/zephyr.bin` | ビルドのみ |
+| ESP32 書き込み | `esptool --chip esp32c6 write_flash 0x0 build-zephyr/zephyr/zephyr.bin` | ビルドのみ |
 | ESP32 デバッグ | openocd-esp32（Windows 版を要導入）を `-f board/esp32c6-builtin.cfg -c "bindto 0.0.0.0"` で起動 | `Debug ESP32-C6 (host OpenOCD)` |
 | UART モニタ | ターミナルアプリ（Tera Term 等） | — |
 
@@ -125,6 +125,29 @@ winget install usbipd                      # 初回のみ
 .devcontainer\usb-attach.ps1 -BusId 2-3    # バス ID 指定も可
 ```
 
+#### 自動 attach（Scheduled Task、常駐プロセスなし）
+
+`usb-autowatch.ps1 -Install` で Scheduled Task を登録すると、以下のタイミングで
+1 回だけスキャンが走り、未 attach の対象を VID:PID で検出して attach します。
+常駐プロセスやポーリングループは作りません。
+
+- USB/PNP デバイス開始イベント（Kernel-PnP/Configuration ID 410、挿入から数秒で attach）
+- ログオン時（挿したまま起動した場合に対応）
+- 15 分周期（WSL 再起動で detach された場合の復帰用。`-FallbackMin` で変更可）
+
+```powershell
+# 初回のみ（管理者 PowerShell）: タスクを登録。以後は OS が必要時にだけ起動する
+.devcontainer\usb-autowatch.ps1 -Install
+
+.devcontainer\usb-autowatch.ps1 -Suspend    # 一時停止（経路 A でホスト側から使うとき等）
+.devcontainer\usb-autowatch.ps1 -Resume     # 再開
+.devcontainer\usb-autowatch.ps1 -Uninstall  # タスク削除（管理者 PowerShell）
+.devcontainer\usb-autowatch.ps1 -Once       # 手動で 1 回スキャン（動作確認用）
+```
+
+手動の `usb-attach.ps1` も併用できます。自動 attach 中にホスト側からデバイスを
+使う場合は、detach しても次のイベント/周期で再 attach されるため先に `-Suspend` してください。
+
 コンテナ側は `--privileged`（devcontainer.json / docker run 例に設定済み）で起動し、
 `bash .devcontainer/check-env.sh` の USB 欄でデバイスが見えることを確認します。
 見えた後はコンテナ内でそのまま実行できます:
@@ -133,8 +156,8 @@ winget install usbipd                      # 初回のみ
 # STM32 書き込み・デバッグ（VS Code の "Debug STM32 (OpenOCD)" も使用可）
 openocd -f interface/stlink.cfg -f target/stm32g4x.cfg -c "program build-zephyr/zephyr/zephyr.elf verify reset exit"
 
-# ESP32 書き込み（USB-Serial-JTAG が /dev/ttyACM* 等に見える）
-esptool --chip esp32c6 write_flash 0x1000 build-zephyr/zephyr/zephyr.bin
+# ESP32 書き込み（USB-Serial-JTAG が /dev/ttyACM* 等に見える。Simple Boot のためアドレスは 0x0）
+esptool --chip esp32c6 write_flash 0x0 build-zephyr/zephyr/zephyr.bin
 
 # ESP32 デバッグ（openocd-esp32 + riscv64 gdb。"Debug ESP32-C6 (OpenOCD, usbipd)" 構成）
 /opt/openocd-esp32/bin/openocd -f board/esp32c6-builtin.cfg   # :3333 で gdb 待受
@@ -179,7 +202,7 @@ MCP サーバはエージェントのプロセスが起動・接続します。
 
 ## 手動で必要な作業まとめ（自動化できない部分）
 
-1. `winget install usbipd` と `.devcontainer/usb-attach.ps1`（管理者、経路 B のみ）
+1. `winget install usbipd` と `.devcontainer/usb-autowatch.ps1 -Install`（管理者、経路 B のみ。初回 1 回で以後は自動 attach）
 2. `netsh interface portproxy`（管理者、コンテナ内エージェントから Fusion を使う場合のみ）
 3. `mcp-proxy` ブリッジ起動（matlab をコンテナ内エージェントに見せる場合のみ）
 4. MATLAB 側の `satk_initialize`（matlab MCP を使うたびに必要）

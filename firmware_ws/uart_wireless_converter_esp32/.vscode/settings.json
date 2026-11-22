@@ -19,5 +19,9 @@
     "-DBOARD=xiao_esp32c6/esp32c6/hpcore",
     "-DCMAKE_BUILD_TYPE=Debug"
   ],
-  "cmake.generator": "Ninja"
+  "cmake.generator": "Ninja",
+  "terminal.integrated.env.windows": {
+    "ZEPHYR_TOOLCHAIN_VARIANT": "zephyr",
+    "ZEPHYR_SDK_INSTALL_DIR": "C:/tools/zephyr-sdk-0.17.4"
+  }
 }

@@ -27,6 +27,27 @@
         "interface/stlink.cfg",
         "target/stm32g4x.cfg"
       ]
+    },
+    {
+      "name": "Debug STM32 (host OpenOCD)",
+      "type": "cortex-debug",
+      "request": "launch",
+      "servertype": "external",
+      "gdbTarget": "host.docker.internal:3333",
+      "cwd": "${workspaceFolder}",
+      "executable": "${workspaceFolder}/build-zephyr/zephyr/zephyr.elf",
+      "runToEntryPoint": "main",
+      "showDevDebugOutput": "raw",
+      "preLaunchTask": "build"
+    },
+    {
+      "name": "Attach STM32 (host OpenOCD)",
+      "type": "cortex-debug",
+      "request": "attach",
+      "servertype": "external",
+      "gdbTarget": "host.docker.internal:3333",
+      "cwd": "${workspaceFolder}",
+      "executable": "${workspaceFolder}/build-zephyr/zephyr/zephyr.elf"
     }
   ]
 }

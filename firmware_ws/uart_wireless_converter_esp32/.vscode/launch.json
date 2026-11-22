@@ -2,31 +2,42 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Debug STM32 (OpenOCD)",
-      "type": "cortex-debug",
+      "name": "Debug ESP32-C6 (OpenOCD, usbipd)",
+      "type": "cppdbg",
       "request": "launch",
-      "servertype": "openocd",
+      "program": "${workspaceFolder}/build-zephyr/zephyr/zephyr.elf",
       "cwd": "${workspaceFolder}",
-      "executable": "${workspaceFolder}/build-zephyr/zephyr/zephyr.elf",
-      "configFiles": [
-        "interface/stlink.cfg",
-        "target/stm32g4x.cfg"
-      ],
-      "runToEntryPoint": "main",
-      "showDevDebugOutput": "raw",
+      "MIMode": "gdb",
+      "miDebuggerPath": "${env:ZEPHYR_SDK_INSTALL_DIR}/riscv64-zephyr-elf/bin/riscv64-zephyr-elf-gdb",
+      "miDebuggerServerAddress": "localhost:3333",
+      "debugServerPath": "/opt/openocd-esp32/bin/openocd",
+      "debugServerArgs": "-f board/esp32c6-builtin.cfg",
+      "serverStarted": "Listening on port .* for gdb connections",
+      "filterStderr": true,
+      "stopAtEntry": true,
       "preLaunchTask": "build"
     },
     {
-      "name": "Attach STM32 (OpenOCD)",
-      "type": "cortex-debug",
-      "request": "attach",
-      "servertype": "openocd",
+      "name": "Debug ESP32-C6 (host OpenOCD)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build-zephyr/zephyr/zephyr.elf",
       "cwd": "${workspaceFolder}",
-      "executable": "${workspaceFolder}/build-zephyr/zephyr/zephyr.elf",
-      "configFiles": [
-        "interface/stlink.cfg",
-        "target/stm32g4x.cfg"
-      ]
+      "MIMode": "gdb",
+      "miDebuggerPath": "${env:ZEPHYR_SDK_INSTALL_DIR}/riscv64-zephyr-elf/bin/riscv64-zephyr-elf-gdb",
+      "miDebuggerServerAddress": "host.docker.internal:3333",
+      "stopAtEntry": true,
+      "preLaunchTask": "build"
+    },
+    {
+      "name": "Attach ESP32-C6 (host OpenOCD)",
+      "type": "cppdbg",
+      "request": "attach",
+      "program": "${workspaceFolder}/build-zephyr/zephyr/zephyr.elf",
+      "cwd": "${workspaceFolder}",
+      "MIMode": "gdb",
+      "miDebuggerPath": "${env:ZEPHYR_SDK_INSTALL_DIR}/riscv64-zephyr-elf/bin/riscv64-zephyr-elf-gdb",
+      "miDebuggerServerAddress": "host.docker.internal:3333"
     }
   ]
 }

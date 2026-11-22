@@ -50,6 +50,7 @@ Checks: >
   -hicpp-no-array-decay,
   -cppcoreguidelines-pro-type-vararg,
   -hicpp-vararg,
+  -clang-analyzer-core.FixedAddressDereference,
   -cppcoreguidelines-pro-type-reinterpret-cast,
   -cppcoreguidelines-pro-type-const-cast,
   -hicpp-use-auto,

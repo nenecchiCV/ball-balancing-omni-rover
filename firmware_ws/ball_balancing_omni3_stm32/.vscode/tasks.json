@@ -13,12 +13,6 @@
         "-DCMAKE_BUILD_TYPE=Debug",
         "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
       ],
-      "options": {
-        "env": {
-          "ZEPHYR_TOOLCHAIN_VARIANT": "zephyr",
-          "ZEPHYR_SDK_INSTALL_DIR": "C:/tools/zephyr-sdk-0.17.4"
-        }
-      },
       "problemMatcher": []
     },
     {
@@ -68,7 +62,7 @@
     {
       "label": "host-test-run",
       "type": "shell",
-      "command": "cmake --build build-tests && ./build-tests/bb_feature_tests.exe",
+      "command": "cmake --build build-tests && ctest --test-dir build-tests --output-on-failure",
       "dependsOn": ["host-test"],
       "problemMatcher": []
     },
@@ -83,12 +77,6 @@
         "-DBOARD=nucleo_g474re",
         "-DCMAKE_BUILD_TYPE=Debug"
       ],
-      "options": {
-        "env": {
-          "ZEPHYR_TOOLCHAIN_VARIANT": "zephyr",
-          "ZEPHYR_SDK_INSTALL_DIR": "C:/tools/zephyr-sdk-0.17.4"
-        }
-      },
       "problemMatcher": []
     },
     {

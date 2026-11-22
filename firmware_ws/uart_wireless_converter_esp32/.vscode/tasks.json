@@ -13,12 +13,6 @@
         "-DCMAKE_BUILD_TYPE=Debug",
         "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
       ],
-      "options": {
-        "env": {
-          "ZEPHYR_TOOLCHAIN_VARIANT": "zephyr",
-          "ZEPHYR_SDK_INSTALL_DIR": "C:/tools/zephyr-sdk-0.17.4"
-        }
-      },
       "problemMatcher": []
     },
     {
@@ -60,8 +54,8 @@
       "args": [
         "--chip", "esp32c6",
         "write_flash",
-        "0x1000",
-        "build-zephyr/zephyr/zephyr.bin"
+        "0x0",
+        "build-zephyr/zephyr.bin"
       ],
       "dependsOn": ["build"],
       "problemMatcher": []

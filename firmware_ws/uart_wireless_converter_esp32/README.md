@@ -47,7 +47,7 @@ cmake -DCLANG_TIDY=clang-tidy -DCOMPILE_COMMANDS=build-zephyr/compile_commands.j
 cmake -DCLANG_FORMAT=clang-format -DSRC_ROOT=$PWD/src -P cmake/run_clang_format.cmake
 
 # 書き込み（Simple Boot、単一バイナリ。esptool は XIAO の USB ポートを自動検出）
-esptool --chip esp32c6 write_flash 0x1000 build-zephyr/zephyr/zephyr.bin
+esptool --chip esp32c6 write-flash 0x0 build-zephyr/zephyr/zephyr.bin
 ```
 
 VSCode では `.vscode/tasks.json` の同名タスクが同等コマンドを実行する。

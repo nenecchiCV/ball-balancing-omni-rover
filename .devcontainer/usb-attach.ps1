@@ -1,4 +1,4 @@
-# usb-attach.ps1 — ST-LINK / ESP32-C6 USB-JTAG を usbipd 経由で devcontainer へ渡す
+﻿# usb-attach.ps1 — ST-LINK / ESP32-C6 USB-JTAG を usbipd 経由で devcontainer へ渡す
 #
 # 使い方（管理者 PowerShell で実行）:
 #   .devcontainer\usb-attach.ps1            # 検出した全ターゲットを attach
@@ -15,7 +15,7 @@ param(
 # 対象デバイスの VID:PID パターン
 #   0483:37xx  STMicroelectronics ST-LINK (V2/V2-1/V3 全系)
 #   303a:1001  Espressif ESP32-C6 内蔵 USB-Serial-JTAG
-$TargetPattern = '^(?<busid>\d+-\d+)\s+(?<vidpid>(0483:37..|303a:1001))\s+(?<device>.+?)\s{2,}(?<state>\S+)'
+$TargetPattern = '^(?<busid>\d+-\d+)\s+(?<vidpid>(0483:37..|303a:1001))\s+(?<device>.+?)\s{2,}(?<state>.+?)\s*$'
 
 function Get-Targets {
     usbipd list | Select-String -Pattern $TargetPattern | ForEach-Object {
@@ -30,7 +30,7 @@ function Get-Targets {
 }
 
 $targets = if ($BusId) {
-    usbipd list | Select-String -Pattern "^(?<busid>$([regex]::Escape($BusId)))\s+(?<vidpid>\S+)\s+(?<device>.+?)\s{2,}(?<state>\S+)" | ForEach-Object {
+    usbipd list | Select-String -Pattern "^(?<busid>$([regex]::Escape($BusId)))\s+(?<vidpid>\S+)\s+(?<device>.+?)\s{2,}(?<state>.+?)\s*$" | ForEach-Object {
         $m = $_.Matches[0].Groups
         [PSCustomObject]@{ BusId = $m['busid'].Value; VidPid = $m['vidpid'].Value; Device = $m['device'].Value.Trim(); State = $m['state'].Value }
     }

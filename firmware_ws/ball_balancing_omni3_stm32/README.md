@@ -44,7 +44,7 @@ cmake -DCLANG_FORMAT=clang-format -DSRC_ROOT=$PWD/src -DTEST_ROOT=$PWD/tests/hos
 
 # ホスト単体テスト（feature 層・ハード不要）
 cmake -S tests/host -B build-tests -G Ninja -DCMAKE_CXX_COMPILER=clang++
-cmake --build build-tests && ./build-tests/bb_feature_tests.exe
+cmake --build build-tests && ctest --test-dir build-tests --output-on-failure
 
 # オンボードテスト（実機検証用の別ファームウェア）
 cmake -S tests/onboard -B tests/onboard/build -G Ninja -DBOARD=nucleo_g474re -DCMAKE_BUILD_TYPE=Debug
