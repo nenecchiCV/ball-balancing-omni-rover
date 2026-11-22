@@ -160,7 +160,7 @@ p.servo.maxSpeed = p.motor.noLoadSpeed;
 % 2.5x thickened against measured frame warpage, its former Ø98 centre
 % opening filled inward so the plate itself clamps the motor tails via
 % 57deg tilted Ø25.6 bores + encoder-board slots; L2/L3 D160x3 at
-% z = 176.5/241.5 mm above ground), six M3x62 + six M3x20.5 ABS
+% z = 176.5/254.5 mm above ground), six M3x75 + six M3x20.5 ABS
 % spacers (OD 6.2 / bore 3.2 mm) at
 % r = 65 mm on the 30-deg-rotated pattern {0,+-60,+-120,180}, three ABS
 % MotorMount_v23 inward-pod square-tube mounts below L1 (single-body
@@ -189,15 +189,15 @@ l1DiscMass = rhoABS*129.65e-6;   % L1 disc thickened 3->7.5 mm + former Ø98 cen
 l1DiscInertia = l1DiscMass*(3*0.080^2 + 0.0075^2)/12;
 frameDiscMass = rhoABS*56.559e-6; % L2 disc net of 6 x Ø3.5 spacer holes + 3 x Ø10 slot ends + 3 x Ø3.5 Nucleo holes + 4 x Ø4.0 MDD3A holes, center filled (Fusion measured 56.559 cm^3)
 frameDiscInertia = frameDiscMass*(3*0.080^2 + 0.003^2)/12;
-l3DiscMass = rhoABS*60.146e-6;    % L3 disc: same as L2 but Ø20 center hole filled (unneeded); Fusion measured 60.146 cm^3
+l3DiscMass = rhoABS*60.030e-6;    % L3 disc: same as L2 but Ø20 center hole filled (unneeded), net of 4 x Ø3.5 battery-tray bolt holes (Fusion measured 60.030 cm^3)
 l3DiscInertia = l3DiscMass*(3*0.080^2 + 0.003^2)/12;
-spacerMass = rhoABS*1.3732e-6;   % Spacer_M3x62 tube OD 6.2 / bore 3.2 x 62 mm - L2-L3 gap extended +12 mm for the under-L3 battery tray (Fusion measured 1.3732 cm^3)
-spacerInertia = spacerMass*(3*(0.0031^2+0.0016^2) + 0.062^2)/12;
+spacerMass = rhoABS*1.6611e-6;   % Spacer_M3x75 tube OD 6.2 / bore 3.2 x 75 mm - L2-L3 gap extended +13 mm so the under-L3 tray clears the L2 electronics stack (Fusion measured 1.6611 cm^3)
+spacerInertia = spacerMass*(3*(0.0031^2+0.0016^2) + 0.075^2)/12;
 spacer20Mass = rhoABS*0.454e-6;  % Spacer_M3x20p5 L1-L2 gap spacer for the 7.5 mm L1 (Fusion measured 0.454 cm^3)
 spacer20Inertia = spacer20Mass*(3*(0.0031^2+0.0016^2) + 0.0205^2)/12;
 mountMass = rhoABS*50.743e-6;    % MotorMount_v23 plate-width square-tube mount + rectangular fastening plate + wedge fills + motor-end bottom-corner chamfer on the face-plate plane (parallel to the ball-wheel contact tangent; M2.5 flat-head screw through-holes on a flat face plate, no boss/pockets; single body, 52 faces), measured 50.743 cm^3
 adapterMass = rhoABS*1.2171e-6;  % WheelAdapter_v4 measured volume 1.217 cm^3 (tube s'=-1.0..11.5)
-trayMass = rhoABS*43.417e-6;     % BatteryTray_L3hang under-L3 battery tray, 4 corner tabs bolted through new L3 holes (Fusion measured 43.417 cm^3, CG z = 220.1 mm above ground)
+trayMass = rhoABS*43.417e-6;     % BatteryTray_L3hang under-L3 battery tray, 4 corner tabs bolted through new L3 holes (Fusion measured 43.417 cm^3, CG z = 233.1 mm above ground)
 % Fusion-measured own-CG inertias scaled to ABS mass (the y/tangential
 % axis entry is used for tilt; the z axis entry is used in the yaw sum).
 % v23 CG-frame tensor (steel) Ixx/Iyy/Izz = 1.976/1.175/1.753
@@ -226,13 +226,13 @@ chassisParts = [ ...
 %    mass[kg]        comZ above ball center [m]  Ixx about own COM [kg m^2]
     l1DiscMass      0.1008                      l1DiscInertia
     frameDiscMass   0.1265                      frameDiscInertia
-    l3DiscMass      0.1915                      l3DiscInertia
+    l3DiscMass      0.2045                      l3DiscInertia
     6*spacer20Mass  0.11475                     6*spacer20Inertia
-    6*spacerMass    0.159                       6*spacerInertia
+    6*spacerMass    0.1655                      6*spacerInertia
     3*mountMass     mountComAboveBall           3*mountTiltI
     3*adapterMass   adapterComAboveBall         3*adapterTiltI
-    trayMass        0.1701                      trayMass*(0.144^2+0.031^2)/12
-    0.423           0.1737                      0.423*(0.138^2+0.025^2)/12
+    trayMass        0.1831                      trayMass*(0.144^2+0.031^2)/12
+    0.423           0.1867                      0.423*(0.138^2+0.025^2)/12
     0.030           0.103                       0.030*(0.050^2+0.030^2)/12
     0.090           0.143                       0.090*(0.133^2+0.080^2)/12
     0.010           0.110                       0];
