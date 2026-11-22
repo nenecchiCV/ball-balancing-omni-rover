@@ -32,8 +32,10 @@ struct config {
 
 - 内部状態は無名名前空間の POD `impl` に集約する: BT 接続 `bt_conn*` 参照、CCC 購読フラグ、現在状態、受信リング・セマフォ参照、注入された `event_cb`、ドロップカウンタ。
 - Zephyr BT の接続・切断・MTU 更新・CCC 変化コールバックから `impl.event_cb` を呼び、上位（`link_monitor`）へ通知する。`link` は上位層を直接参照しない。
+- 切断後（および接続確立失敗時）の connectable advertising 再開は `k_work_delayable` で system workqueue へ遅延委譲する。conn コールバックの実行コンテキストから HCI コマンドを直接発行しないための措置で、`bt_le_adv_start` 失敗時は一定間隔でリトライする（FR-02）。IDLE 以外の状態では再開を行わない。
 
 ## 備考
 
 - BLE 実装では NUS 互換 UUID のサービスを `BT_GATT_SERVICE_DEFINE` で静的登録し、RX 特性 Write コールバックが `rx_ring` に積む。TX 通知は `bt_gatt_notify` を `send()` から呼ぶ。
+- ローカル ATT MTU の上限は prj.conf の `CONFIG_BT_L2CAP_TX_MTU`（TX 側上限）と `CONFIG_BT_BUF_ACL_RX_SIZE`（RX 側上限 = 同値 - L2CAP ヘッダ 4 B）で決まり、NFR-01 の目標 MTU 247 に合わせ 247/251 B に設定する。セントラルが小さい MTU で応答した場合はそちらに従う。
 - Wi-Fi 実装は SoftAP + TCP/UDP で同一静的シグネチャを持つ `link` を提供する。

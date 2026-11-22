@@ -1,0 +1,3 @@
+addr=9C:CC:01:18:DC:98
+rtt_ms=22.4
+recv=b'reconnect-check\n'

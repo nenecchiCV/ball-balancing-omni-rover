@@ -1,0 +1,3 @@
+send=b'uwc-echo-test\n'
+rtt_ms=5002.6
+recv=b''

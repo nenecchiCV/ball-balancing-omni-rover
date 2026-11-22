@@ -1,0 +1,29 @@
+# BLE scan results 20261122_224813
+
+見つかったデバイス数: 21
+
+| addr | name | rssi | uuids |
+|---|---|---|---|
+| 4C:0B:94:04:2C:E4 | None | -88 |  |
+| 4E:51:FF:93:50:24 | None | -84 |  |
+| CF:13:AA:65:EF:D9 | None | -84 |  |
+| 5D:EB:58:F3:B1:D3 | None | -76 |  |
+| 64:00:B3:AA:AB:A6 | None | -88 |  |
+| 42:19:09:CF:8A:74 | None | -57 |  |
+| F6:CE:AE:BD:5D:BE | None | -78 |  |
+| A8:46:74:43:CD:66 | None | -85 |  |
+| 4E:60:E2:7D:BD:14 | None | -62 |  |
+| D4:5B:8B:9F:8F:FD | T87B1_F5F9 | -80 |  |
+| FB:2B:DE:53:57:D4 | None | -88 |  |
+| D0:F9:1F:69:22:F3 | None | -86 |  |
+| 9C:CC:01:18:DC:98 | uwc-esp32c6 | -72 | 6e400001-b5a3-f393-e0a9-e50e24dcca9e |
+| 60:E6:D0:1C:3A:63 | None | -88 |  |
+| B0:F7:C4:35:15:3F | None | -95 | 3e1d50cd-7e3e-427d-8e1c-b78aa87fe624 |
+| 62:1E:50:10:DC:3D | None | -86 |  |
+| 7A:7D:3A:24:B9:96 | None | -93 |  |
+| 41:B2:2F:9D:21:94 | None | -71 |  |
+| 4D:BD:16:64:D7:06 | None | -87 |  |
+| 7F:02:F2:61:2A:6D | None | -94 |  |
+| 6F:04:E1:71:4F:E2 | None | -94 |  |
+
+対象: 9C:CC:01:18:DC:98 (uwc-esp32c6)

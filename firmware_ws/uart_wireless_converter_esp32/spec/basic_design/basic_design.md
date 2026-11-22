@@ -56,6 +56,7 @@
 | ブリッジスレッド（`uart_bridge`） | `bridge_sem` 待ち+短周期タイムアウトで両リングを排出 | ポーリング間隔は NFR-01 の目標内 |
 | shell スレッド | `uwc` コマンド処理 | `link_monitor` の snapshot 参照のみ |
 | LED 点滅ワーク（system workqueue） | BLINK モード中に 500 ms 周期で LED をトグル | 専用スレッドなし、`k_work_delayable` で駆動（FR-05） |
+| adv 再開ワーク（system workqueue） | 切断・接続失敗後の connectable advertising 再開 | `k_work_delayable` で駆動、失敗時リトライ（FR-02） |
 | main スレッド | `init` 後 `converter_application::run()` へ委譲 | — |
 
 ## 通信

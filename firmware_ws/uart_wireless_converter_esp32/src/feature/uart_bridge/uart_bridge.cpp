@@ -60,17 +60,18 @@ void uart_bridge::pump_host_to_link() {
 void uart_bridge::pump_link_to_host() {
   uint8_t buf[128];
   for (;;) {
-    const uint32_t n = ring_buf_get(link_to_host_, buf, sizeof(buf));
+    const uint32_t n = ring_buf_peek(link_to_host_, buf, sizeof(buf));
     if (n == 0) {
       return;
     }
     const int written = host_uart::write(buf, n);
-    link_monitor::note_rx(n);
-    const uint32_t dropped =
-        (written <= 0) ? n : n - static_cast<uint32_t>(written);
-    if (dropped > 0) {
-      link_monitor::note_drop(dropped);
+    if (written <= 0) {
+      // UART TX リングが一杯: 破棄せず link_to_host_ に残し、
+      // 次ポーリングで残りから再送する（バックプレッシャー）。
+      return;
     }
+    link_monitor::note_rx(static_cast<uint32_t>(written));
+    (void)ring_buf_get(link_to_host_, nullptr, static_cast<uint32_t>(written));
   }
 }
 

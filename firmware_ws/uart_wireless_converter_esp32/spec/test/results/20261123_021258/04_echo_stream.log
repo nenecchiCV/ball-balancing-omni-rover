@@ -1,0 +1,5 @@
+send_len=1024
+rtt_ms=162.7
+recv_len=1024
+match=True
+throughput_kbps=50.3

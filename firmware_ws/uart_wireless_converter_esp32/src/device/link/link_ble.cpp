@@ -85,6 +85,11 @@ BT_GATT_SERVICE_DEFINE(
 // NOLINTEND
 // attrs: 0=primary, 1=RX decl, 2=RX value, 3=TX decl, 4=TX value, 5=TX CCC
 
+// 切断後の再 advertising までの待ち時間と、adv 開始失敗時のリトライ間隔。
+// 切断直後はコントローラ側の後処理中で adv 再開が失敗し得るため待つ。
+constexpr uint32_t ADV_RESTART_DELAY_MS = 100;
+constexpr uint32_t ADV_RETRY_DELAY_MS = 1000;
+
 const struct bt_data AD[] = {
     BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
     BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME,
@@ -95,14 +100,35 @@ const struct bt_data SD[] = {
     BT_DATA_BYTES(BT_DATA_UUID128_ALL, UWC_NUS_SVC_UUID),
 };
 
-void start_advertising() {
+// 再 advertising 開始を system workqueue で実行する遅延ワーク。
+// BT conn コールバックの実行コンテキストから HCI コマンドを直に発行せず、
+// 失敗時は一定間隔でリトライする（FR-02）。
+void adv_work_cb(struct k_work* work);
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables,clang-diagnostic-missing-designated-field-initializers)
+K_WORK_DELAYABLE_DEFINE(adv_work, adv_work_cb);
+
+// connectable advertising を開始する。開始済みを含め成功時 0、失敗時は
+// bt_le_adv_start のエラーを返す。成功時は WAITING 遷移イベントを通知する。
+int start_advertising() {
   const int err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_2, AD, ARRAY_SIZE(AD), SD,
                                   ARRAY_SIZE(SD));
-  if (err == 0) {
-    impl.st = link::state::WAITING;
-    if (impl.event_cb != nullptr) impl.event_cb(link::event::WAITING_STARTED);
-  } else {
+  if (err != 0 && err != -EALREADY) {
     printk("uwc: adv start failed (%d)\n", err);
+    return err;
+  }
+  impl.st = link::state::WAITING;
+  if (impl.event_cb != nullptr) impl.event_cb(link::event::WAITING_STARTED);
+  return 0;
+}
+
+void adv_work_cb(struct k_work* work) {
+  ARG_UNUSED(work);
+  // advertising 中・接続中（IDLE 以外）では再開は不要。
+  if (impl.st != link::state::IDLE) {
+    return;
+  }
+  if (start_advertising() != 0) {
+    (void)k_work_reschedule(&adv_work, K_MSEC(ADV_RETRY_DELAY_MS));
   }
 }
 
@@ -144,6 +170,9 @@ void request_link_params(struct bt_conn* conn) {
 void connected_cb(struct bt_conn* conn, uint8_t err) {
   if (err != 0) {
     printk("uwc: connect failed (0x%02x)\n", err);
+    // 接続確立に失敗した場合も advertising を再開して待ちに戻る（FR-02）
+    impl.st = link::state::IDLE;
+    (void)k_work_reschedule(&adv_work, K_MSEC(ADV_RESTART_DELAY_MS));
     return;
   }
   impl.conn = bt_conn_ref(conn);
@@ -163,8 +192,9 @@ void disconnected_cb(struct bt_conn* conn, uint8_t reason) {
   impl.st = link::state::IDLE;
   impl.subscribed = false;
   if (impl.event_cb != nullptr) impl.event_cb(link::event::DISCONNECTED);
-  // 自動的に再 advertising する（FR-02）
-  start_advertising();
+  // 自動的に再 advertising する（FR-02）。コールバックコンテキストからの
+  // 直接実行は避け、system workqueue で失敗時リトライ付きで再開する。
+  (void)k_work_reschedule(&adv_work, K_MSEC(ADV_RESTART_DELAY_MS));
 }
 
 // NOLINTBEGIN: BT_CONN_CB_DEFINE マクロ展開に伴う警告
@@ -205,7 +235,10 @@ bool link::init(const config& cfg) {
     printk("uwc: bt_enable failed (%d)\n", err);
     return false;
   }
-  start_advertising();
+  if (start_advertising() != 0) {
+    // 起動直後の一時的失敗も workqueue 側のリトライで回復を図る
+    (void)k_work_reschedule(&adv_work, K_MSEC(ADV_RETRY_DELAY_MS));
+  }
   return impl.st == link::state::WAITING;
 }
 
