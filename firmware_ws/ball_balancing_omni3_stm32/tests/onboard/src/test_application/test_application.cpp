@@ -30,12 +30,12 @@ bool test_application::init() {
   led_pin_.init({GPIO_DT_SPEC_GET(PINS_NODE, led_gpios), true});
   estop_ext_pin_.init({GPIO_DT_SPEC_GET(PINS_NODE, estop_gpios)});
   estop_btn_pin_.init({GPIO_DT_SPEC_GET(PINS_NODE, estop_btn_gpios)});
-  dir_pins_[0].init({GPIO_DT_SPEC_GET(PINS_NODE, dir0_gpios), true});
-  dir_pins_[1].init({GPIO_DT_SPEC_GET(PINS_NODE, dir1_gpios), true});
-  dir_pins_[2].init({GPIO_DT_SPEC_GET(PINS_NODE, dir2_gpios), true});
-  pwm_ch_[0].init({PWM_DT_SPEC_GET_BY_IDX(PINS_NODE, 0)});
-  pwm_ch_[1].init({PWM_DT_SPEC_GET_BY_IDX(PINS_NODE, 1)});
-  pwm_ch_[2].init({PWM_DT_SPEC_GET_BY_IDX(PINS_NODE, 2)});
+  pwm_a_[0].init({PWM_DT_SPEC_GET_BY_IDX(PINS_NODE, 0)});
+  pwm_b_[0].init({PWM_DT_SPEC_GET_BY_IDX(PINS_NODE, 1)});
+  pwm_a_[1].init({PWM_DT_SPEC_GET_BY_IDX(PINS_NODE, 2)});
+  pwm_b_[1].init({PWM_DT_SPEC_GET_BY_IDX(PINS_NODE, 3)});
+  pwm_a_[2].init({PWM_DT_SPEC_GET_BY_IDX(PINS_NODE, 4)});
+  pwm_b_[2].init({PWM_DT_SPEC_GET_BY_IDX(PINS_NODE, 5)});
   enc_count_[0].init(
       {reinterpret_cast<TIM_TypeDef*>(DT_REG_ADDR(DT_NODELABEL(timers2)))});
   enc_count_[1].init(
@@ -46,9 +46,9 @@ bool test_application::init() {
   // device
   const bool imu_ok =
       lsm6dso::init({DEVICE_DT_GET(DT_ALIAS(imu0)), mat_identity3()});
-  motors_[0].init({&pwm_ch_[0], &dir_pins_[0]});
-  motors_[1].init({&pwm_ch_[1], &dir_pins_[1]});
-  motors_[2].init({&pwm_ch_[2], &dir_pins_[2]});
+  motors_[0].init({&pwm_a_[0], &pwm_b_[0]});
+  motors_[1].init({&pwm_a_[1], &pwm_b_[1]});
+  motors_[2].init({&pwm_a_[2], &pwm_b_[2]});
   encoders_[0].init({&enc_count_[0], p_->encoder.quadrature_factor,
                      p_->encoder.counts_per_rev});
   encoders_[1].init({&enc_count_[1], p_->encoder.quadrature_factor,

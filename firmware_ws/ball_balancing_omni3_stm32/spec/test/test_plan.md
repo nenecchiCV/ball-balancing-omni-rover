@@ -95,7 +95,7 @@ uart:~$ test stop       # 現在のテストを停止
 1. `test tick` — 制御タイムベースが 1 kHz で正しく動くこと。
 2. `test estop` — 停止入力の極性と検出経路。
 3. `test imu` — IMU 配線・軸写像・推定器の健全性。
-4. `test enc` → `test enc spin` — エンコーダ方向とモータ DIR 極性の一致。
+4. `test enc` → `test enc spin` — エンコーダ方向とモータ MxA/MxB 極性の一致。
 5. `test deadzone` — モータ不感帯の同定（`omni_drive_test` の `DEADZONE_COMP` や
    制御パラメータへ反映する材料）。
 6. `test omni` — オムニ運動学と輪速制御系の結合確認。

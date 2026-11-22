@@ -27,4 +27,4 @@ struct config {
 
 ## MATLAB との対応
 
-なし（ハード依存部）。E-Stop・DIR・LED の基盤となる。
+なし（ハード依存部）。E-Stop・LED の基盤となる。

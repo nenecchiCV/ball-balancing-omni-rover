@@ -4,18 +4,6 @@ compatible: "bb,pins"
 include: base.yaml
 
 properties:
-  dir0-gpios:
-    type: phandle-array
-    required: true
-    description: Motor 0 direction output pin
-  dir1-gpios:
-    type: phandle-array
-    required: true
-    description: Motor 1 direction output pin
-  dir2-gpios:
-    type: phandle-array
-    required: true
-    description: Motor 2 direction output pin
   led-gpios:
     type: phandle-array
     required: true
@@ -31,4 +19,4 @@ properties:
   pwms:
     type: phandle-array
     required: true
-    description: PWM outputs for motor 0/1/2 (channel, period, flags)
+    description: Motor PWM outputs, MxA/MxB pairs per motor (M0A, M0B, M1A, M1B, M2A, M2B)

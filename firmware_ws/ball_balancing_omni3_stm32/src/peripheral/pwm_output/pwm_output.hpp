@@ -16,8 +16,8 @@ class pwm_output {
   };
 
   bool init(const config& cfg);
-  // duty [-1.0, +1.0]。負値の場合は DIR
-  // ピン側が極性を担うため絶対値を出力する。
+  // duty [-1.0, +1.0]。符号の扱いは呼出側（mdd3a_motor）が担い、
+  // 本関数は絶対値を出力する。
   void set_duty(float duty) const;
 
  private:

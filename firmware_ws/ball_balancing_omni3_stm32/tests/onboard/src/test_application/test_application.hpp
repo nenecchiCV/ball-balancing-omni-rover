@@ -24,11 +24,11 @@ class test_application {
 
  private:
   static inline const param_set* p_ = nullptr;
-  static inline gpio_pin dir_pins_[3];
   static inline gpio_pin led_pin_;
   static inline gpio_pin estop_ext_pin_;
   static inline gpio_pin estop_btn_pin_;
-  static inline pwm_output pwm_ch_[3];
+  static inline pwm_output pwm_a_[3];
+  static inline pwm_output pwm_b_[3];
   static inline encoder_counter enc_count_[3];
   static inline wheel_encoder encoders_[3];
   static inline mdd3a_motor motors_[3];

@@ -4,6 +4,7 @@
  */
 
 #include <zephyr/dt-bindings/pwm/pwm.h>
+#include <zephyr/dt-bindings/pwm/stm32_pwm.h>
 #include <zephyr/dt-bindings/sensor/lsm6dso.h>
 
 / {
@@ -20,17 +21,47 @@
 
 	bb_pins: bb-pins {
 		compatible = "bb,pins";
-		dir0-gpios = <&gpiob 3 GPIO_ACTIVE_HIGH>;
-		dir1-gpios = <&gpiob 10 GPIO_ACTIVE_HIGH>;
-		dir2-gpios = <&gpioc 7 GPIO_ACTIVE_HIGH>;
 		led-gpios = <&gpioa 5 GPIO_ACTIVE_HIGH>;
 		estop-gpios = <&gpioc 0 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 		estop-btn-gpios = <&gpioc 13 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
-		/* motor PWM: 20 kHz キャリア */
+		/* motor PWM: 20 kHz キャリア。
+		 * MDD3A は CW/CCW 2入力のため MxA/MxB とも PWM とし、
+		 * MxA(正転脚)/MxB(逆転脚) をモーターごとに交互に並べる。
+		 * M0B は TIM8_CH1N のため COMPLEMENTARY フラグが必要。 */
 		pwms = <&pwm17 1 PWM_KHZ(20) PWM_POLARITY_NORMAL>,
+		       <&pwm8 1 PWM_KHZ(20) (PWM_POLARITY_NORMAL | STM32_PWM_COMPLEMENTARY)>,
 		       <&pwm16 1 PWM_KHZ(20) PWM_POLARITY_NORMAL>,
-		       <&pwm4 1 PWM_KHZ(20) PWM_POLARITY_NORMAL>;
+		       <&pwm15 1 PWM_KHZ(20) PWM_POLARITY_NORMAL>,
+		       <&pwm4 1 PWM_KHZ(20) PWM_POLARITY_NORMAL>,
+		       <&pwm8 2 PWM_KHZ(20) PWM_POLARITY_NORMAL>;
 	};
+};
+
+/* ボード標準 dts がデフォルト有効化しているノードのうち、
+ * 本機のモーター/エンコーダ/LED ピンを奪うものを無効化する。
+ * pwm3: PB4(M1A) を TIM3_CH1 として確保 → TIM16_CH1 と二重設定になる
+ * pwm2: PA5(LD2) を TIM2_CH1 として確保
+ * spi1: PA5/PA6/PA7(LD2, ENC2) と CS=PB6(M2A) を確保
+ * spi2: PB14(M1B) を含むピンを確保
+ * adc1: PA0(ENC0) をアナログ入力として確保 */
+&pwm2 {
+	status = "disabled";
+};
+
+&pwm3 {
+	status = "disabled";
+};
+
+&spi1 {
+	status = "disabled";
+};
+
+&spi2 {
+	status = "disabled";
+};
+
+&adc1 {
+	status = "disabled";
 };
 
 /* IMU: LSM6DSO on I2C1 (PB8/PB9) */
@@ -97,7 +128,32 @@
 	};
 };
 
-/* Motor PWM: TIM17 CH1/PB5 (M0), TIM16 CH1/PB4 (M1), TIM4 CH1/PB6 (M2) */
+/* Motor PWM: MxA=TIM17/16/4、MxB=TIM8(CH1N/CH2)+TIM15
+ * M0A=TIM17_CH1/PB5(D4)  M0B=TIM8_CH1N/PB3(D3)
+ * M1A=TIM16_CH1/PB4(D5)  M1B=TIM15_CH1/PB14(モルフォ CN10-28)
+ * M2A=TIM4_CH1/PB6(D10)  M2B=TIM8_CH2/PC7(D9) */
+&timers8 {
+	status = "okay";
+	st,prescaler = <0>;
+
+	pwm8: pwm {
+		status = "okay";
+		pinctrl-0 = <&tim8_ch1n_pb3 &tim8_ch2_pc7>;
+		pinctrl-names = "default";
+	};
+};
+
+&timers15 {
+	status = "okay";
+	st,prescaler = <0>;
+
+	pwm15: pwm {
+		status = "okay";
+		pinctrl-0 = <&tim15_ch1_pb14>;
+		pinctrl-names = "default";
+	};
+};
+
 &timers16 {
 	status = "okay";
 	st,prescaler = <0>;

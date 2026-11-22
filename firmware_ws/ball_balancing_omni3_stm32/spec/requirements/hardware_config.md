@@ -19,12 +19,12 @@
 | ENC0 A/B | TIM2 CH1/CH2（エンコーダモード） | PA0 / PA1 | A0 / A1 | ホイール0（P0、+X 方向） |
 | ENC1 A/B | TIM1 CH1/CH2（エンコーダモード） | PA8 / PA9 | D7 / D8 | ホイール1 |
 | ENC2 A/B | TIM3 CH1/CH2（エンコーダモード） | PA6 / PA7 | D12 / D11 | ホイール2 |
-| PWM0 | TIM17 CH1 | PB5 | D4 | MDD3A-A M1A |
-| PWM1 | TIM16 CH1 | PB4 | D5 | MDD3A-B M1A |
-| PWM2 | TIM4 CH1 | PB6 | D10 | MDD3A-B M2A |
-| DIR0 | GPIO 出力 | PB3 | D3 | MDD3A-A M1B。PWM0=D4 と隣接するよう配置 |
-| DIR1 | GPIO 出力 | PB10 | D6 | MDD3A-B M1B。PWM1=D5 と隣接 |
-| DIR2 | GPIO 出力 | PC7 | D9 | MDD3A-B M2B。PWM2=D10 と隣接 |
+| M0A（正転PWM） | TIM17 CH1 | PB5 | D4 | MDD3A-A M1A |
+| M0B（逆転PWM） | TIM8 CH1N（相補出力） | PB3 | D3 | MDD3A-A M1B。M0A=D4 と隣接 |
+| M1A（正転PWM） | TIM16 CH1 | PB4 | D5 | MDD3A-B M1A |
+| M1B（逆転PWM） | TIM15 CH1 | PB14 | モルフォ CN10-28 | MDD3A-B M1B。M1A=CN10-27 と隣接 |
+| M2A（正転PWM） | TIM4 CH1 | PB6 | D10 | MDD3A-B M2A |
+| M2B（逆転PWM） | TIM8 CH2 | PC7 | D9 | MDD3A-B M2B。M2A=D10 と隣接 |
 | I2C1 SCL/SDA | I2C1 | PB8 / PB9 | D15 / D14 | IMU 接続。アドレス 0x6B/0x6A を起動時に走査 |
 | 非常停止（外部） | GPIO 入力（プルアップ、EXTI） | PC0 | A5 | 低レベル = 停止要求 |
 | 非常停止（基板ボタン） | GPIO 入力（EXTI） | PC13 | B1 | ユーザボタン、押下 = 停止要求 |
@@ -57,7 +57,9 @@
 
 ### MDD3A（モータドライバ）
 
-- 制御方式: MxA = PWM、MxB = DIR（正転: DIR=H、逆転: DIR=L）
+- 制御方式: MxA/MxB は CW/CCW 2入力（H,L=正転 / L,H=逆転 / 同値=停止）で、
+  両方とも PWM 駆動とする。正転は MxA、逆転は MxB を PWM し、オフ期間は
+  両入力 L のブレーキとなる（詳細は `detail_design/device/mdd3a_motor.md`）
 - ロジック: 3.3 V 対応。モータ電源はバッテリ直結 7.2 V。
 - 連続トルク上限、デューティ上限 0.8333 はソフト定数側で強制する。
 

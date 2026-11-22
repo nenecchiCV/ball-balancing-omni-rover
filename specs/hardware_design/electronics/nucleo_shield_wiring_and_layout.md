@@ -81,7 +81,7 @@ flowchart LR
 - チャネル配置: 同一チャネルの ENC コネクタと駆動コネクタは隣接させ、1 台分のハーネスが近傍で完結するようにする。さらに P0（0°方向・MD-A 担当）の CN_E0・CN_M0・CN_PWR をひとまとめ、P1/P2（120°/240°方向・MD-B 担当）の CN_E1・CN_M1・CN_GND・CN_M2・CN_E2 をひとまとめにして、2 台のドライバへのハーネス引き回しを分離する。Arduino ピン側では MD-B 担当の信号が D5〜D12 の連続ブロックに収まる（M1=D5〜D8、M2=D9〜D12）。
 - MD-A ハーネス（5VO・GND・M1A・M1B）は CN_PWR + CN_M0 の 4 ピンに、MD-B ハーネス（M1A・M1B・GND・M2A・M2B）は CN_M1・CN_GND・CN_M2 の 6 ピンに分岐する。MDD3A 側信号ヘッダのピン順と同じ並びにすると分岐が直線的になる。
 - エンコーダの Vcc/GND はコネクタに含めず、従来どおりシールドの電源ランド（3V3/GND 母線穴）へ半田付けする。
-- MD の MxA/MxB は正転/逆転（CW/CCW）2 入力である。現行ファームウェアは MxA=PWM・MxB=DIR の PWM/DIR モード（`hardware_config.md`）で駆動する。配線は 2 本で共通のため、ファームウェア変更で CW/CCW-PWM モードへも移行できる。
+- MD の MxA/MxB は正転/逆転（CW/CCW）2 入力である（H,L=正転 / L,H=逆転 / 同値=停止）。MxA・MxB とも PWM 駆動とし、duty の符号で駆動脚を切り替える（`hardware_config.md`、`mdd3a_motor.md`）。MxB 用の PWM ピンはエンコーダ占有タイマ（TIM1/2/3）を避けて選定済み（M0B=TIM8_CH1N、M1B=TIM15_CH1＝モルフォ CN10-28、M2B=TIM8_CH2）。
 - FIT0521 の 6 芯ハーネスは、モーター線 2 本（M+/M-）を MDD3A のモーター出力端子へ、エンコーダ線 4 本をシールドへ分岐させる（A/B を CN_Ei へ、Vcc/GND を電源ランドへ）。
 - 実装時はシールド外周寄りにコネクタを並べ、嵌合時の外形が基板縁や隣接部品と干渉しないことを実物で確認する。
 
@@ -96,25 +96,26 @@ flowchart LR
 | D0 | PC5 | USART1 RX | XIAO D6（GPIO16 TX） |
 | D1 | PC4 | USART1 TX | XIAO D7（GPIO17 RX） |
 | D2 | PA10 | 予備（未使用） | — |
-| D3 | PB3 | DIR0 | CN_M0-2 |
-| D4 | PB5 | PWM0（TIM17） | CN_M0-1 |
-| D5 | PB4 | PWM1（TIM16） | CN_M1-1 |
-| D6 | PB10 | DIR1 | CN_M1-2 |
+| D3 | PB3 | M0B（TIM8 CH1N、逆転PWM） | CN_M0-2 |
+| D4 | PB5 | M0A（TIM17、正転PWM） | CN_M0-1 |
+| D5 | PB4 | M1A（TIM16、正転PWM） | CN_M1-1 |
+| D6 | PB10 | 予備（未使用） | — |
 | D7 | PA8 | ENC1_A（TIM1 CH1） | CN_E1-1 |
 | D8 | PA9 | ENC1_B（TIM1 CH2） | CN_E1-2 |
-| D9 | PC7 | DIR2 | CN_M2-2 |
-| D10 | PB6 | PWM2（TIM4） | CN_M2-1 |
+| D9 | PC7 | M2B（TIM8 CH2、逆転PWM） | CN_M2-2 |
+| D10 | PB6 | M2A（TIM4、正転PWM） | CN_M2-1 |
 | D11 | PA7 | ENC2_B（TIM3 CH2） | CN_E2-2 |
 | D12 | PA6 | ENC2_A（TIM3 CH1） | CN_E2-1 |
 | D13 | PA5 | 状態 LED | Nucleo 基板上 LED（配線不要） |
 | D14 | PB9 | I2C1 SDA | IMU SDA |
 | D15 | PB8 | I2C1 SCL | IMU SCL |
+| CN10-28 | PB14 | M1B（TIM15 CH1、逆転PWM） | CN_M1-2 |
 | +5V | — | E5V（5 V 入力） | CN_PWR-1、XIAO 5V ピン |
 | +3V3 | — | 3.3 V 出力 | 電源ランド（ENC Vcc×3）、IMU Vin、IMU CS/SA0 |
 | GND | — | 共通 GND | CN_PWR-2、CN_GND、電源ランド、IMU/XIAO GND（両ピン使用） |
 
 - 注記: ボード回路図の「PMW」印は Arduino analogWrite 互換ピン（D3/D5/D6/D9/D10/D11）を示し、D4 には付いていない。ただし PB5 は STM32G474 の AF に TIM17_CH1 を持つため、Zephyr で TIM17 を直接駆動する本設計では D4 からの PWM 出力は電気的に有効（`nucleo_g474re.overlay` の `tim17_ch1_pb5`）。表記上の非対応を避けて PMW 印ピンへ揃える場合は、PWM0 を D6（PB10/TIM2_CH3）または D9（PC7/TIM3_CH2・TIM8_CH2）に移す選択肢があるが、`hardware_config.md` と overlay の変更を伴う。
-- 注記: PWM ピンは空きタイマチャネルの制約で決まる（TIM17→D4、TIM16→D5、TIM4_CH1→D10）。DIR は任意の GPIO でよいため、駆動信号ペアがヘッダ上で隣接するよう DIR 側を割当てている（M0=D3+D4、M1=D5+D6、M2=D9+D10）。コネクタのピン順は全チャネル「1:PWM、2:DIR」で統一する。
+- 注記: PWM ピンは空きタイマチャネルの制約で決まる（MxA: TIM17→D4、TIM16→D5、TIM4_CH1→D10。MxB: TIM8_CH1N→D3、TIM15_CH1→CN10-28、TIM8_CH2→D9）。駆動信号ペアがヘッダ上で隣接するよう配置（M0=D3+D4、M1=CN10-27+CN10-28、M2=D9+D10）。コネクタのピン順は全チャネル「1:MxA、2:MxB」で統一する。
 
 ## シールド内配線図
 

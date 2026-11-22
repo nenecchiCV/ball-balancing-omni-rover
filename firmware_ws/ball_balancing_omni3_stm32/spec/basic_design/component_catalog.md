@@ -27,7 +27,7 @@
 | コンポーネント | クラス | 形態 | 責務 |
 |---|---|---|---|
 | lsm6dso | `lsm6dso` | static | Zephyr sensor ドライバ経由の IMU 読取 + 機体軸への `mat33` 写像 |
-| mdd3a_motor | `mdd3a_motor` | インスタンス | 1 チャネルの PWM + DIR 駆動、デューティ→符号付き出力 |
+| mdd3a_motor | `mdd3a_motor` | インスタンス | 1 チャネルの CW/CCW 2入力（両 PWM）駆動、デューティ→符号付き出力 |
 | wheel_encoder | `wheel_encoder` | インスタンス | カウント差分→変位 [rad]・輪速算出用のサンプル |
 | estop_input | `estop_input` | static | 外部 E-Stop + 基板ボタンの停止要求検出・EXTI 有効化 |
 | status_led | `status_led` | static | 状態表示 LED の点滅パターン |

@@ -38,7 +38,7 @@ TIM6 の 1 kHz 更新割込を基準に、単一の制御スレッド上で 3 �
 | タスク | 周期 | 内容 | 実行時間目標 |
 |---|---|---|---|
 | 外側（Outer） | 5 ms | IMU 読取 → 輪速計測 → 推定 → 指令生成 → LQI 外側タスク → サーボコンテキスト更新 | < 3 ms |
-| 内側（Inner） | 1 ms | サーボコンテキスト（ZOH）+ 保持輪速 → 内側タスク → duty → PWM/DIR 出力 | < 0.2 ms |
+| 内側（Inner） | 1 ms | サーボコンテキスト（ZOH）+ 保持輪速 → 内側タスク → duty → CW/CCW-PWM 出力 | < 0.2 ms |
 | 診断（Diag） | 200 ms | LED 更新 + UART テレメトリ（`bb telem` で有効化） | < 1 ms |
 
 セマフォの滞留はオーバーランとして計数し、追いつき実行は行わない（位相歪み防止）。実行時間は `timebase::cycles()` で DWT サイクル計測し、`bb status` で最大値を参照できる。
@@ -52,7 +52,7 @@ TIM6 の 1 kHz 更新割込を基準に、単一の制御スレッド上で 3 �
 ## 通信
 
 - **センサ**: LSM6DSO は Zephyr sensor ドライバ（`st,lsm6dso`）経由で I2C1 から読取る。読取は外側タスクの先頭で行い、推定・制御は同一サンプルを共有する。軸写像は `device/lsm6dso` が `mat33` で適用する。
-- **車輪**: エンコーダは devicetree の `st,stm32-qdec` ノードが TIM エンコーダモードを初期化する。`encoder_counter` は `LL_TIM` 経由で `CNT` を読み、2^n CPR 設定による自由周回の 16 ビット差分を取得する。PWM/DIR は内側タスクで Zephyr PWM ドライバ経由で更新する。
+- **車輪**: エンコーダは devicetree の `st,stm32-qdec` ノードが TIM エンコーダモードを初期化する。`encoder_counter` は `LL_TIM` 経由で `CNT` を読み、2^n CPR 設定による自由周回の 16 ビット差分を取得する。MxA/MxB の CW/CCW-PWM は内側タスクで Zephyr PWM ドライバ経由で更新する。
 - **ホスト**: USART2（115200 8N1）を Zephyr console/shell バックエンドとして使用する。`bb status` で状態照会、`bb telem on|off` で CSV テレメトリの送出を切替える。テレメトリ本体は `printk` 経由で送出する。
 
 ## メモリ管理
