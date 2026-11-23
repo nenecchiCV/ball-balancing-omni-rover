@@ -12,6 +12,7 @@ import {
   robotUnsubscribe,
 } from "@/lib/ipc";
 import { EVT_POSE, POSE_SUBSCRIBE_HZ } from "@/lib/limits";
+import { confirmAsync } from "@/stores/confirm";
 import { useConnected } from "@/stores/connection";
 import { useLogStore } from "@/stores/logs";
 import { useTelemetryStore } from "@/stores/telemetry";
@@ -34,7 +35,7 @@ export function OdometryPage() {
   }, [connected, pushLog]);
 
   const resetOrigin = async () => {
-    if (!window.confirm("現在位置をワールド原点に再設定する。よろしいか?")) {
+    if (!(await confirmAsync("現在位置をワールド原点に再設定する。よろしいか?"))) {
       return;
     }
     try {

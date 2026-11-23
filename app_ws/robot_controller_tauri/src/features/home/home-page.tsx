@@ -12,6 +12,7 @@ import {
   robotStopOperation,
 } from "@/lib/ipc";
 import { CALIB_STATE, OP_STATE } from "@/lib/types";
+import { confirmAsync } from "@/stores/confirm";
 import { useConnected } from "@/stores/connection";
 import { useLogStore } from "@/stores/logs";
 import { useTelemetryStore } from "@/stores/telemetry";
@@ -61,7 +62,7 @@ export function HomePage() {
   };
 
   const startOp = async () => {
-    if (!window.confirm("モータ駆動を開始します。よろしいですか？")) return;
+    if (!(await confirmAsync("モータ駆動を開始します。よろしいですか？"))) return;
     try {
       await robotStartOperation();
       pushLog(1, "動作開始を受理");
@@ -72,9 +73,9 @@ export function HomePage() {
 
   const stopOp = async () => {
     if (
-      !window.confirm(
+      !(await confirmAsync(
         "モータ駆動を停止します。ロボットは姿勢を保持できず転倒します。よろしいですか？",
-      )
+      ))
     )
       return;
     try {

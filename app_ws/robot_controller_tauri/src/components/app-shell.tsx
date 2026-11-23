@@ -7,6 +7,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, type ReactNode } from "react";
 
+import { ConfirmDialog } from "@/components/confirm-dialog";
+
 import {
   robotGetParams,
   robotStop,
@@ -161,6 +163,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </header>
         <main className="flex-1 overflow-auto p-5">{children}</main>
       </div>
+      <ConfirmDialog />
     </div>
   );
 }

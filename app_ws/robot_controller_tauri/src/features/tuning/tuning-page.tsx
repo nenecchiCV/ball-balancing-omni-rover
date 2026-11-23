@@ -14,6 +14,7 @@ import {
   robotTuneDeadzone,
 } from "@/lib/ipc";
 import { OP_STATE, PARAM_DEFS, paramName, type TuneResultInfo } from "@/lib/types";
+import { confirmAsync } from "@/stores/confirm";
 import { useConnected } from "@/stores/connection";
 import { useLogStore } from "@/stores/logs";
 import {
@@ -94,9 +95,9 @@ export function TuningPage() {
 
   const resetDefaults = async () => {
     if (
-      !window.confirm(
+      !(await confirmAsync(
         "保存領域を消去し、全パラメータを既定値へ戻します。よろしいですか？",
-      )
+      ))
     )
       return;
     try {
@@ -118,11 +119,11 @@ export function TuningPage() {
       return;
     }
     if (
-      !window.confirm(
+      !(await confirmAsync(
         `不感帯掃引を開始します（約 ${Math.ceil(2 * rampS)} 秒）。` +
           "車体を手で保持し、3 輪すべて地面から浮かせた無負荷状態にしてください。" +
           "掃引中モータが回転します。よろしいですか？",
-      )
+      ))
     )
       return;
     setBusy(true);
@@ -161,10 +162,10 @@ export function TuningPage() {
 
   const calibrate = async () => {
     if (
-      !window.confirm(
+      !(await confirmAsync(
         "IMU キャリブレーションを実行します。" +
           "ロボットを水平な場所に置き、静止させてください。よろしいですか？",
-      )
+      ))
     )
       return;
     setNote("キャリブレーション実行中…（静止を維持）");
