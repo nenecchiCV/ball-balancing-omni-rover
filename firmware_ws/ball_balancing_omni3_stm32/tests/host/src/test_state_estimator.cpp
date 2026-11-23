@@ -137,6 +137,22 @@ void test_placement_reset_reseeds_and_keeps_bias() {
   CHECK_TRUE(fabsf(out.velocity_world[0]) < 0.05F);
 }
 
+// 裏返し起動: 比力が -z（チップの測る上向きが機体 -Z 側）の場合も
+// 姿勢が 180° へシードされることを確認する（tilt=0 にならない回帰）。
+void test_inverted_start_seeds_180deg() {
+  const auto& p = get_params();
+  state_estimator::init({&p});
+  imu_sample s = still_sample();
+  s.specific_force = {0.0F, 0.0F, -9.80665F};
+  state_estimator::output out{};
+  for (int i = 0; i < 600; ++i) {
+    out = state_estimator::step(s, vec3{}, p.estimator.sample_time);
+  }
+  const float tilt =
+      sqrtf(out.euler[0] * out.euler[0] + out.euler[1] * out.euler[1]);
+  CHECK_NEAR(tilt, 3.14159F, 0.1F);
+}
+
 void test_invalid_sample_marks_output() {
   const auto& p = get_params();
   state_estimator::init({&p});
@@ -154,6 +170,7 @@ void state_estimator_tests() {
   test_tilted_start_seeds_attitude();
   test_stuck_filter_reseeds_from_accel();
   test_placement_reset_reseeds_and_keeps_bias();
+  test_inverted_start_seeds_180deg();
   test_invalid_sample_marks_output();
 }
 
