@@ -34,7 +34,8 @@ pub fn run() {
     let specta = specta_builder();
 
     // 開発ビルドのたびに TypeScript 型を再生成する（src/lib/bindings.ts）。
-    #[cfg(debug_assertions)]
+    // モバイルでは相対パス ../src が解決できないためデスクトップのみで実行する。
+    #[cfg(all(debug_assertions, desktop))]
     specta
         .export(
             specta_typescript::Typescript::default(),
@@ -42,8 +43,10 @@ pub fn run() {
         )
         .expect("typescript bindings export");
 
-    tauri::Builder::default()
-        .plugin(tauri_plugin_shell::init())
+    let builder = tauri::Builder::default();
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_shell::init());
+    builder
         .manage(AppState::new())
         .invoke_handler(specta.invoke_handler())
         .run(tauri::generate_context!())

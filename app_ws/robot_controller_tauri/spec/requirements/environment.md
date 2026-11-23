@@ -14,6 +14,15 @@
 | 主要 cargo 依存 | tauri 2, btleplug 0.11, tokio, serde, thiserror, tauri-specta / specta / specta-typescript | `src-tauri/Cargo.toml` が正本。specta 系は `src/lib/bindings.ts` 生成に使用 |
 | 開発コンテナ | リポジトリ `.devcontainer` | Node.js / Rust / Tauri Linux 依存を同梱。コンテナ内ビルドは Linux 向け成果物となり、BLE 実機通信は Linux ホストの BlueZ/D-Bus 経由に限る（Windows + Docker Desktop では Bluetooth を渡せない） |
 
+## モバイル実行環境（iOS）
+
+| 要素 | 仕様 | 備考 |
+|---|---|---|
+| OS | iOS 15 以降 | `gen/apple/project.yml` の deploymentTarget が正本 |
+| ビルド | Xcode で `src-tauri/gen/apple/*.xcodeproj` をビルド、または `npm run tauri ios build` | 生成手順は `tools/build_ios.sh` |
+| BLE | CoreBluetooth（`btleplug`） | `NSBluetoothAlwaysUsageDescription` を `src-tauri/Info.plist` で付与。iOS シミュレータでは Bluetooth が動作しないため BLE 確認は実機のみ |
+| 署名 | 実機ビルドには Apple Development Team ID が必要 | `APPLE_DEVELOPMENT_TEAM` 環境変数または `bundle > iOS > developmentTeam` |
+
 ## 対向機器
 
 | 要素 | 機器 | 概要 |

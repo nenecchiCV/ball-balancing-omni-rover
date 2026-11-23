@@ -66,8 +66,9 @@ TS 側では `{ kind: "ble", message } | { kind: "notConnected" } | ...` の tag
 ## lib.rs（app_entry）
 
 - `specta_builder()`: `tauri_specta::Builder` に `collect_commands!` で全 command を登録し、`invoke_handler()` を Tauri Builder へ渡す。
-- debug ビルド起動時（`cfg(debug_assertions)`）に `../src/lib/bindings.ts` をエクスポートする。
-- `Builder::default()` に `tauri_plugin_shell`・`AppState::new()`・invoke handler を登録して `run()`。
+- debug ビルド起動時（`cfg(all(debug_assertions, desktop))`）に `../src/lib/bindings.ts` をエクスポートする。モバイルでは相対パスが解決できず起動直後に abort するためデスクトップ限定とする。
+- `Builder::default()` に `AppState::new()`・invoke handler を登録して `run()`。
+- `tauri_plugin_shell` はデスクトップ専用のため `#[cfg(desktop)]` でのみ登録する（依存も `cfg(not(any(target_os = "android", target_os = "ios")))` 限定）。モバイルでは `shell:default` 権限を持たない（`capabilities/desktop.json` が `"platforms"` でデスクトップに限定）。
 
 ## 備考
 
