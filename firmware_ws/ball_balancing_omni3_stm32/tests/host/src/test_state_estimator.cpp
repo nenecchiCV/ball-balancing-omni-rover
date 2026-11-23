@@ -57,6 +57,53 @@ void test_quaternion_stays_normalized() {
   CHECK_NEAR(n, 1.0F, 0.01F);
 }
 
+// 床置き（大傾斜）起動: identity 初期姿勢だと残差ゲートで加速度更新が
+// 永久拒否され、ジャイロバイアスで傾斜が積算され続ける。加速度シードで
+// 初期姿勢が実姿勢に合い、バイアス学習が始まることを確認する。
+void test_tilted_start_seeds_attitude() {
+  const auto& p = get_params();
+  state_estimator::init({&p});
+  // ロール +60° で静置: 比力 = R^T {0,0,g} = g(0, sin60, cos60)
+  imu_sample s{};
+  const float g = p.physical.gravity;
+  s.specific_force = {0.0F, 0.8660254F * g, 0.5F * g};
+  s.gyro = {0.017F, 0.0F, 0.0F};  // ~1°/s の未学習ロールバイアス
+  s.valid = true;
+  state_estimator::output out{};
+  for (int i = 0; i < 1200; ++i) {  // 6 s
+    out = state_estimator::step(s, vec3{}, p.estimator.sample_time);
+  }
+  // 60° ≈ 1.047 rad 付近に収束し、ドリフトで逃走しない
+  CHECK_NEAR(out.euler[0], 1.0472F, 0.15F);
+  CHECK_TRUE(fabsf(out.euler[1]) < 0.1F);
+}
+
+// 固着復帰: 水平で初期化後に床へ倒す（加速度が一貫して傾斜方向）。
+// 残差ゲートを超えた拒否が続いても、静止証明後は加速度で再シードされ
+// 姿勢が実値へ戻ることを確認する。
+void test_stuck_filter_reseeds_from_accel() {
+  const auto& p = get_params();
+  state_estimator::init({&p});
+  const float g = p.physical.gravity;
+  imu_sample level{};
+  level.specific_force = {0.0F, 0.0F, g};
+  level.valid = true;
+  for (int i = 0; i < 200; ++i) {  // 1 s 水平で収束
+    (void)state_estimator::step(level, vec3{}, p.estimator.sample_time);
+  }
+  // ロール +60° で静置（ジャイロバイアス付き、quasi_static 外だが
+  // inertial 条件内）
+  imu_sample tilted = level;
+  tilted.specific_force = {0.0F, 0.8660254F * g, 0.5F * g};
+  tilted.gyro = {0.03F, 0.0F, 0.0F};
+  state_estimator::output out{};
+  for (int i = 0; i < 800; ++i) {  // 4 s（再シード待ち 2 s 込み）
+    out = state_estimator::step(tilted, vec3{}, p.estimator.sample_time);
+  }
+  CHECK_NEAR(out.euler[0], 1.0472F, 0.15F);
+  CHECK_TRUE(fabsf(out.euler[1]) < 0.1F);
+}
+
 void test_invalid_sample_marks_output() {
   const auto& p = get_params();
   state_estimator::init({&p});
@@ -71,6 +118,8 @@ void test_invalid_sample_marks_output() {
 void state_estimator_tests() {
   test_still_stays_valid_and_bounded();
   test_quaternion_stays_normalized();
+  test_tilted_start_seeds_attitude();
+  test_stuck_filter_reseeds_from_accel();
   test_invalid_sample_marks_output();
 }
 

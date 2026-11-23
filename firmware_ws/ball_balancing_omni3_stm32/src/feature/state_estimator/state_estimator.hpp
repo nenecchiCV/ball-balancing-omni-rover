@@ -52,6 +52,10 @@ class state_estimator {
                        float ekf_bias_y);
 
  private:
+  // EKF 内部状態をリセットし、比力からロール/ピッチをシードした姿勢を
+  // 返す（yaw は current の値を維持）。初期化・固着復帰で共用。
+  static vec4 seed_ekf(const vec3& specific_force, const vec4& current);
+
   static inline const param_set* p_ = nullptr;
 
   // 状態
@@ -84,6 +88,7 @@ class state_estimator {
   static inline vec3 ekf_prev_wheel_rate_{};
   static inline bool ekf_slew_init_ = false;
   static inline float inertial_hold_ = 0.0F;
+  static inline float inertial_reject_hold_ = 0.0F;  // 種ズレ固着検出用
 };
 
 }  // namespace bb

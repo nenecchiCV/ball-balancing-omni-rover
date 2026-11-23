@@ -11,6 +11,27 @@ inline float hypot2(float a, float b) {
   return sqrtf(a * a + b * b);
 }
 
+// 静止証明済みなのに残差がゲート超過し続ける場合の再シード待ち時間 [s]。
+constexpr float kReseedHoldTime = 2.0F;
+
+// 静止時の比力（≈重力の反対向き）からロール/ピッチを定めた姿勢を作る。
+// yaw は current の値を維持する（yaw は加速度から観測できない）。
+vec4 tilt_quat_from_accel(const vec3& specific_force_body,
+                          const vec4& current) {
+  const float an = etl::max(norm(specific_force_body), 1e-6F);
+  const vec3 u = specific_force_body * (1.0F / an);  // body 系の +z_world
+  // u → ez への最短回転: q = [1 + u_z, u×ez]（u_z≈-1 は退化するので
+  // 水平軸の 180° 回転を選ぶ）
+  vec4 tilt = u[2] > -0.9999F
+                  ? vec4{1.0F + u[2], u[1], -u[0], 0.0F}
+                  : vec4{0.0F, 1.0F, 0.0F, 0.0F};
+  const float n = etl::max(norm(tilt), 1e-6F);
+  for (auto& v : tilt) v /= n;
+  const float yaw = rotation_to_euler(quaternion_to_rotation(current))[2];
+  const vec4 qy = {cosf(0.5F * yaw), 0.0F, 0.0F, sinf(0.5F * yaw)};
+  return quaternion_multiply(qy, tilt);
+}
+
 }  // namespace
 
 void state_estimator::init(const config& cfg) {
@@ -40,6 +61,21 @@ void state_estimator::init(const config& cfg) {
   ekf_prev_wheel_rate_ = vec3{};
   ekf_slew_init_ = false;
   inertial_hold_ = 0.0F;
+  inertial_reject_hold_ = 0.0F;
+}
+
+vec4 state_estimator::seed_ekf(const vec3& specific_force,
+                               const vec4& current) {
+  const auto& ek = p_->ekf;
+  ekf_bias_xy_ = vec2{};
+  ekf_accel_world_ = vec3{};
+  prev_ball_velocity_world_ = vec3{};
+  ekf_covariance_ = mat55{};
+  for (int i = 0; i < 3; ++i)
+    ekf_covariance_[i][i] = ek.init_tilt_std * ek.init_tilt_std;
+  for (int i = 3; i < 5; ++i)
+    ekf_covariance_[i][i] = ek.init_bias_std * ek.init_bias_std;
+  return tilt_quat_from_accel(specific_force, current);
 }
 
 void state_estimator::reset_bias() {
@@ -80,15 +116,17 @@ state_estimator::output state_estimator::step(const imu_sample& imu,
 
   const bool ekf_enabled = ek.enabled;
   if (ekf_enabled && !ekf_init_) {
-    ekf_bias_xy_ = vec2{};
-    ekf_accel_world_ = vec3{};
-    prev_ball_velocity_world_ = vec3{};
-    ekf_covariance_ = mat55{};
-    for (int i = 0; i < 3; ++i)
-      ekf_covariance_[i][i] = ek.init_tilt_std * ek.init_tilt_std;
-    for (int i = 3; i < 5; ++i)
-      ekf_covariance_[i][i] = ek.init_bias_std * ek.init_bias_std;
-    ekf_init_ = true;
+    // 比力が重力と整合（≈静止）するサンプルが来るまで初期化を遅延し、
+    // その方向からロール/ピッチをシードする。床置き等の大傾斜起動でも
+    // 初期残差がゲート内に収まり、以後の加速度更新が機能する。
+    // 静止サンプルが得られない間は従来どおり予測のみ（共分散ゼロのため
+    // 加速度更新も実質無効）。
+    if (imu.valid &&
+        fabsf(norm(specific_force_body) - p_->physical.gravity) <=
+            ek.residual_gate) {
+      quaternion = seed_ekf(specific_force_body, quaternion);
+      ekf_init_ = true;
+    }
   }
 
   vec3 gyro_body = gyro_body_raw;
@@ -309,8 +347,9 @@ state_estimator::output state_estimator::step(const imu_sample& imu,
     const mat33 rt = transpose(rotation_world_from_body);
     const vec3 predicted_force_body = mul(rt, expected_force_world);
     const vec3 residual = specific_force_body - predicted_force_body;
+    const bool residual_ok = norm(residual) <= ek.residual_gate;
 
-    if (update_allowed && norm(residual) <= ek.residual_gate) {
+    if (update_allowed && residual_ok) {
       // H = [skew(predicted_force_body), 0(3x2)]
       const mat33 h = skew(predicted_force_body);
       const mat33 ht = transpose(h);
@@ -396,6 +435,19 @@ state_estimator::output state_estimator::step(const imu_sample& imu,
         ekf_covariance_[i][i] =
             etl::max(ekf_covariance_[i][i], ek.tilt_var_floor);
       rotation_world_from_body = quaternion_to_rotation(quaternion);
+      inertial_reject_hold_ = 0.0F;
+    } else if (update_allowed && imu.valid) {
+      // 静止証明済みなのに残差がゲート超過し続ける＝姿勢の種ズレ固着
+      // （大傾斜起動・運搬中のドリフト蓄積等）。加速度計でロール/ピッチを
+      // 再シードしてフィルタを復帰させる。
+      inertial_reject_hold_ += dt;
+      if (inertial_reject_hold_ >= kReseedHoldTime) {
+        quaternion = seed_ekf(specific_force_body, quaternion);
+        rotation_world_from_body = quaternion_to_rotation(quaternion);
+        inertial_reject_hold_ = 0.0F;
+      }
+    } else {
+      inertial_reject_hold_ = 0.0F;
     }
   }
 

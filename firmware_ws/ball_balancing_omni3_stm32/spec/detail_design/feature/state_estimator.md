@@ -30,3 +30,8 @@ struct output {
 ## MATLAB との対応・適応事項
 
 `ballbotEstimatorStep.m` の行をほぼ 1:1 に写像する。`isfield` による機能スイッチは `constexpr` フラグで固定（`ekf.enabled = true`, `ekf.useLegacyCorrection = false`）。`pinv` は `inverse3` で実現する。
+
+MATLAB にはない実機向け追加（姿勢シード/再シード）:
+
+- **初期化シード**: `ekf_init_` は「比力が重力と整合（`|a|−g| ≤ ek.residual_gate`、≈静止）」する最初のサンプルまで遅延され、その比力方向からロール/ピッチを決めて `quaternion` をシードする（yaw は従前値を維持）。MATLAB 側は初期姿勢既知（`ballbotEstimatorInitialState`）のため残差ゲートは収束圏でしか機能しないが、実機は床置き等大傾斜起動で初期残差がゲート超過となり、これがないと加速度更新が永久拒否されてジャイロバイアスで傾斜が積算される（固着）。
+- **固着時の再シード**: `update_allowed`（inertial 静止証明済み）成立にもかかわらず `|residual| > ek.residual_gate` が `kReseedHoldTime`（2 s）連続した場合は姿勢種ズレの固着と判定し、同じシード処理で EKF 内部状態（共分散・bias・加速度フィルタ）をリセットして復帰する。運搬中のドリフト蓄積等による固着を自己回復する。
