@@ -28,9 +28,14 @@ class odometry {
   // 外側タスクと同時実行され得るため呼出し側が排他する。
   static void reset_origin(float raw_x, float raw_y, float raw_yaw);
   // 現在の get()/yaw_of が (x, y, yaw) を返すようオフセットを設定する
-  // （SET_POSE、FR-13）。呼出し側が排他する。
+  // （SET_POSE、FR-13）。指定値は宣言位置として記憶し、
+  // reapply_declared で再適用できる。呼出し側が排他する。
   static void set_pose(float x, float y, float yaw, float raw_x, float raw_y,
                        float raw_yaw);
+  // 最後に宣言した位置・向き（set_pose の指定値、reset_origin なら原点）
+  // を現在の生位置・生 yaw へ再適用する（START_OPERATION 受理時、FR-12）。
+  // 待機中に蓄積した生積分ドリフトを動作開始へ持込まないための再アンカー。
+  static void reapply_declared(float raw_x, float raw_y, float raw_yaw);
 
  private:
   static inline float raw_x_ = 0.0F;
@@ -38,6 +43,10 @@ class odometry {
   static inline float origin_x_ = 0.0F;
   static inline float origin_y_ = 0.0F;
   static inline float yaw_offset_ = 0.0F;
+  // 宣言位置（set_pose の指定値。reset_origin/初期値は原点）
+  static inline float decl_x_ = 0.0F;
+  static inline float decl_y_ = 0.0F;
+  static inline float decl_yaw_ = 0.0F;
 };
 
 }  // namespace bb

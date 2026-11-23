@@ -74,6 +74,6 @@ lib.rs ─→ commands.rs ─→ robot/ ─→ protocol/
 
 ## 安全性
 
-- 緊急停止は `STOP` リクエストを全画面共通ボタンから即時送信する。ロボット側の最終安全機構（E-Stop、指令ウォッチドッグ 500 ms、リンク断絶フェイルセーフ）は `ball_balancing_omni3_stm32` が保持し、本アプリは通知と指令停止を担当する。
+- 緊急停止は `STOP_OPERATION` リクエストを全画面共通ボタンから即時送信する（モータ即遮断→待機、故障状態からの待機復帰も兼ねる。ロボット側は常時受理）。ロボット側の最終安全機構（E-Stop、指令ウォッチドッグ 500 ms、リンク断絶フェイルセーフ）は `ball_balancing_omni3_stm32` が保持し、本アプリは通知と動作停止を担当する。
 - 切断検出は `Session` が `link` broadcast に `Disconnected` を発行し、`watch_link_state` 経由で UI の接続バッジを即時更新する。
 - `watch_*` を含む command 全般は Tauri GUI ランタイム（wry）への依存を引き込むため、Windows の `cargo test` ではアプリマニフェスト（comctl32 v6）のないテストバイナリがロード失敗する。ドメインの単体テストは Tauri 非依存モジュールに閉じて書き、IPC シェルを直接テストしない。

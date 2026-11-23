@@ -44,11 +44,12 @@ struct telemetry_snapshot {
 
 ## 外側タスクの指令選択（FR-09/FR-10/FR-12/FR-13）
 
-`outer_task_cb` は `odometry::update` で推定器の `velocity_world2` を積分した後、まず動作状態を処理する（FR-12）:
+`outer_task_cb` は冒頭で `STANDBY`→`OPERATING` の遷移エッジを処理してから `state_estimator::step`・`odometry::update` を実行し、動作状態の処理（FR-12/FR-13）へ進む:
 
+- **開始エッジ（FR-12）**: `drives_motors()` の立上りで、推定器・制御器・オドメトリの滞留状態を最初の `OPERATING` ティックへ持ち込まないため `step()` より前に `balance_controller::reset()` + `state_estimator::reset_estimate(true)` + `odometry::reapply_declared(raw_x, raw_y, euler_z)` を実行する。待機中も推定・積分は走り続けるため（下記）、手で車体を動かす等で蓄積した速度・姿勢・位置ドリフトをここで捨てる。受理判定で確認済みのバイアス資格と学習済みバイアス・yaw は保持し、`SET_POSE`/`RESET_ODOMETRY` の宣言位置へ再アンカーする。
 - `operation_manager::take_bias_reset_req()` が真なら `state_estimator::reset_bias()` を呼ぶ（FR-13 キャリブレーション開始）。
 - `operation_manager::calib_update(now_ms, qualified, imu_ok)` の返値が `>=0` なら `link_session::notify_calib_result(result, calib_seq, gyro_bias_z)` で `CALIB_RESULT` を送出する。
-- `drives_motors()==false`（`STANDBY`/`FAULT`）→ `balance_controller::step` を**実行せず**、制御出力はゼロ化した `output`（`mode` は直前値維持、`attitude_torque=0`）として扱う。`STANDBY`→`OPERATING` の遷移エッジでは `balance_controller::reset()` を呼んでから次項へ進む。
+- `drives_motors()==false`（`STANDBY`/`FAULT`）→ `balance_controller::step` を**実行せず**、制御出力はゼロ化した `output`（`mode` は直前値維持、`attitude_torque=0`）として扱う。
 - `drives_motors()==true`（`OPERATING`）→ `link_session::command()` の結果で指令源を切替える:
   1. `link_active=false`（一度もフレームを受けていない）→ 従来どおり `command_profile` の出力。
   2. `link_mode::VELOCITY` → `velocity_cmd`（500 ms WDG 失効時はゼロ化済み）。

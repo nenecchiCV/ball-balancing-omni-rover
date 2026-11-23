@@ -18,15 +18,17 @@ class odometry {  // static class
 - `static pose raw()` — オフセット適用前の積分位置。
 - `static pose get()` — `raw - origin` の現在ワールド位置。
 - `static float yaw_of(float raw_yaw)` — `raw_yaw - yaw_offset` の現在ワールド yaw。yaw 自体は推定器の euler を入力とし、ここでは原点オフセットのみ適用する。
-- `static void reset_origin(float raw_x, float raw_y, float raw_yaw)` — 現在の生位置・生 yaw を原点として `origin`/`yaw_offset` に記録する（`RESET_ODOMETRY` 対応）。
-- `static void set_pose(float x, float y, float yaw, float raw_x, float raw_y, float raw_yaw)` — `origin`/`yaw_offset` を、現在の `get()`/`yaw_of` が指定値 `(x, y, yaw)` を返すよう設定する（`SET_POSE` 対応。`reset_origin` は `set_pose(0,0,0)` 相当）。
+- `static void reset_origin(float raw_x, float raw_y, float raw_yaw)` — 現在の生位置・生 yaw を原点として `origin`/`yaw_offset` に記録する（`RESET_ODOMETRY` 対応）。宣言位置は原点 `(0,0,0)` とする。
+- `static void set_pose(float x, float y, float yaw, float raw_x, float raw_y, float raw_yaw)` — `origin`/`yaw_offset` を、現在の `get()`/`yaw_of` が指定値 `(x, y, yaw)` を返すよう設定する（`SET_POSE` 対応。`reset_origin` は `set_pose(0,0,0)` 相当）。指定値は宣言位置 `decl_*` として記憶する。
+- `static void reapply_declared(float raw_x, float raw_y, float raw_yaw)` — 最後に宣言した位置・向きを現在の生位置・生 yaw へ再適用する（`START_OPERATION` 受理時、FR-12）。待機中に蓄積した生積分ドリフト（手で車体を動かした等）を動作開始へ持ち込まないための再アンカーで、`set_pose(decl_x_, decl_y_, decl_yaw_, ...)` と等価。
 
 ## 内部状態
 
 - `raw_x_`, `raw_y_` — `velocity_world2` の積分値（オフセット前）。
-- `origin_x_`, `origin_y_`, `yaw_offset_` — `reset_origin` で記録した原点。
+- `origin_x_`, `origin_y_`, `yaw_offset_` — `reset_origin`/`set_pose` で記録した原点。
+- `decl_x_`, `decl_y_`, `decl_yaw_` — 最後に宣言した位置・向き（`reapply_declared` の再適用先）。`reset_origin` では原点、初期値も原点。
 
 ## 備考
 
-- 精度は推定器の `velocity_world2` 品質に従う。長時間ドリフトは許容する（用途は短時間の移動制御）。
-- `update` は外側タスク（200 Hz）で推定器出力をそのまま渡す。`reset_origin` はリンクスレッドから呼ばれ得るため、呼出し側が `irq_lock` 等で外側タスクと排他する。
+- 精度は推定器の `velocity_world2` 品質に従う。長時間ドリフトは許容する（用途は短時間の移動制御）が、待機中に手で動かされると生積分が実態と乖離するため、動作開始時に宣言位置を再適用してリセットする（FR-12）。
+- `update` は外側タスク（200 Hz）で推定器出力をそのまま渡す。`reset_origin`/`set_pose` はリンクスレッドから、`reapply_declared` は外側タスクから呼ばれるため、呼出し側が `irq_lock` 等で排他する。

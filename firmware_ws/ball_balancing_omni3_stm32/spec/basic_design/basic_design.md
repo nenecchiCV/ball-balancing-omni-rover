@@ -99,7 +99,7 @@ TIM6 の 1 kHz 更新割込を基準に、単一の制御スレッド上で 3 �
 
 ## 安全性
 
-- 動作状態（FR-12）: 起動直後は `standby`（モータ無駆動）とし、`START_OPERATION` の受理で `operating` へ、`STOP_OPERATION` で `standby` へ戻る。`fault`（mode 0 終端相当）は `operating` 中の異常のみで遷移し、リセット必須とする。
+- 動作状態（FR-12）: 起動直後は `standby`（モータ無駆動）とし、`START_OPERATION` の受理で `operating` へ、`STOP_OPERATION` で `standby` へ戻る。`fault`（mode 0 終端相当）は `operating` 中の異常のみで遷移し、`STOP_OPERATION` で `standby` へ復帰する（故障リセット）。待機中に蓄積する推定ドリフトを動作へ持ち込まないため、`standby` → `operating` 遷移時に推定器の動的状態リセット（バイアス・yaw・資格は保持）とオドメトリ宣言位置の再適用を行う。
 - E-Stop は GPIO コールバックで即時検出し、イネーブルを落とす。mode 0 は終端で、以後全タスクのトルク出力が 0 に固定される。
 - IMU 不在・読取失敗時は推定を停止し mode 0 に移行する（`state_estimator` が健全性フラグを返す）。
 - 動作開始時は `startup_torque_ramp_time`（0.4 s）で全トルク経路をランプし、初期トランジェントを抑える。

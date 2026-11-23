@@ -1,5 +1,5 @@
 // operation_manager ホストテスト: 動作状態遷移・START 受理判定・
-// キャリブレーション状態機械・fault 終端（FR-12, FR-13）。
+// キャリブレーション状態機械・fault 停止復帰（FR-12, FR-13）。
 #include "feature/operation_manager/operation_manager.hpp"
 
 #include "common/control_params/control_params.hpp"
@@ -65,17 +65,21 @@ void stop_returns_to_standby() {
   CHECK_TRUE(operation_manager::state() == om::op_state::OPERATING);
 }
 
-void fault_is_terminal() {
+void fault_resets_via_stop() {
   init();
   (void)operation_manager::request_start(ready_cond());
   operation_manager::notify_controller_terminal();
   CHECK_TRUE(operation_manager::state() == om::op_state::FAULT);
   CHECK_TRUE(!operation_manager::drives_motors());
-  // FAULT からは STOP でも START でも戻れない。
-  operation_manager::request_stop();
-  CHECK_TRUE(operation_manager::state() == om::op_state::FAULT);
+  // FAULT からの START は拒否されるが、STOP は故障リセットとして
+  // 受理され STANDBY へ戻る（FR-12 の「常時受理し即時 standby へ」）。
   CHECK_TRUE(operation_manager::request_start(ready_cond()) ==
              ack::REJECTED_STATE);
+  operation_manager::request_stop();
+  CHECK_TRUE(operation_manager::state() == om::op_state::STANDBY);
+  // リセット後は受理条件を満たせば再開始できる。
+  CHECK_TRUE(operation_manager::request_start(ready_cond()) == ack::OK);
+  CHECK_TRUE(operation_manager::state() == om::op_state::OPERATING);
   // STANDBY 中の終端通知は無視される。
   init();
   operation_manager::notify_controller_terminal();
@@ -132,7 +136,7 @@ void operation_manager_tests() {
   start_rejects_when_not_standby();
   start_checks_conditions();
   stop_returns_to_standby();
-  fault_is_terminal();
+  fault_resets_via_stop();
   calib_lifecycle();
   calib_timeout_and_imu_failure();
   calib_rejected_while_operating();

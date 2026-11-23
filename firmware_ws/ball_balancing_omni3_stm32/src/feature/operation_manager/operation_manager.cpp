@@ -55,8 +55,10 @@ uint8_t operation_manager::request_start(const start_cond& c) {
 
 void operation_manager::request_stop() {
   const unsigned int key = irq_lock();
-  // OPERATING からのみ STANDBY へ。FAULT は終端のため維持する。
-  if (state_ == op_state::OPERATING) {
+  // OPERATING → STANDBY（動作停止）と FAULT → STANDBY（故障リセット）
+  // を受理する。FAULT の発生要因（転倒等）は物理的に解消されている
+  // 前提で、再開始可否は以後の request_start の受理判定が担う。
+  if (state_ == op_state::OPERATING || state_ == op_state::FAULT) {
     state_ = op_state::STANDBY;
   }
   irq_unlock(key);

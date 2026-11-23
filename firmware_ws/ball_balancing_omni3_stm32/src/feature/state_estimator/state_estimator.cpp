@@ -13,7 +13,7 @@ inline float hypot2(float a, float b) {
 }
 
 // 静止証明済みなのに残差がゲート超過し続ける場合の再シード待ち時間 [s]。
-constexpr float kReseedHoldTime = 2.0F;
+constexpr float K_RESEED_HOLD_TIME = 2.0F;
 
 // 静止時の比力（≈重力の反対向き）からロール/ピッチを定めた姿勢を作る。
 // yaw は current の値を維持する（yaw は加速度から観測できない）。
@@ -48,12 +48,19 @@ void state_estimator::request_reset() {
   irq_unlock(key);
 }
 
-void state_estimator::reset_estimate() {
-  quaternion_ = {1.0F, 0.0F, 0.0F, 0.0F};
+void state_estimator::reset_estimate(bool keep_qualification) {
+  // 再シードは yaw を current から引き継ぐため、ここで yaw 成分のみ
+  // 残したクォータニオンへ置き換える（リセット前後で yaw が跳ばず、
+  // オドメトリの yaw オフセットとの整合が保たれる）。ゼロ初期状態では
+  // quaternion_to_rotation 内の norm クランプにより恒等相当となる。
+  const float yaw = rotation_to_euler(quaternion_to_rotation(quaternion_))[2];
+  quaternion_ = {cosf(0.5F * yaw), 0.0F, 0.0F, sinf(0.5F * yaw)};
   velocity_world_ = vec3{};
   ball_rate_world_ = vec3{};
   relative_position_body_ = vec2{};
-  qualification_time_ = 0.0F;
+  if (!keep_qualification) {
+    qualification_time_ = 0.0F;
+  }
   ekf_covariance_ = mat55{};
   ekf_accel_world_ = vec3{};
   prev_ball_velocity_world_ = vec3{};
@@ -115,7 +122,7 @@ state_estimator::output state_estimator::step(const imu_sample& imu,
                                               float dt) {
   // SET_POSE 由来の推定リセット要求を消費（リンクスレッド→制御スレッド）。
   {
-    bool do_reset;
+    bool do_reset = false;
     const unsigned int key = irq_lock();
     do_reset = reset_req_;
     reset_req_ = false;
@@ -463,7 +470,7 @@ state_estimator::output state_estimator::step(const imu_sample& imu,
       // （大傾斜起動・運搬中のドリフト蓄積等）。加速度計でロール/ピッチを
       // 再シードしてフィルタを復帰させる。
       inertial_reject_hold_ += dt;
-      if (inertial_reject_hold_ >= kReseedHoldTime) {
+      if (inertial_reject_hold_ >= K_RESEED_HOLD_TIME) {
         quaternion = seed_ekf(specific_force_body, quaternion);
         rotation_world_from_body = quaternion_to_rotation(quaternion);
         inertial_reject_hold_ = 0.0F;

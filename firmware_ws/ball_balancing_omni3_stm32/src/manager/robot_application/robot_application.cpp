@@ -327,6 +327,22 @@ void robot_application::run() {
 
 void robot_application::outer_task_cb() {
   const float dt = p_->controller.sample_time;
+
+  // STANDBY → OPERATING エッジ（FR-12）: 待機中に蓄積した滞留状態を
+  // 制御開始へ持込まない。推定器の動的状態はリセットして次の静止
+  // サンプルで姿勢を再シードし（受理時点の資格は保持、yaw も保持）、
+  // オドメトリは SET_POSE/RESET_ODOMETRY の宣言位置を現在の生値へ
+  // 再適用する。step() より前に行い、最初の OPERATING ティックから
+  // リセット済みの推定値を使う。
+  const bool operating = operation_manager::drives_motors();
+  if (operating && !prev_operating_) {
+    balance_controller::reset();
+    state_estimator::reset_estimate(true);
+    const odometry::pose raw0 = odometry::raw();
+    odometry::reapply_declared(raw0.x, raw0.y, est_out_.euler[2]);
+  }
+  prev_operating_ = operating;
+
   const lsm6dso::sample imu_sample = lsm6dso::read();
   wheel_rate_ = wheel_speed_meter::update();
   est_out_ = state_estimator::step(imu_sample, wheel_rate_, dt);
@@ -376,12 +392,6 @@ void robot_application::outer_task_cb() {
     tune_deadzone::consume_done();
     operation_manager::notify_tune_done(0);
   }
-
-  const bool operating = operation_manager::drives_motors();
-  if (operating && !prev_operating_) {
-    balance_controller::reset();  // STANDBY → OPERATING で内部状態を持込まない
-  }
-  prev_operating_ = operating;
 
   if (operating) {
     // 指令選択: UART リンクが一度でも確立していれば link_session の

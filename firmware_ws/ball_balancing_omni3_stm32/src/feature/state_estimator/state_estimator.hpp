@@ -53,11 +53,16 @@ class state_estimator {
   // 初期位置確定（SET_POSE）に伴う推定リセットを要求する。リンクスレッド
   // から呼び、制御スレッドの step() 先頭で消費される（irq_lock 保護）。
   static void request_reset();
-  // 動的推定状態を初期値へ戻す（quaternion 単位→次の静止サンプルで
-  // 姿勢再シード、速度・輪速・相対位置・qualification・補助フィルタ全て
-  // リセット）。学習済みバイアス（gyro_bias_z_ / ekf_bias_xy_）は保持。
+  // 動的推定状態を初期値へ戻す。速度・輪速・相対位置・補助フィルタを
+  // リセットし ekf_init_=false とすることで次の静止サンプルで姿勢が
+  // 加速度から再シードされる（yaw だけは現行値を保持し、再シードへ
+  // 引き継ぐ。加速度からは観測できないため）。学習済みバイアス
+  // （gyro_bias_z_ / ekf_bias_xy_）は保持する。
+  // keep_qualification=true のとき qualification_time_ も保持する
+  // （START_OPERATION 受理時の動作開始リセット用。受理判定で資格
+  // 成立を確認済みのため、0.5 s の再証明待ちを挟まない）。
   // 外側タスクから呼ぶ（step と同一スレッドのため排他不要）。
-  static void reset_estimate();
+  static void reset_estimate(bool keep_qualification = false);
 
  private:
   // EKF 内部状態をリセットし、比力からロール/ピッチをシードした姿勢を

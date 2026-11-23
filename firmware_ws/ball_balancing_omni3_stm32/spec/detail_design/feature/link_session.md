@@ -54,7 +54,7 @@ class link_session {  // static class
 | `SET_CONTROL_MODE` | `op_state==OPERATING` のみ受理、`mode<=2` を受理。`POSITION` は `imu_ok && qualified` 必須。`STANDBY` では指令スロット・目標をクリア | `ACK` — 待機中は `REJECTED_STATE` |
 | `RESET_ODOMETRY` | `odometry::reset_origin(raw_x, raw_y, raw_yaw)`（`irq_lock` で外側タスクと排他） | `ACK(OK)` |
 | `START_OPERATION` | `operation_manager::request_start(cond)`。`cond` はメールボックスの `imu_ok/estop/qualified/tilt` から組立て | `ACK(result)` — `request_start` の返値をそのまま返す |
-| `STOP_OPERATION` | `operation_manager::request_stop()`＋リンク側 `mode_=STANDBY`・指令スロットゼロ化 | `ACK(OK)` |
+| `STOP_OPERATION` | `operation_manager::request_stop()`（`OPERATING`/`FAULT` → `STANDBY`、故障リセット兼用）＋リンク側 `mode_=STANDBY`・指令スロットゼロ化・位置目標解除。`TUNING` 中は掃引中断 | `ACK(OK)` |
 | `SET_POSE` | `op_state==STANDBY` のみ受理。`odometry::set_pose(x, y, yaw, raw_x, raw_y, raw_yaw)` + `position_controller::clear_target` + `state_estimator::request_reset`（初期位置確定に伴い推定器をリセットし、静止サンプルで姿勢再シード） | `ACK` — 待機中以外は `REJECTED_STATE`、長不整合は `INVALID_PARAM` |
 | `CALIBRATE_IMU` | `operation_manager::request_calib(req.seq)` | `ACK(result)`（受理時の完了結果は別途 `CALIB_RESULT`） |
 | `SET_PARAM` | `param_store::set_key(key, value)`。`TUNING` を含む全状態で受理 | `ACK` — 未定義 key/範囲外は `INVALID_PARAM` |

@@ -162,6 +162,55 @@ void test_invalid_sample_marks_output() {
   CHECK_TRUE(!out.valid);
 }
 
+// 動作開始時の推定リセット（FR-12）: 蓄積した yaw を保持したまま動的
+// 状態をリセットし、keep_qualification で資格時間も保持されることを
+// 確認する。yaw が跳ぶとオドメトリの yaw オフセットと不整合になる。
+void test_start_reset_keeps_yaw_and_qualification() {
+  const auto& p = get_params();
+  state_estimator::init({&p});
+  // まず静止で資格を成立させる（START 受理条件と同じ）。
+  state_estimator::output out{};
+  for (int i = 0; i < 400; ++i) {
+    out =
+        state_estimator::step(still_sample(), vec3{}, p.estimator.sample_time);
+  }
+  CHECK_TRUE(out.updated_qualification_time >=
+             p.estimator.bias_qualification_time);
+  // 搬送中: yaw 回転しつつ水平加速度で速度も蓄積する。
+  // 残差が residual_gate を超えるため EKF 更新は走らず、バイアスが
+  // 汚染されない（この期間の資格は失格側へ落ちる）。
+  imu_sample mv = still_sample();
+  mv.specific_force = {3.0F, 0.0F, 9.8F};
+  mv.gyro = {0.0F, 0.0F, 0.5F};
+  for (int i = 0; i < 200; ++i) {  // 1 s
+    (void)state_estimator::step(mv, vec3{}, p.estimator.sample_time);
+  }
+  // 設置して再び静止させ、資格を再成立させる。
+  for (int i = 0; i < 400; ++i) {
+    out =
+        state_estimator::step(still_sample(), vec3{}, p.estimator.sample_time);
+  }
+  CHECK_TRUE(out.updated_qualification_time >=
+             p.estimator.bias_qualification_time);
+  const float yaw_at_start = out.euler[2];
+  CHECK_TRUE(fabsf(yaw_at_start) > 0.3F);  // ドリフトした yaw がある前提
+
+  // 動作開始リセット（資格保持）。yaw は維持され、速度・資格の扱いが
+  // 仕様どおりであることを確認する。
+  state_estimator::reset_estimate(true);
+  out = state_estimator::step(still_sample(), vec3{}, p.estimator.sample_time);
+  CHECK_NEAR(out.euler[2], yaw_at_start, 0.05F);  // yaw は跳ばない
+  CHECK_TRUE(fabsf(out.velocity_world[0]) < 0.1F);
+  CHECK_TRUE(out.updated_qualification_time >=
+             p.estimator.bias_qualification_time);
+
+  // 既定（資格非保持）では資格が 0 に戻り再証明が必要。
+  state_estimator::reset_estimate();
+  out = state_estimator::step(still_sample(), vec3{}, p.estimator.sample_time);
+  CHECK_TRUE(out.updated_qualification_time <
+             p.estimator.bias_qualification_time);
+}
+
 }  // namespace
 
 void state_estimator_tests() {
@@ -172,6 +221,7 @@ void state_estimator_tests() {
   test_placement_reset_reseeds_and_keeps_bias();
   test_inverted_start_seeds_180deg();
   test_invalid_sample_marks_output();
+  test_start_reset_keeps_yaw_and_qualification();
 }
 
 }  // namespace bb

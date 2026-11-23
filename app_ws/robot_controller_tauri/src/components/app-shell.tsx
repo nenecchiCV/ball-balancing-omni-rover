@@ -12,7 +12,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { formatError } from "@/lib/error";
 import {
   robotGetParams,
-  robotStop,
+  robotStopOperation,
   watchLinkState,
   watchLog,
   watchStatus,
@@ -105,7 +105,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (stopping.current) return;
     stopping.current = true;
     try {
-      await robotStop();
+      // STOP_OPERATION: 動作停止（トルク即遮断→待機）。故障状態からの
+      // 待機復帰も兼ねる（FR-06）。運動指令ゼロのみの STOP とは別機能。
+      await robotStopOperation();
     } catch (e) {
       pushLog(3, `STOP 送信失敗: ${formatError(e)}`);
     } finally {
