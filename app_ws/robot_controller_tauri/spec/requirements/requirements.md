@@ -6,7 +6,7 @@
 [robot_controller_tauri] <--BLE NUS--> [XIAO ESP32-C6] <--UART 115200--> [G474 USART1]
 ```
 
-アプリとロボットの間のアプリケーションプロトコルは `spec/basic_design/robot_link_protocol.md` を正本とする。ロボット側がこのプロトコルを処理するために必要なファームウェア側要求は `firmware_ws/ball_balancing_omni3_stm32/spec/requirements/requirements.md` の FR-09〜FR-14 にトレースする。
+アプリとロボットの間のアプリケーションプロトコルは `spec/basic_design/robot_link_protocol.md` を正本とする。ロボット側がこのプロトコルを処理するために必要なファームウェア側要求は `firmware_ws/ball_balancing_omni3_stm32/spec/requirements/requirements.md` の FR-09〜FR-17 にトレースする。
 
 ## 機能要求
 
@@ -20,6 +20,8 @@
 | FR-06 | 通信異常と緊急停止を操作者へ通知・提供する | [functional/FR-06.md](functional/FR-06.md) |
 | FR-07 | 動作開始・停止コマンドと開始前準備を提供する | [functional/FR-07.md](functional/FR-07.md) |
 | FR-08 | テスト用コマンドの送受信を行う | [functional/FR-08.md](functional/FR-08.md) |
+| FR-09 | 制御パラメータの取得・調整・不揮発保存と不感帯同定を行う | [functional/FR-09.md](functional/FR-09.md) |
+| FR-10 | 各機能の実行に必要な実機操作を画面へ表示する | [functional/FR-10.md](functional/FR-10.md) |
 
 ## 非機能要求
 

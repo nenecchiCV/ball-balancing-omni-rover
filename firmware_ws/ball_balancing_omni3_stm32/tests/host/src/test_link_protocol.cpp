@@ -29,12 +29,13 @@ void crc16_known_vector() {
 }
 
 void encode_layout() {
+  // rev C: SYNC | LEN | TYPE | SEQ | DATA | CRC16-LE。
   const uint8_t pl[3] = {0x11, 0x22, 0x33};
   uint8_t buf[link_protocol::MAX_FRAME];
   const uint32_t n = enc(0x10, 7, pl, 3, buf);
   CHECK_TRUE(n == 4 + 3 + 2);
-  CHECK_TRUE(buf[0] == SYNC && buf[1] == 0x10 && buf[2] == 7 && buf[3] == 3);
-  const uint16_t crc = link_protocol::crc16(&buf[1], 3 + 3);
+  CHECK_TRUE(buf[0] == SYNC && buf[1] == 5 && buf[2] == 0x10 && buf[3] == 7);
+  const uint16_t crc = link_protocol::crc16(&buf[1], 1 + 5);
   CHECK_TRUE(buf[7] == (crc & 0xFF));
   CHECK_TRUE(buf[8] == (crc >> 8));
 }
@@ -102,10 +103,10 @@ void embedded_sync_resyncs() {
   uint8_t good[link_protocol::MAX_FRAME];
   const uint32_t n = enc(link_protocol::req::PING, 3, nullptr, 0, good);
   frame_decoder d;
-  // SYNC|TYPE|SEQ|LEN=8 + ゴミ 4B + 正常フレーム。
+  // SYNC|LEN=8|TYPE|SEQ + ゴミ 4B + 正常フレーム。
   // 破損フレームはゴミ+正常フレーム先頭を payload/CRC として吸収し、
   // CRC 照合に失敗 → 先頭 SYNC のみ捨てて正常フレームへ再同期する。
-  const uint8_t bad_head[8] = {SYNC, 0x12, 0x00, 8, 0x11, 0x22, 0x33, 0x44};
+  const uint8_t bad_head[8] = {SYNC, 8, 0x12, 0x00, 0x11, 0x22, 0x33, 0x44};
   feed(d, bad_head, sizeof(bad_head));
   feed(d, good, n);
   request r{};
@@ -113,9 +114,9 @@ void embedded_sync_resyncs() {
   CHECK_TRUE(r.type == 0x01 && r.seq == 3);
 }
 
-void oversize_len_dropped() {
-  // LEN > MAX_PAYLOAD のフレームは SYNC のみ捨てて再同期する。
-  const uint8_t bad[7] = {SYNC, 0x10, 0x01, 200, 0x00, 0x00, 0x00};
+void undersize_len_dropped() {
+  // LEN < META_LEN(2) のフレームは SYNC のみ捨てて再同期する。
+  const uint8_t bad[7] = {SYNC, 1, 0x10, 0x01, 0x00, 0x00, 0x00};
   const uint8_t pl[1] = {4};
   uint8_t good[link_protocol::MAX_FRAME];
   const uint32_t n = enc(link_protocol::req::STOP, 8, pl, 0, good);
@@ -145,7 +146,7 @@ void link_protocol_tests() {
   garbage_resync();
   bad_crc_resyncs();
   embedded_sync_resyncs();
-  oversize_len_dropped();
+  undersize_len_dropped();
   f32_u32_helpers();
 }
 

@@ -16,7 +16,7 @@ const CAPS_NAMES: [number, string][] = [
   [0x10, "運転管理"],
 ];
 
-const OP_NAMES = ["待機", "動作中", "故障"] as const;
+const OP_NAMES = ["待機", "動作中", "故障", "調整中"] as const;
 const MODE_NAMES = ["スタンバイ", "速度指令", "位置制御"] as const;
 
 // ASCII 文字列 ⇔ バイト列（ペイロードは 1-63 バイト）。
@@ -108,7 +108,9 @@ export function TestPage() {
         </div>
         <p className="muted mt-2">
           TEST_ECHO は ASCII 文字列（1-63 バイト）を往復させる。STM32
-          テストファーム（test link 起動）対応。
+          テストファーム使用時は、先に STM32 側シェルで
+          <code>test link</code> を起動してから実行すること
+          （`caps` のテストビルドビットで識別可能）。
         </p>
       </div>
       <div className="card">

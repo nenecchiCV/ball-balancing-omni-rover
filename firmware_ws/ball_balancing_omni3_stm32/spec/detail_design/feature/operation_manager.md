@@ -10,7 +10,7 @@ class operation_manager {  // static class
   struct config { const param_set* params; };
 
   // 動作状態（STATUS/EVT_STATUS の op_state と同じ値）
-  enum op_state : uint8_t { STANDBY = 0, OPERATING = 1, FAULT = 2 };
+  enum op_state : uint8_t { STANDBY = 0, OPERATING = 1, FAULT = 2, TUNING = 3 };
   // キャリブレーション状態（STATUS/EVT_STATUS の calib_state と同じ値）
   enum calib_state : uint8_t { NONE = 0, RUNNING = 1, DONE = 2, FAILED = 3 };
 
@@ -37,6 +37,9 @@ class operation_manager {  // static class
 - `static uint8_t calib_seq()` — 受理時の `seq`（`CALIB_RESULT` エコー用）。
 - `static bool take_bias_reset_req()` — `request_calib` 受理で立てたバイアスリセット要求を取得しクリアする。外側タスクがこれを検出して `state_estimator::reset_bias()` を呼ぶ経路とし、リンクスレッド→制御スレッドの跨ぎ呼出しを避ける。
 - `static void notify_controller_terminal()` — `OPERATING` 中に制御器が mode 0（終端）に到達したことを外側タスクが通知し、`FAULT` へ遷移する。`STANDBY` 中の呼出しは無視する。
+- `static uint8_t request_tune(float dir, float max_duty, float ramp_s, uint8_t seq)` — `TUNE_DEADZONE` 受理判定（リンクスレッドから呼ぶ）。`STANDBY` 中のみ `OK` を返し `TUNING` へ遷移して `tune_deadzone::start` を呼ぶ。`OPERATING`/`FAULT`/`TUNING` 中は `REJECTED_STATE`。
+- `static void notify_tune_done()` — 外側タスクが `tune_deadzone::is_done()` を検出して呼び、`TUNING` → `STANDBY` へ戻す。`TUNE_RESULT` の送出は `robot_application` 経由で `link_session` が行う。
+- `static bool tuning()` — `state == TUNING` のとき true。外側タスクが `tune_deadzone::step` の駆動と E-Stop 監視に使う。
 
 ## スレッドモデル
 
@@ -53,4 +56,6 @@ class operation_manager {  // static class
 
 - `FAULT` からの遷移は持たない（物理リセット前提、FR-12）。`balance_controller` の `mode0_latch_` は `OPERATING` 中のみ発動し得る構成とし、`STANDBY` 中は制御器 `step` 自体を実行しない（`robot_application` 側のゲート）。
 - `OPERATING` → `STANDBY` 遷移は次の外側タスクから制御器 `step` を止めるだけで即時反映される。トルク遮断にランプは使わない。
+- `TUNING` 中は `drives_motors()` は true を返すが、外側タスクは `tuning()` を優先して `balance_controller::step` ではなく `tune_deadzone::step` を駆動する（平衡制御は行わず掃引のみ。車体は人が保持する前提）。
+- `TUNING` 中の E-Stop は `tune_deadzone::abort` で掃引を中断し `STANDBY` へ戻る（終端へは遷移しない、FR-17）。`STOP_OPERATION` も掃引を中断する。
 - `RUNNING` 中の再 `request_calib` は `OK`（再開=バイアス状態の再リセット＋deadline 更新）としてよい。

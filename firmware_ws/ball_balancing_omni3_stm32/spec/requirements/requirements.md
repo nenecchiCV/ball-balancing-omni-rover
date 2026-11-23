@@ -20,6 +20,9 @@
 | FR-12 | アプリ指示で待機 ⇔ 動作中を遷移しモータ駆動を管理する | [functional/FR-12.md](functional/FR-12.md) |
 | FR-13 | IMU キャリブレーションと初期位置設定をリンク経由で行う | [functional/FR-13.md](functional/FR-13.md) |
 | FR-14 | 購読イベントを周期バッチでまとめて送出する | [functional/FR-14.md](functional/FR-14.md) |
+| FR-15 | 動作パラメータをメインフラッシュへ不揮発保存する | [functional/FR-15.md](functional/FR-15.md) |
+| FR-16 | 車輪ごとの駆動不感帯補償を wheel_servo へ適用する | [functional/FR-16.md](functional/FR-16.md) |
+| FR-17 | パラメータ取得・設定と不感帯掃引同定をリンク経由で提供する | [functional/FR-17.md](functional/FR-17.md) |
 
 ## 非機能要求
 

@@ -48,6 +48,19 @@ void state_estimator::reset_bias() {
   qualification_time_ = 0.0F;
 }
 
+void state_estimator::get_bias(float* gyro_bias_z, float* ekf_bias_x,
+                               float* ekf_bias_y) {
+  if (gyro_bias_z != nullptr) *gyro_bias_z = gyro_bias_z_;
+  if (ekf_bias_x != nullptr) *ekf_bias_x = ekf_bias_xy_[0];
+  if (ekf_bias_y != nullptr) *ekf_bias_y = ekf_bias_xy_[1];
+}
+
+void state_estimator::set_bias(float gyro_bias_z, float ekf_bias_x,
+                               float ekf_bias_y) {
+  gyro_bias_z_ = gyro_bias_z;
+  ekf_bias_xy_ = {ekf_bias_x, ekf_bias_y};
+}
+
 state_estimator::output state_estimator::step(const imu_sample& imu,
                                               const vec3& wheel_rate,
                                               float dt) {

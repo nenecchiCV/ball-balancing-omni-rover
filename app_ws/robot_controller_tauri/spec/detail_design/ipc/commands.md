@@ -23,6 +23,11 @@ async fn robot_stop_operation(state) -> Result<(), AppError>
 async fn robot_set_pose(state, x: f32, y: f32, yaw: f32) -> Result<(), AppError>
 async fn robot_calibrate_imu(state) -> Result<CalibResultInfo, AppError>
 async fn robot_test_echo(state, payload: Vec<u8>) -> Result<TestEchoInfo, AppError>
+async fn robot_get_params(state, start_key: u8) -> Result<ParamsInfo, AppError>
+async fn robot_set_param(state, key: u8, value: f32) -> Result<(), AppError>
+async fn robot_save_params(state) -> Result<(), AppError>
+async fn robot_reset_params(state) -> Result<(), AppError>
+async fn robot_tune_deadzone(state, dir: f32, max_duty: f32, ramp_s: f32) -> Result<TuneResultInfo, AppError>
 async fn robot_get_status(state) -> Result<RobotStatusInfo, AppError>
 async fn robot_subscribe(state, event_type: u8, rate_hz: u8) -> Result<(), AppError>
 async fn robot_unsubscribe(state, event_type: u8) -> Result<(), AppError>
@@ -47,6 +52,8 @@ async fn watch_log(state, channel: Channel<LogMessage>) -> Result<(), AppError>
 - `robot_set_mode` は mode 上限（`control_mode::POSITION`）を検証し、超過は `InvalidParam`。
 - `robot_calibrate_imu` は `request_data` で `CALIB_RESULT` を待ち、`CalibResultInfo { result, gyroBiasZ }` を返す。`result!=0`（タイムアウト/IMU異常）も正常応答として返し、失敗表示は UI 側で行う。
 - `robot_test_echo` は `request_data` で `TEST_ECHO_RESP` を待ち、往復時間を測って `TestEchoInfo { data, rttMs }` を返す。`data` は送信値と一致する前提のエコーペイロード。
+- `robot_get_params` は `PARAMS` を待ち、`ParamsInfo { more, entries: { key, value }[] }` を返す。全件取得は UI 側で `start_key` 巡回する。
+- `robot_tune_deadzone` は `request_data` で `TUNE_RESULT` を待つ。タイムアウトは `2*ramp_s + 5 s` 程度とし、`TuneResultInfo { result, dzStart[3], dzKeep[3], recommended[3] }` を返す。
 - `PongInfo` は `{ protoVer, robotCaps }`、`RobotStatusInfo` は `{ opState, mode, enable, estop, imuOk, calibState, uptimeMs }`（camelCase）。
 
 ## error.rs（AppError）

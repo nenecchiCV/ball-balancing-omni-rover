@@ -17,7 +17,7 @@ import { useLogStore } from "@/stores/logs";
 import { useTelemetryStore } from "@/stores/telemetry";
 
 const MODE_NAMES = ["スタンバイ", "速度指令", "位置制御"] as const;
-const OP_NAMES = ["待機", "動作中", "故障"] as const;
+const OP_NAMES = ["待機", "動作中", "故障", "調整中"] as const;
 const CALIB_NAMES = ["未実施", "実行中", "完了", "失敗"] as const;
 
 export function HomePage() {
@@ -133,6 +133,11 @@ export function HomePage() {
       </div>
       <div className="card">
         <h2 className="mb-2 text-base">運転準備（待機中のみ実行可）</h2>
+        <p className="muted mb-2 text-[13px]">
+          実機準備: ①ロボットを水平な場所に置き静止させて IMU
+          キャリブレーション → ②所定の初期位置・向きに設置して位置設定
+          → ③ボール上に置き手で保持しながら動作開始。
+        </p>
         <div className="row">
           <button
             className="btn"
@@ -147,6 +152,9 @@ export function HomePage() {
           </button>
           {calibNote && <span className="muted">{calibNote}</span>}
         </div>
+        <p className="muted mt-1 text-[13px]">
+          ※ 実行中はロボットを動かさないこと（約 5 秒以内に完了/失敗が返る）。
+        </p>
         <div className="row mt-2">
           <label>
             x [m]{" "}
@@ -180,6 +188,9 @@ export function HomePage() {
             位置設定
           </button>
         </div>
+        <p className="muted mt-1 text-[13px]">
+          ※ 送信前にロボットを設定したい座標・向きへ実際に置いておく。
+        </p>
         <div className="row mt-2">
           {opState !== OP_STATE.operating ? (
             <button
@@ -196,6 +207,8 @@ export function HomePage() {
           )}
           <span className="muted">
             動作開始には IMU 正常・E-Stop 解除・キャリブレーション完了・姿勢正常が必要。
+            開始時は手で保持して傾きを最小にすること。動作停止はモータ遮断=
+            転倒するため、先に STOP で静止させてから実行すること。
           </span>
         </div>
       </div>

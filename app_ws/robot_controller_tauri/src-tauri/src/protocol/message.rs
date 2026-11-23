@@ -14,10 +14,15 @@ pub mod msg_type {
     pub const STOP_OPERATION: u8 = 0x16;
     pub const SET_POSE: u8 = 0x17;
     pub const CALIBRATE_IMU: u8 = 0x18;
+    pub const SET_PARAM: u8 = 0x19;
+    pub const SAVE_PARAMS: u8 = 0x1A;
+    pub const RESET_PARAMS: u8 = 0x1B;
+    pub const TUNE_DEADZONE: u8 = 0x1C;
     pub const SUBSCRIBE: u8 = 0x20;
     pub const UNSUBSCRIBE: u8 = 0x21;
     pub const GET_STATUS: u8 = 0x30;
     pub const TEST_ECHO: u8 = 0x31;
+    pub const GET_PARAMS: u8 = 0x32;
 
     // 応答（ロボット→アプリ）
     pub const ACK: u8 = 0x80;
@@ -25,6 +30,8 @@ pub mod msg_type {
     pub const STATUS: u8 = 0x82;
     pub const CALIB_RESULT: u8 = 0x83;
     pub const TEST_ECHO_RESP: u8 = 0x84;
+    pub const PARAMS: u8 = 0x85;
+    pub const TUNE_RESULT: u8 = 0x86;
 
     // イベント（ロボット→アプリ、購読送出）
     pub const EVT_POSE: u8 = 0x90;
@@ -56,6 +63,7 @@ pub mod op_state {
     pub const STANDBY: u8 = 0;
     pub const OPERATING: u8 = 1;
     pub const FAULT: u8 = 2;
+    pub const TUNING: u8 = 3; // FR-17 同定セッション中
 }
 
 // STATUS/EVT_STATUS の calib_state 値。
@@ -79,10 +87,15 @@ pub enum Request {
     StopOperation,
     SetPose { x: f32, y: f32, yaw: f32 },
     CalibrateImu,
+    SetParam { key: u8, value: f32 },
+    SaveParams,
+    ResetParams,
+    TuneDeadzone { dir: i8, max_duty: f32, ramp_s: f32 },
     Subscribe { event_type: u8, rate_hz: u8 },
     Unsubscribe { event_type: u8 },
     GetStatus,
     TestEcho { data: Vec<u8> },
+    GetParams { start_key: u8 },
 }
 
 impl Request {
@@ -117,6 +130,19 @@ impl Request {
                 msg_type::SET_POSE
             }
             Request::CalibrateImu => msg_type::CALIBRATE_IMU,
+            Request::SetParam { key, value } => {
+                p.push(*key);
+                push_f32(&mut p, *value);
+                msg_type::SET_PARAM
+            }
+            Request::SaveParams => msg_type::SAVE_PARAMS,
+            Request::ResetParams => msg_type::RESET_PARAMS,
+            Request::TuneDeadzone { dir, max_duty, ramp_s } => {
+                p.push(*dir as u8);
+                push_f32(&mut p, *max_duty);
+                push_f32(&mut p, *ramp_s);
+                msg_type::TUNE_DEADZONE
+            }
             Request::Subscribe { event_type, rate_hz } => {
                 p.push(*event_type);
                 p.push(*rate_hz);
@@ -130,6 +156,10 @@ impl Request {
             Request::TestEcho { data } => {
                 p.extend_from_slice(data);
                 msg_type::TEST_ECHO
+            }
+            Request::GetParams { start_key } => {
+                p.push(*start_key);
+                msg_type::GET_PARAMS
             }
         };
         Frame::new(t, seq, p)
@@ -145,6 +175,9 @@ pub enum Response {
              calib_state: u8, uptime_ms: u32 },
     CalibResult { seq: u8, result: u8, gyro_bias_z: f32 },
     TestEchoResp { seq: u8, data: Vec<u8> },
+    Params { seq: u8, total: u8, entries: Vec<(u8, f32)> },
+    TuneResult { seq: u8, result: u8, onset: [f32; 3], sustain: [f32; 3],
+                 suggest: [f32; 3] },
 }
 
 impl Response {
@@ -180,6 +213,34 @@ impl Response {
                 seq: p[0],
                 data: p[1..].to_vec(),
             }),
+            // {seq u8, total u8, count u8, [key u8, value f32]*}
+            msg_type::PARAMS if p.len() >= 3 => {
+                let count = p[2] as usize;
+                if p.len() != 3 + count * 5 {
+                    return None;
+                }
+                let mut entries = Vec::with_capacity(count);
+                for i in 0..count {
+                    let key = p[3 + i * 5];
+                    let v = f32::from_le_bytes(
+                        p[4 + i * 5..8 + i * 5].try_into().ok()?);
+                    entries.push((key, v));
+                }
+                Some(Response::Params { seq: p[0], total: p[1], entries })
+            }
+            // {seq u8, result u8, onset f32x3, sustain f32x3, suggest f32x3}
+            msg_type::TUNE_RESULT if p.len() == 38 => {
+                let rd = |o: usize| -> Option<f32> {
+                    Some(f32::from_le_bytes(p[o..o + 4].try_into().ok()?))
+                };
+                Some(Response::TuneResult {
+                    seq: p[0],
+                    result: p[1],
+                    onset: [rd(2)?, rd(6)?, rd(10)?],
+                    sustain: [rd(14)?, rd(18)?, rd(22)?],
+                    suggest: [rd(26)?, rd(30)?, rd(34)?],
+                })
+            }
             _ => None,
         }
     }

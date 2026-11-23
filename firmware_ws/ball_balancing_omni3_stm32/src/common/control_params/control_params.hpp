@@ -279,11 +279,27 @@ struct param_set {
     uint32_t event_batch_ms = 100;   // イベントバッチ送出周期（FR-14）
     uint32_t calib_timeout_ms = 5000;  // CALIBRATE_IMU 完了期限（FR-13）
   } link;
+
+  // FR-16 駆動不感帯補償（車輪ごと、既定は omni_drive_test::DEADZONE_COMP と同値）。
+  struct drive {
+    float deadzone_comp[3] = {0.08F, 0.08F, 0.08F};
+  } drive;
+
+  // FR-15 IMU 特性（永続化対象。CALIBRATE_IMU の学習結果を保存）。
+  struct imu {
+    float gyro_bias_z = 0.0F;   // ジャイロ z バイアス [rad/s]
+    float ekf_bias_x = 0.0F;    // EKF 推定 x 軸バイアス [rad/s]
+    float ekf_bias_y = 0.0F;    // EKF 推定 y 軸バイアス [rad/s]
+  } imu;
+
+  // FR-17 同定セッション定数。
+  struct tune {
+    float wake_rate = 2.0F;     // 輪速立上り判定閾値 [rad/s]
+  } tune;
 };
 
-inline const param_set& get_params() {
-  static const param_set PARAMS{};
-  return PARAMS;
-}
+// 動作値（param_store の可変コピー）への参照を返す。
+// param_store::init_defaults() 呼出し前は constexpr 既定値と同値。
+const param_set& get_params();
 
 }  // namespace bb

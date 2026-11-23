@@ -7,6 +7,7 @@
 #include "common/control_params/control_params.hpp"
 #include "common/link_protocol/link_protocol.hpp"
 #include "common/vector_math/vector_math.hpp"
+#include "feature/tune_deadzone/tune_deadzone.hpp"
 
 namespace bb {
 
@@ -71,9 +72,12 @@ class link_session {
   static command_output command();
   static void generate_events(uint32_t now_ms);
 
-  // CALIB_RESULT の即時送出（制御スレッド、FR-13）。バッチを経由しない。
+  // CALIB_RESULT / TUNE_RESULT の即時送出（制御スレッド、FR-13/FR-17）。
+  // バッチを経由しない。
   static void notify_calib_result(uint8_t result, uint8_t seq,
                                   float gyro_bias_z);
+  static void notify_tune_result(uint8_t result, uint8_t seq,
+                                 const tune_deadzone::measure& m);
 
   // EVT_LOG 生成（両スレッドから呼べる）。level: 1=info 2=warn 3=error。
   static void log(uint8_t level, const char* text);

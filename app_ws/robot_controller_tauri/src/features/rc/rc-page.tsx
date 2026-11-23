@@ -6,10 +6,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Joystick } from "@/features/rc/joystick";
 import { robotSetMode, robotSetVelocity } from "@/lib/ipc";
-import { MAX_SPEED, MAX_YAW_RATE, RC_SEND_HZ } from "@/lib/limits";
+import { MAX_YAW_RATE, RC_SEND_HZ } from "@/lib/limits";
 import { CONTROL_MODE, OP_STATE } from "@/lib/types";
 import { useConnected } from "@/stores/connection";
 import { useLogStore } from "@/stores/logs";
+import { useParamsStore } from "@/stores/params";
 import { useTelemetryStore } from "@/stores/telemetry";
 
 export function RcPage() {
@@ -17,6 +18,7 @@ export function RcPage() {
   const operating = useTelemetryStore(
     (s) => s.status?.opState === OP_STATE.operating,
   );
+  const maxSpeed = useParamsStore((s) => s.maxSpeed);
   const pushLog = useLogStore((s) => s.push);
   const cmd = useRef({ vx: 0, vy: 0, yawRate: 0 });
   const active = useRef(false);
@@ -41,8 +43,8 @@ export function RcPage() {
     (which: "trans" | "rot") => (x: number, y: number) => {
       const c = cmd.current;
       if (which === "trans") {
-        c.vx = y * MAX_SPEED;
-        c.vy = x * MAX_SPEED;
+        c.vx = y * maxSpeed;
+        c.vy = x * maxSpeed;
       } else {
         c.yawRate = x * MAX_YAW_RATE;
       }
@@ -54,7 +56,7 @@ export function RcPage() {
       }
       active.current = nonzero;
     },
-    [],
+    [maxSpeed],
   );
 
   const enterVelocityMode = async () => {
@@ -81,7 +83,7 @@ export function RcPage() {
           </button>
           <span className="muted">
             送信: vx={sent.vx.toFixed(2)} m/s, vy={sent.vy.toFixed(2)} m/s,
-            yaw={sent.yawRate.toFixed(2)} rad/s（20 Hz, 最大 {MAX_SPEED} m/s /{" "}
+            yaw={sent.yawRate.toFixed(2)} rad/s（20 Hz, 最大 {maxSpeed} m/s /{" "}
             {MAX_YAW_RATE} rad/s）
           </span>
         </div>

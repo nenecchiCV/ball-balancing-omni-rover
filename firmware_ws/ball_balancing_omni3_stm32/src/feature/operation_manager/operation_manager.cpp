@@ -115,6 +115,42 @@ bool operation_manager::take_bias_reset_req() {
   return r;
 }
 
+uint8_t operation_manager::request_tune(uint8_t seq) {
+  const unsigned int key = irq_lock();
+  uint8_t result = link_protocol::ack_result::OK;
+  if (state_ != op_state::STANDBY || calib_ == calib_state::RUNNING) {
+    result = link_protocol::ack_result::REJECTED_STATE;
+  } else {
+    state_ = op_state::TUNING;
+    tune_seq_ = seq;
+  }
+  irq_unlock(key);
+  return result;
+}
+
+void operation_manager::notify_tune_done(uint8_t result) {
+  (void)result;  // result は link_session 側の TUNE_RESULT で返す
+  const unsigned int key = irq_lock();
+  if (state_ == op_state::TUNING) {
+    state_ = op_state::STANDBY;
+  }
+  irq_unlock(key);
+}
+
+uint8_t operation_manager::tune_seq() {
+  const unsigned int key = irq_lock();
+  const uint8_t s = tune_seq_;
+  irq_unlock(key);
+  return s;
+}
+
+bool operation_manager::tuning() {
+  const unsigned int key = irq_lock();
+  const bool t = (state_ == op_state::TUNING);
+  irq_unlock(key);
+  return t;
+}
+
 void operation_manager::notify_controller_terminal() {
   const unsigned int key = irq_lock();
   if (state_ == op_state::OPERATING) {

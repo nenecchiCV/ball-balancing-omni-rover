@@ -47,6 +47,35 @@ pub struct TestEchoInfo {
     pub data: Vec<u8>,
 }
 
+#[derive(Debug, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ParamEntry {
+    pub key: u8,
+    pub value: f32,
+}
+
+#[derive(Debug, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ParamsInfo {
+    /// ファーム側の調整対象キー総数。
+    pub total: u8,
+    /// 収集したエントリ（key 昇順）。total と件数が一致するとき全件。
+    pub entries: Vec<ParamEntry>,
+}
+
+#[derive(Debug, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct TuneResultInfo {
+    /// 0=完了、1=中断（E-Stop/キャンセル）。
+    pub result: u8,
+    /// 立上り duty（回転開始時）の車輪ごとの絶対値。
+    pub onset: [f32; 3],
+    /// 維持 duty（下降側で回転継続した最小値）。
+    pub sustain: [f32; 3],
+    /// ファーム算出の推奨 deadzone_comp。
+    pub suggest: [f32; 3],
+}
+
 /// CALIB_RESULT 待機上限。firmware `link.calib_timeout_ms`(5000) より長め。
 const CALIB_TIMEOUT_MS: u32 = 6_000;
 
@@ -242,6 +271,127 @@ pub async fn robot_test_echo(
         .await?
     {
         Response::TestEchoResp { data, .. } => Ok(TestEchoInfo { data }),
+        _ => Err(AppError::BadResponse),
+    }
+}
+
+/// 調整対象パラメータを全件取得する（GET_PARAMS ページング、FR-09）。
+/// `total` 件に達するまで start_key を進めて複数リクエストを送る。
+#[tauri::command]
+#[specta::specta]
+pub async fn robot_get_params(state: State<'_, AppState>) -> Result<ParamsInfo, AppError> {
+    let mut entries: Vec<ParamEntry> = Vec::new();
+    let mut total: u8 = 0;
+    let mut start_key: u8 = 0;
+    // 最大 4 ページ（30 件/ページで全 43 キーをカバー）。
+    for _ in 0..4 {
+        match state
+            .session
+            .request(&Request::GetParams { start_key })
+            .await?
+        {
+            Response::Params {
+                total: t, entries: e, ..
+            } => {
+                total = t;
+                for (key, value) in e {
+                    entries.push(ParamEntry { key, value });
+                    start_key = key.saturating_add(1);
+                }
+                if entries.len() >= total as usize || start_key == 0 {
+                    break;
+                }
+            }
+            _ => return Err(AppError::BadResponse),
+        }
+    }
+    // key 0x60 = controller.max_speed。指令クランプへ反映する。
+    if let Some(e) = entries.iter().find(|e| e.key == PARAM_KEY_MAX_SPEED) {
+        state.session.set_max_speed(e.value);
+    }
+    Ok(ParamsInfo { total, entries })
+}
+
+/// 調整対象 key（robot_link_protocol.md「調整対象パラメータ」）。
+const PARAM_KEY_MAX_SPEED: u8 = 0x60;
+
+/// パラメータを 1 キーだけ更新する（RAM のみ、SAVE_PARAMS で不揮発化）。
+#[tauri::command]
+#[specta::specta]
+pub async fn robot_set_param(
+    state: State<'_, AppState>,
+    key: u8,
+    value: f32,
+) -> Result<(), AppError> {
+    if !value.is_finite() {
+        return Err(AppError::InvalidParam("value が非有限".into()));
+    }
+    ack_to_result(
+        state
+            .session
+            .request(&Request::SetParam { key, value })
+            .await?,
+    )?;
+    if key == PARAM_KEY_MAX_SPEED {
+        state.session.set_max_speed(value);
+    }
+    Ok(())
+}
+
+/// 動作パラメータをフラッシュへ保存する（ロボット側 STANDBY のみ受理）。
+/// 消去+書込みのため数百 ms 掛かる場合がある。
+#[tauri::command]
+#[specta::specta]
+pub async fn robot_save_params(state: State<'_, AppState>) -> Result<(), AppError> {
+    ack_to_result(state.session.request(&Request::SaveParams).await?)
+}
+
+/// 保存領域を消去して動作パラメータを既定値へ戻す。
+#[tauri::command]
+#[specta::specta]
+pub async fn robot_reset_params(state: State<'_, AppState>) -> Result<(), AppError> {
+    ack_to_result(state.session.request(&Request::ResetParams).await?)?;
+    // 既定 max_speed = 0.4（シム検証値）へ戻る。
+    state.session.set_max_speed(0.4);
+    Ok(())
+}
+
+/// 不感帯掃引セッションを実行し TUNE_RESULT を返す（FR-09/FR-17）。
+/// 車輪を無負荷にして実行すること。所要時間は 2*ramp_s 秒。
+#[tauri::command]
+#[specta::specta]
+pub async fn robot_tune_deadzone(
+    state: State<'_, AppState>,
+    dir: Option<i8>,
+    max_duty: Option<f32>,
+    ramp_s: Option<f32>,
+) -> Result<TuneResultInfo, AppError> {
+    let dir = dir.unwrap_or(1).clamp(-1, 1);
+    let max_duty = max_duty.unwrap_or(0.25).clamp(0.01, 0.8);
+    let ramp_s = ramp_s.unwrap_or(15.0).clamp(1.0, 120.0);
+    // 掃引全体 + マージンの待機時間。
+    let timeout_ms = ((2.0 * ramp_s + 5.0) * 1000.0) as u32;
+    match state
+        .session
+        .request_data(
+            &Request::TuneDeadzone { dir, max_duty, ramp_s },
+            msg_type::TUNE_RESULT,
+            timeout_ms,
+        )
+        .await?
+    {
+        Response::TuneResult {
+            result,
+            onset,
+            sustain,
+            suggest,
+            ..
+        } => Ok(TuneResultInfo {
+            result,
+            onset,
+            sustain,
+            suggest,
+        }),
         _ => Err(AppError::BadResponse),
     }
 }

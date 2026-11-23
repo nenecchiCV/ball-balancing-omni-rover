@@ -6,9 +6,13 @@
 #include <zephyr/drivers/uart.h>
 #include <zephyr/irq.h>
 
+#include "common/param_store/param_store.hpp"
 #include "feature/odometry/odometry.hpp"
 #include "feature/operation_manager/operation_manager.hpp"
 #include "feature/position_controller/position_controller.hpp"
+#include "feature/state_estimator/state_estimator.hpp"
+#include "feature/tune_deadzone/tune_deadzone.hpp"
+#include "peripheral/flash_store/flash_store.hpp"
 #include "peripheral/link_uart/link_uart.hpp"
 
 namespace bb {
@@ -181,6 +185,20 @@ void link_session::notify_calib_result(uint8_t result, uint8_t seq,
   send_frame(link_protocol::resp::CALIB_RESULT, 0, pl, sizeof(pl));
 }
 
+// TUNE_RESULT: seq u8 | result u8 | onset f32x3 | sustain f32x3 | suggest f32x3
+void link_session::notify_tune_result(uint8_t result, uint8_t seq,
+                                      const tune_deadzone::measure& m) {
+  uint8_t pl[2 + 36];
+  pl[0] = seq;
+  pl[1] = result;
+  for (int i = 0; i < 3; ++i) {
+    link_protocol::write_f32(&pl[2 + i * 4], m.onset[i]);
+    link_protocol::write_f32(&pl[14 + i * 4], m.sustain[i]);
+    link_protocol::write_f32(&pl[26 + i * 4], m.suggest[i]);
+  }
+  send_frame(link_protocol::resp::TUNE_RESULT, 0, pl, sizeof(pl));
+}
+
 void link_session::log(uint8_t level, const char* text) {
   const size_t tlen = strlen(text);
   const uint8_t n = (tlen > 60) ? 60 : static_cast<uint8_t>(tlen);
@@ -323,6 +341,10 @@ void link_session::dispatch(const link_protocol::request& req) {
       break;
     }
     case link_protocol::req::STOP_OPERATION: {
+      // TUNING 中は掃引を中断（done 化）し、完了通知で STANDBY へ戻る。
+      if (operation_manager::tuning()) {
+        tune_deadzone::request_cancel();
+      }
       operation_manager::request_stop();
       key = irq_lock();
       mode_ = link_mode::STANDBY;
@@ -353,6 +375,100 @@ void link_session::dispatch(const link_protocol::request& req) {
     }
     case link_protocol::req::CALIBRATE_IMU: {
       send_ack(req.type, req.seq, operation_manager::request_calib(req.seq));
+      break;
+    }
+    case link_protocol::req::SET_PARAM: {
+      if (n != 5) {
+        send_ack(req.type, req.seq, link_protocol::ack_result::INVALID_PARAM);
+        break;
+      }
+      const bool ok = param_store::set_key(pl[0],
+                                           link_protocol::read_f32(&pl[1]));
+      send_ack(req.type, req.seq,
+               ok ? link_protocol::ack_result::OK
+                  : link_protocol::ack_result::INVALID_PARAM);
+      // IMU 特性 key（0x50-0x52）は推定器の実行状態へも即時反映する。
+      if (ok && pl[0] >= 0x50 && pl[0] <= 0x52) {
+        const param_set& mp = param_store::params();
+        state_estimator::set_bias(mp.imu.gyro_bias_z, mp.imu.ekf_bias_x,
+                                  mp.imu.ekf_bias_y);
+      }
+      break;
+    }
+    case link_protocol::req::SAVE_PARAMS: {
+      if (op_state != operation_manager::op_state::STANDBY) {
+        send_ack(req.type, req.seq, link_protocol::ack_result::REJECTED_STATE);
+        break;
+      }
+      {
+        static uint32_t save_seq = 0;
+        static uint8_t blob[param_store::BLOB_SIZE];
+        param_store::build_blob(++save_seq, blob);
+        // 旧 seq のスロットを選んで交互書き（seq % 2）。
+        const uint32_t slot = save_seq % flash_store::SLOT_COUNT;
+        const bool ok =
+            flash_store::write_slot(slot, blob, param_store::BLOB_SIZE);
+        send_ack(req.type, req.seq,
+                 ok ? link_protocol::ack_result::OK
+                    : link_protocol::ack_result::NOT_READY);
+      }
+      break;
+    }
+    case link_protocol::req::RESET_PARAMS: {
+      if (op_state != operation_manager::op_state::STANDBY) {
+        send_ack(req.type, req.seq, link_protocol::ack_result::REJECTED_STATE);
+        break;
+      }
+      const bool ok = flash_store::erase_all();
+      param_store::init_defaults();
+      send_ack(req.type, req.seq,
+               ok ? link_protocol::ack_result::OK
+                  : link_protocol::ack_result::NOT_READY);
+      break;
+    }
+    case link_protocol::req::TUNE_DEADZONE: {
+      // dir i8 | max_duty f32 | ramp_s f32（省略時は既定値）
+      if (n != 0 && n != 9) {
+        send_ack(req.type, req.seq, link_protocol::ack_result::INVALID_PARAM);
+        break;
+      }
+      const float dir = (n >= 1) ? static_cast<float>(
+                                       static_cast<int8_t>(pl[0]))
+                                 : 1.0F;
+      const float max_duty = (n >= 9) ? link_protocol::read_f32(&pl[1]) : 0.25F;
+      const float ramp_s = (n >= 9) ? link_protocol::read_f32(&pl[5]) : 15.0F;
+      const uint8_t r = operation_manager::request_tune(req.seq);
+      if (r == link_protocol::ack_result::OK) {
+        (void)tune_deadzone::request_start(dir, max_duty, ramp_s);
+      }
+      send_ack(req.type, req.seq, r);
+      break;
+    }
+    case link_protocol::req::GET_PARAMS: {
+      // {start_key u8} → PARAMS {seq u8, total u8, count u8, [key u8, f32]*}
+      const uint8_t start_key = (n >= 1) ? pl[0] : 0;
+      uint8_t r[3 + 5 * 30];
+      r[0] = req.seq;
+      r[1] = static_cast<uint8_t>(param_store::KEY_COUNT);
+      uint8_t count = 0;
+      // key 昇順に start_key 以降を詰める。
+      for (uint32_t k = 0; k < param_store::KEY_COUNT; ++k) {
+        const uint8_t key_of_k = param_store::key_at(k);
+        if (key_of_k < start_key) {
+          continue;
+        }
+        float v = 0.0F;
+        (void)param_store::get_key(key_of_k, &v);
+        r[3 + count * 5] = key_of_k;
+        link_protocol::write_f32(&r[3 + count * 5 + 1], v);
+        ++count;
+        if (count >= 30) {
+          break;
+        }
+      }
+      r[2] = count;
+      send_frame(link_protocol::resp::PARAMS, 0, r,
+                 static_cast<uint8_t>(3 + count * 5));
       break;
     }
     case link_protocol::req::SUBSCRIBE: {
@@ -414,7 +530,7 @@ void link_session::dispatch(const link_protocol::request& req) {
       break;
     }
     case link_protocol::req::TEST_ECHO: {
-      uint8_t r[1 + link_protocol::MAX_PAYLOAD];
+      uint8_t r[1 + link_protocol::MAX_DATA];
       r[0] = req.seq;
       memcpy(&r[1], pl, n);
       send_frame(link_protocol::resp::TEST_ECHO_RESP, 0, r,

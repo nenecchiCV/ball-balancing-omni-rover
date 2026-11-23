@@ -24,10 +24,11 @@ use futures::StreamExt;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(1);
 const CONNECT_SCAN_TIMEOUT: Duration = Duration::from_secs(5);
 const MONITOR_INTERVAL: Duration = Duration::from_millis(500);
-const PROTO_VER: u8 = 2;
+const PROTO_VER: u8 = 3;
 
 // 送信直前クランプ（NFR-02 の 2 段階目）。`control_params.controller` と同期。
-const MAX_SPEED: f32 = 0.4;
+// max_speed はロボットの調整パラメータ（key 0x60）に追随する。
+const DEFAULT_MAX_SPEED: f32 = 0.4;
 const MAX_YAW_RATE: f32 = 0.8;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
@@ -79,6 +80,9 @@ struct Inner {
 pub struct Session {
     inner: Mutex<Inner>,
     bus: EventBus,
+    /// ロボットの `controller.max_speed`（key 0x60）キャッシュ。
+    /// GET_PARAMS / SET_PARAM / RESET_PARAMS 時に更新し、指令クランプに使う。
+    max_speed_bits: std::sync::atomic::AtomicU32,
 }
 
 impl Session {
@@ -99,6 +103,41 @@ impl Session {
                 status: broadcast::channel(16).0,
                 log: broadcast::channel(256).0,
             },
+            max_speed_bits: std::sync::atomic::AtomicU32::new(
+                DEFAULT_MAX_SPEED.to_bits()),
+        }
+    }
+
+    /// 指令クランプに使うロボット max_speed を更新する。
+    pub fn set_max_speed(&self, v: f32) {
+        if v.is_finite() && v > 0.0 {
+            self.max_speed_bits
+                .store(v.to_bits(), std::sync::atomic::Ordering::Relaxed);
+        }
+    }
+
+    fn max_speed(&self) -> f32 {
+        f32::from_bits(
+            self.max_speed_bits.load(std::sync::atomic::Ordering::Relaxed))
+    }
+
+    /// 指令値クランプ（NFR-02）。速度上限はロボットの `max_speed` に追随する。
+    fn clamped(&self, req: &Request) -> Request {
+        let ms = self.max_speed();
+        match req {
+            Request::SetVelocity { vx, vy, yaw_rate } => Request::SetVelocity {
+                vx: vx.clamp(-ms, ms),
+                vy: vy.clamp(-ms, ms),
+                yaw_rate: yaw_rate.clamp(-MAX_YAW_RATE, MAX_YAW_RATE),
+            },
+            Request::SetPoseTarget { x, y, speed_limit } => {
+                Request::SetPoseTarget {
+                    x: *x,
+                    y: *y,
+                    speed_limit: speed_limit.clamp(0.0, ms),
+                }
+            }
+            _ => req.clone(),
         }
     }
 
@@ -293,7 +332,7 @@ impl Session {
             (link, seq, rx)
         };
 
-        let frame = clamped(req).encode(seq);
+        let frame = self.clamped(req).encode(seq);
         if let Err(e) = link.send(&frame.encode()).await {
             self.drop_pending(seq).await;
             return Err(AppError::Send(e.to_string()));
@@ -338,7 +377,7 @@ impl Session {
             (link, seq, rx)
         };
 
-        let frame = clamped(req).encode(seq);
+        let frame = self.clamped(req).encode(seq);
         if let Err(e) = link.send(&frame.encode()).await {
             self.drop_pending(seq).await;
             return Err(AppError::Send(e.to_string()));
@@ -375,7 +414,7 @@ impl Session {
             }
             (link, inner.seq)
         };
-        let frame = clamped(req).encode(seq);
+        let frame = self.clamped(req).encode(seq);
         link.send(&frame.encode())
             .await
             .map_err(|e| AppError::Send(e.to_string()))
@@ -450,24 +489,9 @@ fn resp_seq(resp: &Response) -> u8 {
         | Response::Pong { seq, .. }
         | Response::Status { seq, .. }
         | Response::CalibResult { seq, .. }
-        | Response::TestEchoResp { seq, .. } => *seq,
-    }
-}
-
-/// 指令値クランプ（NFR-02）。ロボット側 `max_speed`/`max_yaw_rate` と同期する。
-fn clamped(req: &Request) -> Request {
-    match req {
-        Request::SetVelocity { vx, vy, yaw_rate } => Request::SetVelocity {
-            vx: vx.clamp(-MAX_SPEED, MAX_SPEED),
-            vy: vy.clamp(-MAX_SPEED, MAX_SPEED),
-            yaw_rate: yaw_rate.clamp(-MAX_YAW_RATE, MAX_YAW_RATE),
-        },
-        Request::SetPoseTarget { x, y, speed_limit } => Request::SetPoseTarget {
-            x: *x,
-            y: *y,
-            speed_limit: speed_limit.clamp(0.0, MAX_SPEED),
-        },
-        _ => req.clone(),
+        | Response::TestEchoResp { seq, .. }
+        | Response::Params { seq, .. }
+        | Response::TuneResult { seq, .. } => *seq,
     }
 }
 
@@ -477,10 +501,29 @@ mod tests {
 
     #[test]
     fn clamps_velocity() {
-        match clamped(&Request::SetVelocity { vx: 1.0, vy: -1.0, yaw_rate: 9.0 }) {
+        let s = Session::new();
+        match s.clamped(&Request::SetVelocity {
+            vx: 1.0,
+            vy: -1.0,
+            yaw_rate: 9.0,
+        }) {
             Request::SetVelocity { vx, vy, yaw_rate } => {
                 assert_eq!((vx, vy, yaw_rate), (0.4, -0.4, 0.8));
             }
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn clamps_follow_robot_max_speed() {
+        let s = Session::new();
+        s.set_max_speed(0.8);
+        match s.clamped(&Request::SetVelocity {
+            vx: 1.0,
+            vy: 0.0,
+            yaw_rate: 0.0,
+        }) {
+            Request::SetVelocity { vx, .. } => assert_eq!(vx, 0.8),
             _ => panic!(),
         }
     }

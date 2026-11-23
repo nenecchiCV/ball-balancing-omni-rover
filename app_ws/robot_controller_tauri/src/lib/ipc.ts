@@ -30,6 +30,13 @@ export const robotSetPose = (x: number, y: number, yaw: number) =>
   commands.robotSetPose(x, y, yaw);
 export const robotCalibrateImu = () => commands.robotCalibrateImu();
 export const robotTestEcho = (data: number[]) => commands.robotTestEcho(data);
+export const robotGetParams = () => commands.robotGetParams();
+export const robotSetParam = (key: number, value: number) =>
+  commands.robotSetParam(key, value);
+export const robotSaveParams = () => commands.robotSaveParams();
+export const robotResetParams = () => commands.robotResetParams();
+export const robotTuneDeadzone = (dir = 1, maxDuty = 0.25, rampS = 15.0) =>
+  commands.robotTuneDeadzone(dir, maxDuty, rampS);
 export const robotSubscribe = (eventType: number, rateHz: number) =>
   commands.robotSubscribe(eventType, rateHz);
 export const robotUnsubscribe = (eventType: number) =>

@@ -20,6 +20,7 @@ get_filename_component(FW_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../.. ABSOLUTE)
 add_executable(
   bb_feature_tests
   ${FW_ROOT}/src/common/link_protocol/link_protocol.cpp
+  ${FW_ROOT}/src/common/param_store/param_store.cpp
   ${FW_ROOT}/src/feature/balance_controller/balance_controller.cpp
   ${FW_ROOT}/src/feature/command_profile/command_profile.cpp
   ${FW_ROOT}/src/feature/odometry/odometry.cpp
@@ -32,6 +33,7 @@ add_executable(
   src/test_link_protocol.cpp
   src/test_main.cpp
   src/test_odometry.cpp
+  src/test_param_store.cpp
   src/test_operation_manager.cpp
   src/test_position_controller.cpp
   src/test_state_estimator.cpp

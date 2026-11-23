@@ -21,6 +21,25 @@ export const commands = {
 	robotSetPose: (x: number | null, y: number | null, yaw: number | null, options?: InvokeOptions) => __TAURI_INVOKE<null>("robot_set_pose", { x, y, yaw }, options),
 	robotCalibrateImu: (options?: InvokeOptions) => __TAURI_INVOKE<CalibResultInfo>("robot_calibrate_imu", undefined, options),
 	robotTestEcho: (data: number[], options?: InvokeOptions) => __TAURI_INVOKE<TestEchoInfo>("robot_test_echo", { data }, options),
+	/**
+	 *  調整対象パラメータを全件取得する（GET_PARAMS ページング、FR-09）。
+	 *  `total` 件に達するまで start_key を進めて複数リクエストを送る。
+	 */
+	robotGetParams: (options?: InvokeOptions) => __TAURI_INVOKE<ParamsInfo>("robot_get_params", undefined, options),
+	/**  パラメータを 1 キーだけ更新する（RAM のみ、SAVE_PARAMS で不揮発化）。 */
+	robotSetParam: (key: number, value: number | null, options?: InvokeOptions) => __TAURI_INVOKE<null>("robot_set_param", { key, value }, options),
+	/**
+	 *  動作パラメータをフラッシュへ保存する（ロボット側 STANDBY のみ受理）。
+	 *  消去+書込みのため数百 ms 掛かる場合がある。
+	 */
+	robotSaveParams: (options?: InvokeOptions) => __TAURI_INVOKE<null>("robot_save_params", undefined, options),
+	/**  保存領域を消去して動作パラメータを既定値へ戻す。 */
+	robotResetParams: (options?: InvokeOptions) => __TAURI_INVOKE<null>("robot_reset_params", undefined, options),
+	/**
+	 *  不感帯掃引セッションを実行し TUNE_RESULT を返す（FR-09/FR-17）。
+	 *  車輪を無負荷にして実行すること。所要時間は 2*ramp_s 秒。
+	 */
+	robotTuneDeadzone: (dir: number | null, maxDuty: number | null, rampS: number | null, options?: InvokeOptions) => __TAURI_INVOKE<TuneResultInfo>("robot_tune_deadzone", { dir, maxDuty, rampS }, options),
 	robotSubscribe: (eventType: number, rateHz: number, options?: InvokeOptions) => __TAURI_INVOKE<null>("robot_subscribe", { eventType, rateHz }, options),
 	robotUnsubscribe: (eventType: number, options?: InvokeOptions) => __TAURI_INVOKE<null>("robot_unsubscribe", { eventType }, options),
 	/**  現在値を即時送った後、以後の変化をストリームする。 */
@@ -63,6 +82,18 @@ export type LogMessage = {
 
 export type LogSource = "robot" | "app";
 
+export type ParamEntry = {
+	key: number,
+	value: number | null,
+};
+
+export type ParamsInfo = {
+	/**  ファーム側の調整対象キー総数。 */
+	total: number,
+	/**  収集したエントリ（key 昇順）。total と件数が一致するとき全件。 */
+	entries: ParamEntry[],
+};
+
 export type PongInfo = {
 	protoVer: number,
 	robotCaps: number,
@@ -102,4 +133,15 @@ export type StatusTelemetry = {
 export type TestEchoInfo = {
 	/**  エコーバックされたペイロード（バイト配列）。 */
 	data: number[],
+};
+
+export type TuneResultInfo = {
+	/**  0=完了、1=中断（E-Stop/キャンセル）。 */
+	result: number,
+	/**  立上り duty（回転開始時）の車輪ごとの絶対値。 */
+	onset: [(number | null), (number | null), (number | null)],
+	/**  維持 duty（下降側で回転継続した最小値）。 */
+	sustain: [(number | null), (number | null), (number | null)],
+	/**  ファーム算出の推奨 deadzone_comp。 */
+	suggest: [(number | null), (number | null), (number | null)],
 };

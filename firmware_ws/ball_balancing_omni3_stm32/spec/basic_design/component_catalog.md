@@ -11,6 +11,7 @@
 | control_params | `param_set` 構造体群 | MATLAB `p` 構造に対応する全定数の集約 |
 | imu_sample | `imu_sample` 構造体 | IMU 1 サンプルのデータ構造（比力・ジャイロ・有効フラグ）。device 非依存で feature が直接参照する |
 | link_protocol | `link_protocol` 名前空間 + `frame_decoder` | ロボットリンクプロトコルのフレーム符号化/復号・CRC16・メッセージ型（純粋ロジック、ホストテスト対象） |
+| param_store | `param_store` | `param_set` の動作値保持・既定値初期化・key 単位 get/set・保存 blob 符号化/復号（純粋ロジック、ホストテスト対象、FR-15, FR-17） |
 
 ## peripheral（ペリフェラル制御）
 
@@ -23,6 +24,7 @@
 | timebase | `timebase` | static | `k_uptime` ミリ秒時刻 + DWT サイクル μs 計測 |
 | debug_uart | `debug_uart` | static | 診断テキスト送出（`printk`/console バックエンド） |
 | link_uart | `link_uart` | static | USART1 割込駆動 RX リング + TX リング（非ブロッキング送受信、`k_sem` 受信通知） |
+| flash_store | `flash_store` | static | `storage_partition` への 2 スロット blob 読出・消去・書込（Zephyr flash ドライバ、FR-15） |
 
 ## device（IC・センサ/アクチュエータ）
 
@@ -46,7 +48,8 @@
 | link_session | `link_session` | static | ロボットリンクのフレーム振分け・モード/指令スロット・購読・ウォッチドッグ・イベント生成とバッチ送出・リンクスレッドポンプ（FR-09, FR-11, FR-14） |
 | odometry | `odometry` | static | ワールド速度の積分による位置推定・原点オフセット管理（FR-10, FR-11） |
 | position_controller | `position_controller` | static | 位置外ループ（目標位置→ワールド速度指令生成、FR-10） |
-| operation_manager | `operation_manager` | static | 動作状態（待機/動作中/終端）の遷移管理・開始受理判定・制御器リセット指示・キャリブレーション状態（FR-12, FR-13） |
+| operation_manager | `operation_manager` | static | 動作状態（待機/動作中/終端/調整中）の遷移管理・開始受理判定・制御器リセット指示・キャリブレーション状態（FR-12, FR-13, FR-17） |
+| tune_deadzone | `tune_deadzone` | static | モータ不感帯の三角掃引同定セッション（調整中状態で 1 kHz 駆動、FR-17） |
 
 ## manager（機能管理）
 

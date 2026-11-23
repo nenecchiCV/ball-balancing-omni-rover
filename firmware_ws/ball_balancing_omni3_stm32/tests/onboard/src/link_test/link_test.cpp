@@ -73,7 +73,7 @@ void respond(const link_protocol::request& req) {
       break;
     }
     case link_protocol::req::TEST_ECHO: {
-      uint8_t r[1 + link_protocol::MAX_PAYLOAD];
+      uint8_t r[1 + link_protocol::MAX_DATA];
       r[0] = req.seq;
       memcpy(&r[1], req.payload, req.payload_len);
       send_frame(link_protocol::resp::TEST_ECHO_RESP, 0, r,

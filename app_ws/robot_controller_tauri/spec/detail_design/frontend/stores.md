@@ -27,6 +27,19 @@ interface TelemetryStore {
 }
 ```
 
+## params.ts
+
+```ts
+interface ParamsStore {
+  maxSpeed: number;             // ロボット controller.max_speed（key 0x60）。指令 UI の速度クランプに使用。未取得時は既定 0.4 m/s
+  maxSpeedTheory: number | null; // key 0x61 の無滑り理論上限（表示用）
+  setLimits(maxSpeed, theory): void;
+}
+```
+
+- 書き込み起点は `app-shell` の接続時 `robotGetParams` および tuning ページのパラメータ取得・`SET_PARAM(0x60)` 反映時。
+- `watch_*` 購読ではなくコマンド応答駆動のため、「`watch_*` が唯一の書き込み起点」の原則の例外とする。
+
 ## logs.ts
 
 ```ts

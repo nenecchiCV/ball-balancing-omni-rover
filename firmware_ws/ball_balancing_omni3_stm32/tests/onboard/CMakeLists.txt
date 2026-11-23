@@ -47,6 +47,7 @@ target_sources(app PRIVATE
   ${APP_SRC}/peripheral/link_uart/link_uart.cpp
 
   ${APP_SRC}/common/link_protocol/link_protocol.cpp
+  ${APP_SRC}/common/param_store/param_store.cpp
 
   ${APP_SRC}/device/lsm6dso/lsm6dso.cpp
   ${APP_SRC}/device/wheel_encoder/wheel_encoder.cpp

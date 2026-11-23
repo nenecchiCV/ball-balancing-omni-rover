@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, type ReactNode } from "react";
 
 import {
+  robotGetParams,
   robotStop,
   watchLinkState,
   watchLog,
@@ -17,6 +18,11 @@ import {
 import { OP_STATE, type LinkState } from "@/lib/types";
 import { useConnectionStore } from "@/stores/connection";
 import { useLogStore } from "@/stores/logs";
+import {
+  PARAM_KEY_MAX_SPEED,
+  PARAM_KEY_THEORY_MAX_SPEED,
+  useParamsStore,
+} from "@/stores/params";
 import { useTelemetryStore } from "@/stores/telemetry";
 
 const NAV = [
@@ -26,6 +32,7 @@ const NAV = [
   { href: "/odometry", label: "Odometry" },
   { href: "/logs", label: "Logs" },
   { href: "/test", label: "Test" },
+  { href: "/tuning", label: "Tuning" },
 ];
 
 const STATE_LABEL: Record<LinkState, string> = {
@@ -39,12 +46,14 @@ const OP_STATE_LABEL: Record<number, string> = {
   [OP_STATE.standby]: "待機",
   [OP_STATE.operating]: "動作中",
   [OP_STATE.fault]: "故障",
+  [OP_STATE.tuning]: "調整中",
 };
 
 const OP_STATE_STYLE: Record<number, string> = {
   [OP_STATE.standby]: "bg-[#333a44] text-text",
   [OP_STATE.operating]: "bg-[#1d4d2b] text-ok",
   [OP_STATE.fault]: "bg-[#7a1f1f] text-white",
+  [OP_STATE.tuning]: "bg-[#4d3d1d] text-warn",
 };
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -64,6 +73,29 @@ export function AppShell({ children }: { children: ReactNode }) {
     watchStatus(setStatus);
     watchLog(pushMsg);
   }, []);
+
+  // 接続時に調整パラメータを取得し、指令上限（max_speed）を同期する。
+  useEffect(() => {
+    if (linkState !== "connected") return;
+    let cancelled = false;
+    robotGetParams()
+      .then((info) => {
+        if (cancelled) return;
+        const ms = info.entries.find(
+          (e) => e.key === PARAM_KEY_MAX_SPEED,
+        )?.value;
+        const theory = info.entries.find(
+          (e) => e.key === PARAM_KEY_THEORY_MAX_SPEED,
+        )?.value;
+        useParamsStore
+          .getState()
+          .setLimits(ms ?? 0.4, theory ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [linkState]);
 
   const emergencyStop = async () => {
     if (stopping.current) return;

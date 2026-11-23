@@ -1,6 +1,7 @@
 // UI クランプ・周期定数 — ball_balancing_omni3_stm32 の control_params と同期。
 
-export const MAX_SPEED = 0.4; // m/s
+// 速度上限は stores/params.ts の maxSpeed（ロボット GET_PARAMS 由来、
+// 既定 0.4 m/s = シム検証値）を使う。
 export const MAX_YAW_RATE = 0.8; // rad/s
 export const RC_SEND_HZ = 20;
 export const POSE_SUBSCRIBE_HZ = 20;

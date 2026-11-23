@@ -37,8 +37,10 @@ target_sources(app PRIVATE
   src/peripheral/control_tick/control_tick.cpp
   src/peripheral/debug_uart/debug_uart.cpp
   src/peripheral/link_uart/link_uart.cpp
+  src/peripheral/flash_store/flash_store.cpp
 
   src/common/link_protocol/link_protocol.cpp
+  src/common/param_store/param_store.cpp
 
   src/device/lsm6dso/lsm6dso.cpp
   src/device/wheel_encoder/wheel_encoder.cpp
@@ -55,6 +57,7 @@ target_sources(app PRIVATE
   src/feature/position_controller/position_controller.cpp
   src/feature/operation_manager/operation_manager.cpp
   src/feature/link_session/link_session.cpp
+  src/feature/tune_deadzone/tune_deadzone.cpp
 
   src/manager/robot_application/robot_application.cpp
   src/manager/task_scheduler/task_scheduler.cpp

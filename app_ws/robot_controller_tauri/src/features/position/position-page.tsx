@@ -6,10 +6,11 @@ import { useEffect, useState } from "react";
 
 import { OdometryMap } from "@/features/odometry/odometry-map";
 import { robotSetPoseTarget, robotSubscribe, robotUnsubscribe } from "@/lib/ipc";
-import { EVT_POSE, MAX_SPEED, POSE_SUBSCRIBE_HZ } from "@/lib/limits";
+import { EVT_POSE, POSE_SUBSCRIBE_HZ } from "@/lib/limits";
 import { OP_STATE } from "@/lib/types";
 import { useConnected } from "@/stores/connection";
 import { useLogStore } from "@/stores/logs";
+import { useParamsStore } from "@/stores/params";
 import { useTelemetryStore } from "@/stores/telemetry";
 
 export function PositionPage() {
@@ -19,6 +20,7 @@ export function PositionPage() {
   );
   const pushLog = useLogStore((s) => s.push);
   const pose = useTelemetryStore((s) => s.pose);
+  const maxSpeed = useParamsStore((s) => s.maxSpeed);
   const [x, setX] = useState("0.0");
   const [y, setY] = useState("0.0");
   const [speed, setSpeed] = useState("0.2");
@@ -38,7 +40,7 @@ export function PositionPage() {
   const sendTarget = async () => {
     const tx = parseFloat(x);
     const ty = parseFloat(y);
-    const sp = Math.min(Math.max(parseFloat(speed) || 0, 0), MAX_SPEED);
+    const sp = Math.min(Math.max(parseFloat(speed) || 0, 0), maxSpeed);
     if (Number.isNaN(tx) || Number.isNaN(ty)) {
       pushLog(2, "目標値が数値ではない");
       return;
@@ -100,7 +102,7 @@ export function PositionPage() {
           </p>
         )}
         <p className="muted mt-2">
-          ワールド座標（起動点原点）。速度上限は {MAX_SPEED} m/s まで。
+          ワールド座標（起動点原点）。速度上限は {maxSpeed} m/s まで。
           {remaining !== null && ` 残距離: ${remaining.toFixed(2)} m`}
         </p>
       </div>

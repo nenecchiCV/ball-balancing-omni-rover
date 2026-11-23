@@ -26,16 +26,27 @@ struct param_set {
         uint32_t event_batch_ms;   // イベントバッチ周期（既定 100 ms, FR-14）
         uint32_t calib_timeout_ms; // CALIBRATE_IMU 完了期限（既定 5000 ms, FR-13）
     };
+    struct drive {                // 駆動出力調整（FR-16）
+        float deadzone_comp[3];    // 車輪ごとの不感帯補償デューティ（既定 0.08）
+    };
+    struct imu {                  // IMU 特性（FR-15 永続化対象）
+        float gyro_bias_z;         // ジャイロ z バイアス（CALIBRATE_IMU で学習）
+        float ekf_bias_x;          // EKF 推定 x 軸バイアス
+        float ekf_bias_y;          // EKF 推定 y 軸バイアス
+    };
+    struct tune {                 // 同定セッション定数（FR-17）
+        float wake_rate;           // 輪速立上り判定閾値 [rad/s]（既定 2.0）
+    };
 };
 ```
 
 ## 公開関数
 
-`const param_set& get_params()` — 全定数を集約した `param_set` への参照を返す（関数ローカル static、`-fno-threadsafe-statics` によりガードなし。`main` 単一スレッド内でのみ使用）。
+`const param_set& get_params()` — **動作値**への参照を返す。rev C 以降は `param_set` 自体はコンパイル時既定値（`constexpr` 互換の集約初期化）のままだが、実体は `common/param_store` が持つ可変コピーとなり、`get_params()` は `param_store::params()` を返す薄いラッパとする。起動時は「既定値 → `param_store` へ展開 → フラッシュ保存値で上書き」で初期化される（FR-15）。調整対象フィールドは `SET_PARAM`/`GET_PARAMS` の key テーブルで公開され、未公開フィールドはフラッシュ保存のみで link 経由の変更は不可。
 
 ## 内部状態
 
-なし。値はコンパイル時確定。
+`param_set` 既定値はコンパイル時確定。動作値（可変）は `param_store` の内部状態。
 
 ## MATLAB との対応
 

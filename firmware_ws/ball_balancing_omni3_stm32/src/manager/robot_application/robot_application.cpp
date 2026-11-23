@@ -2,11 +2,16 @@
 
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <zephyr/irq.h>
 #include <zephyr/kernel.h>
 #include <zephyr/shell/shell.h>
 #include <zephyr/sys/printk.h>
+
+#include "common/param_store/param_store.hpp"
+#include "feature/tune_deadzone/tune_deadzone.hpp"
+#include "peripheral/flash_store/flash_store.hpp"
 
 namespace bb {
 
@@ -140,6 +145,75 @@ int calib_cmd_cb(const struct shell* sh, size_t argc, char** argv) {
   return (r == 0) ? 0 : -EPERM;
 }
 
+int param_cmd_cb(const struct shell* sh, size_t argc, char** argv) {
+  // bb param            : 調整対象キーを全表示
+  // bb param <key>      : 1 キー表示
+  // bb param <key> <v>  : 設定（RAM のみ、bb save で不揮発化）
+  if (argc == 1) {
+    for (uint32_t i = 0; i < param_store::KEY_COUNT; ++i) {
+      const uint8_t k = param_store::key_at(i);
+      float v = 0.0F;
+      (void)param_store::get_key(k, &v);
+      shell_print(sh, "0x%02X = %.6f", static_cast<unsigned>(k),
+                  static_cast<double>(v));
+    }
+    return 0;
+  }
+  const long key = strtol(argv[1], nullptr, 0);
+  if (argc == 2) {
+    float v = 0.0F;
+    if (!param_store::get_key(static_cast<uint8_t>(key), &v)) {
+      shell_error(sh, "unknown key 0x%02lX", key);
+      return -EINVAL;
+    }
+    shell_print(sh, "0x%02lX = %.6f", key, static_cast<double>(v));
+    return 0;
+  }
+  const float v = strtof(argv[2], nullptr);
+  if (!param_store::set_key(static_cast<uint8_t>(key), v)) {
+    shell_error(sh, "set rejected (unknown key or out of range)");
+    return -EINVAL;
+  }
+  shell_print(sh, "0x%02lX = %.6f (volatile; 'bb save' to persist)", key,
+              static_cast<double>(v));
+  return 0;
+}
+
+int save_cmd_cb(const struct shell* sh, size_t argc, char** argv) {
+  ARG_UNUSED(argc);
+  ARG_UNUSED(argv);
+  if (operation_manager::state() != operation_manager::op_state::STANDBY) {
+    shell_error(sh, "save allowed in standby only");
+    return -EPERM;
+  }
+  static uint32_t save_seq = 0;
+  static uint8_t blob[param_store::BLOB_SIZE];
+  param_store::build_blob(++save_seq, blob);
+  const bool ok = flash_store::write_slot(
+      save_seq % flash_store::SLOT_COUNT, blob, param_store::BLOB_SIZE);
+  shell_print(sh, "save %s (seq=%lu)", ok ? "ok" : "failed",
+              static_cast<unsigned long>(save_seq));
+  return ok ? 0 : -EIO;
+}
+
+int tune_cmd_cb(const struct shell* sh, size_t argc, char** argv) {
+  // bb tune [dir] [max_duty] [ramp_s]
+  float dir = 1.0F;
+  float max_duty = 0.25F;
+  float ramp_s = 15.0F;
+  if (argc >= 2) dir = strtof(argv[1], nullptr);
+  if (argc >= 3) max_duty = strtof(argv[2], nullptr);
+  if (argc >= 4) ramp_s = strtof(argv[3], nullptr);
+  const uint8_t r = operation_manager::request_tune(0);
+  if (r != 0) {
+    shell_error(sh, "tune rejected result=%u", static_cast<unsigned>(r));
+    return -EPERM;
+  }
+  (void)tune_deadzone::request_start(dir, max_duty, ramp_s);
+  shell_print(sh, "tune started: wheels unloaded, hold the chassis");
+  return 0;
+}
+
 // NOLINTBEGIN: Zephyr の SHELL_* マクロ内部の初期化子・分岐に由来する警告
 SHELL_STATIC_SUBCMD_SET_CREATE(
     SUB_BB, SHELL_CMD(status, NULL, "show controller status", status_cmd_cb),
@@ -150,6 +224,12 @@ SHELL_STATIC_SUBCMD_SET_CREATE(
     SHELL_CMD(stop, NULL, "stop operation (-> standby)", stop_cmd_cb),
     SHELL_CMD(calib, NULL, "calibrate IMU gyro bias (standby only)",
               calib_cmd_cb),
+    SHELL_CMD(param, NULL, "param [key] [value] get/set tunable params",
+              param_cmd_cb),
+    SHELL_CMD(save, NULL, "persist params to flash (standby only)",
+              save_cmd_cb),
+    SHELL_CMD(tune, NULL, "tune [dir] [max_duty] [ramp_s] deadzone sweep",
+              tune_cmd_cb),
     SHELL_SUBCMD_SET_END);
 SHELL_CMD_REGISTER(bb, &SUB_BB, "ball balancing robot commands", NULL);
 // NOLINTEND
@@ -157,6 +237,22 @@ SHELL_CMD_REGISTER(bb, &SUB_BB, "ball balancing robot commands", NULL);
 }  // namespace
 
 bool robot_application::init(const config& cfg) {
+  // FR-15: 既定値で動作パラメータを初期化し、保存 blob があれば上書き。
+  // get_params() は param_store::params() を返すため、cfg.params 以降の
+  // 全コンポーネントが可変パラメータを共有する。
+  param_store::init_defaults();
+  {
+    static uint8_t blob[param_store::BLOB_SIZE];
+    uint32_t seq = 0;
+    if (flash_store::load_latest(blob, sizeof(blob), &seq) &&
+        param_store::parse_blob(blob, sizeof(blob), nullptr)) {
+      char line[64];
+      const int n = snprintf(line, sizeof(line),
+                             "params: restored from flash (seq=%lu)\r\n",
+                             static_cast<unsigned long>(seq));
+      debug_uart::write(line, static_cast<uint32_t>(n));
+    }
+  }
   p_ = cfg.params;
   imu_accel_axis_map_ = cfg.imu_accel_axis_map;
   imu_gyro_axis_map_ = cfg.imu_gyro_axis_map;
@@ -199,12 +295,17 @@ bool robot_application::init(const config& cfg) {
   wheel_speed_meter::init({{&encoders_[0], &encoders_[1], &encoders_[2]},
                            p_->controller.sample_time});
   state_estimator::init({p_});
+  // FR-15: 保存済み IMU 特性を推定器へ反映（初期値として使用し、
+  // バイアス学習は起動後も継続される）。
+  state_estimator::set_bias(p_->imu.gyro_bias_z, p_->imu.ekf_bias_x,
+                            p_->imu.ekf_bias_y);
   balance_controller::init({p_});
   wheel_servo::init({p_});
   command_profile::init({p_});
   odometry::init();
   position_controller::init({p_});
   operation_manager::init({p_});
+  tune_deadzone::init({p_});
   link_session::init({p_});
   k_sem_give(&link_init_sem);
 
@@ -255,6 +356,22 @@ void robot_application::outer_task_cb() {
     link_session::notify_calib_result(static_cast<uint8_t>(cr),
                                       operation_manager::calib_seq(),
                                       est_out_.gyro_bias_z);
+    // FR-15: キャリブレーション完了時は学習済み IMU 特性を
+    // 動作パラメータへ反映する（SAVE_PARAMS で不揮発化される）。
+    if (cr == 0) {
+      param_set& mp = param_store::mutable_params();
+      state_estimator::get_bias(&mp.imu.gyro_bias_z, &mp.imu.ekf_bias_x,
+                                &mp.imu.ekf_bias_y);
+    }
+  }
+
+  // FR-17: 同定セッションの完了検出 → TUNE_RESULT 送出 → STANDBY 復帰。
+  if (operation_manager::tuning() && tune_deadzone::done()) {
+    link_session::notify_tune_result(tune_deadzone::done_result(),
+                                     operation_manager::tune_seq(),
+                                     tune_deadzone::result());
+    tune_deadzone::consume_done();
+    operation_manager::notify_tune_done(0);
   }
 
   const bool operating = operation_manager::drives_motors();
@@ -313,6 +430,16 @@ void robot_application::outer_task_cb() {
 }
 
 void robot_application::inner_task_cb() {
+  // FR-17: TUNING 中はサーボを回さず掃引セッションの duty を直接適用。
+  if (operation_manager::tuning()) {
+    const tune_deadzone::output td = tune_deadzone::step(
+        wheel_speed_meter::rate(), estop_input::requested(),
+        task_scheduler::tick_count());
+    for (int i = 0; i < 3; ++i) {
+      motors_[i].set_duty(td.duty[i]);
+    }
+    return;
+  }
   wheel_servo::input in{};
   in.attitude_torque = ctrl_out_.attitude_torque;
   in.wheel_rate_command = ctrl_out_.wheel_rate_command;

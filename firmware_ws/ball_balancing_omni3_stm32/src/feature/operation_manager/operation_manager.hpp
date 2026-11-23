@@ -30,6 +30,7 @@ class operation_manager {
     static constexpr uint8_t STANDBY = 0;
     static constexpr uint8_t OPERATING = 1;
     static constexpr uint8_t FAULT = 2;
+    static constexpr uint8_t TUNING = 3;  // FR-17 同定セッション中
   };
   struct calib_state {
     static constexpr uint8_t NONE = 0;
@@ -56,8 +57,13 @@ class operation_manager {
   static uint8_t request_start(const start_cond& c);  // ack_result を返す
   static void request_stop();
   static uint8_t request_calib(uint8_t seq);
-
-  // 外側タスクから呼ぶ。
+  // FR-17 同定セッション。STANDBY からのみ受理し TUNING へ遷移。
+  // TUNING 中は drives_motors()==false のまま（掃引駆動は tune_deadzone
+  // が担当）。完了・中断は notify_tune_done() で STANDBY へ戻る。
+  static uint8_t request_tune(uint8_t seq);
+  static void notify_tune_done(uint8_t result);  // TUNE_RESULT result
+  static uint8_t tune_seq();                     // TUNE_RESULT エコー用 seq
+  static bool tuning();                          // state_ == TUNING
   // -1=実施中継続、0..2=CALIB_RESULT result（状態更新済み）。
   static int8_t calib_update(uint32_t now_ms, bool qualified, bool imu_ok);
   static uint8_t calib_seq();  // CALIB_RESULT エコー用の受理 seq
@@ -72,6 +78,7 @@ class operation_manager {
   static inline uint8_t calib_ = calib_state::NONE;
   static inline uint8_t calib_seq_ = 0;
   static inline uint32_t calib_deadline_ms_ = 0;
+  static inline uint8_t tune_seq_ = 0;
   static inline bool bias_reset_req_ = false;
 };
 

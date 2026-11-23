@@ -38,6 +38,7 @@ class link_session {  // static class
 - `static void generate_events(uint32_t now_ms)` — 購読中の `EVT_POSE` を指定レートで分周エンコード、`EVT_STATUS` を変化検出 + 10 Hz ハートビートでエンコードし、**バッチバッファへ投入**する（即時送出しない）。
 - `static void log(uint8_t level, const char* text)` — `EVT_LOG` をエンコードしてバッチバッファのログ FIFO へ投入（どちらのスレッドからも呼べる）。
 - `static void notify_calib_result(uint8_t result, uint8_t seq, float gyro_bias_z)` — `CALIB_RESULT(seq, result, bias)` をエンコードして `link_uart::write` で**即時送出**する（バッチ経由しない単発応答）。外側タスクが `operation_manager::calib_update` の完了検出時に呼ぶ。
+- `static void notify_tune_result(const tune_deadzone::result& r, uint8_t seq)` — `TUNE_RESULT(seq, code, dz_start[3], dz_keep[3], recommended[3])` を**即時送出**する。外側タスクが `tune_deadzone::is_done` 検出時に呼ぶ。
 - `static stats get_stats()` — shell 診断用カウンタ整合コピー。
 
 ## 振分け（dispatch）
@@ -46,7 +47,7 @@ class link_session {  // static class
 
 | TYPE | 処理 | 応答 |
 |---|---|---|
-| `PING` | — | `PONG(seq, proto_ver=2, caps=0x17)` |
+| `PING` | — | `PONG(seq, proto_ver=3, caps=0x17)` |
 | `SET_VELOCITY` | `op_state==OPERATING` かつ `mode==VELOCITY` のみ受理して指令スロット更新＋`last_vel_ms` 更新。ペイロード長 12B 必須 | `ACK(result)` — 動作状態/モード不整合は `REJECTED_STATE`、長不整合は `INVALID_PARAM` |
 | `SET_POSE_TARGET` | `op_state==OPERATING` かつ `imu_ok && qualified` 必須。`position_controller::set_target` + `mode=POSITION` へ移行 | `ACK` — 待機中は `REJECTED_STATE`、未健全は `NOT_READY` |
 | `STOP` | `op_state==OPERATING` のみ受理。速度指令スロットゼロ化＋位置モード時は `position_controller::hold_at(current)` | `ACK` — 待機中は `REJECTED_STATE` |
@@ -56,6 +57,11 @@ class link_session {  // static class
 | `STOP_OPERATION` | `operation_manager::request_stop()`＋リンク側 `mode_=STANDBY`・指令スロットゼロ化 | `ACK(OK)` |
 | `SET_POSE` | `op_state==STANDBY` のみ受理。`odometry::set_pose(x, y, yaw, raw_x, raw_y, raw_yaw)` | `ACK` — 待機中以外は `REJECTED_STATE`、長不整合は `INVALID_PARAM` |
 | `CALIBRATE_IMU` | `operation_manager::request_calib(req.seq)` | `ACK(result)`（受理時の完了結果は別途 `CALIB_RESULT`） |
+| `SET_PARAM` | `param_store::set_key(key, value)`。`TUNING` を含む全状態で受理 | `ACK` — 未定義 key/範囲外は `INVALID_PARAM` |
+| `SAVE_PARAMS` | `op_state==STANDBY` のみ受理。`param_store::build_blob` → `flash_store::write(slot, len)` 完了後に応答 | `ACK` — 待機中以外は `REJECTED_STATE`、フラッシュ失敗は `NOT_READY` |
+| `RESET_PARAMS` | `op_state==STANDBY` のみ受理。`param_store::init_defaults` + `flash_store` 両スロット消去 | `ACK` — 同上 |
+| `TUNE_DEADZONE` | `operation_manager::request_tune(req.seq)` 受理時に `tune_deadzone::request_start(dir, max_duty, ramp_s)`（引数省略時は既定値） | `ACK(result)`（完了報告は別途 `TUNE_RESULT`） |
+| `GET_PARAMS` | `param_store::key_at` で `start_key` 以降を昇順列挙し 1 フレーム分（最大 30 件）を `PARAMS(seq, total, count, [key, value]*)` で返す | `PARAMS` — `start_key` が範囲外でも空 `PARAMS` を返す |
 | `SUBSCRIBE` | `event_type ∈ {0x90,0x91,0x92}` かつ `EVT_POSE` の `rate_hz ∈ 1..50`（他は 0 でも可）で購読テーブル更新 | `ACK` |
 | `UNSUBSCRIBE` | 購読テーブル削除 | `ACK(OK)` |
 | `GET_STATUS` | — | `STATUS(seq, op_state, mode, enable, estop, imu_ok, calib_state, uptime_ms)` |

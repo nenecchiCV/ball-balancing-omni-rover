@@ -44,6 +44,12 @@ class state_estimator {
   // をリセットする（CALIBRATE_IMU、FR-13）。姿勢・速度等は保持する。
   // 外側タスクから呼ぶ（step と同一スレッドのため排他不要）。
   static void reset_bias();
+  // FR-15 永続化された IMU 特性の読み出し・書き戻し。
+  // 外側タスクから呼ぶ（step と同一スレッドのため排他不要）。
+  static void get_bias(float* gyro_bias_z, float* ekf_bias_x,
+                       float* ekf_bias_y);
+  static void set_bias(float gyro_bias_z, float ekf_bias_x,
+                       float ekf_bias_y);
 
  private:
   static inline const param_set* p_ = nullptr;

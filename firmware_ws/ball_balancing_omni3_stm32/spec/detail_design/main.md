@@ -31,6 +31,7 @@
 - [control_params](common/control_params.md)
 - [imu_sample](common/imu_sample.md)
 - [link_protocol](common/link_protocol.md)
+- [param_store](common/param_store.md)
 
 ### peripheral
 - [gpio_pin](peripheral/gpio_pin.md)
@@ -40,6 +41,7 @@
 - [timebase](peripheral/timebase.md)
 - [debug_uart](peripheral/debug_uart.md)
 - [link_uart](peripheral/link_uart.md)
+- [flash_store](peripheral/flash_store.md)
 
 ### device
 - [lsm6dso](device/lsm6dso.md)
@@ -56,6 +58,7 @@
 - [command_profile](feature/command_profile.md)
 - [link_session](feature/link_session.md)
 - [operation_manager](feature/operation_manager.md)
+- [tune_deadzone](feature/tune_deadzone.md)
 - [odometry](feature/odometry.md)
 - [position_controller](feature/position_controller.md)
 

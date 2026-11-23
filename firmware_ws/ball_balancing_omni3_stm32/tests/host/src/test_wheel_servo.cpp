@@ -2,6 +2,7 @@
 #include <math.h>
 
 #include "common/control_params/control_params.hpp"
+#include "common/param_store/param_store.hpp"
 #include "feature/wheel_servo/wheel_servo.hpp"
 #include "test_util.hpp"
 
@@ -24,6 +25,9 @@ void test_zero_input_zero_duty() {
 }
 
 void test_duty_sign_matches_torque() {
+  // 線形性の検証は不感帯補償なしで行う（FR-16 の底上げは比を変える）。
+  param_store::init_defaults();
+  for (uint8_t k = 0; k < 3; ++k) (void)param_store::set_key(k, 0.0F);
   const auto& p = get_params();
   wheel_servo::init({&p});
   // 昇順ランプを避けるため数回回す（prop_torque=0 のまま）。

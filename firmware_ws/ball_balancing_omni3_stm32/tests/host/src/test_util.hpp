@@ -48,8 +48,9 @@ inline int& check_count() {
     }                                                                      \
   } while (0)
 
-#define TEST_MAIN_BEGIN() \
-  int main() {            \
+#define TEST_MAIN_BEGIN()                          \
+  int main() {                                     \
+    setvbuf(stdout, NULL, _IONBF, 0);              \
     printf("running host feature tests\n");
 #define TEST_RUN(fn)                                                    \
   do {                                                                  \

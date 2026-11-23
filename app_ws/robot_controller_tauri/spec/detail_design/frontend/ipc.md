@@ -33,6 +33,9 @@ robotPing / robotSetVelocity / robotSetPoseTarget / robotStop
 robotSetMode / robotResetOdometry / robotGetStatus
 robotStartOperation / robotStopOperation / robotSetPose(x, y, yaw)
 robotCalibrateImu / robotTestEcho(payload)
+robotGetParams(startKey) / robotSetParam(key, value)
+robotSaveParams / robotResetParams
+robotTuneDeadzone(dir, maxDuty, rampS)
 robotSubscribe(eventType, rateHz) / robotUnsubscribe(eventType)
 ```
 
@@ -54,9 +57,10 @@ bindings 型の re-export + プロトコル定数。
 ```ts
 export type { DiscoveredDevice_Serialize as DiscoveredDevice, LinkState, LogMessage,
               LogSource, PongInfo, PoseTelemetry, RobotStatusInfo, StatusTelemetry,
-              CalibResultInfo, TestEchoInfo } from "./bindings";
+              CalibResultInfo, TestEchoInfo, ParamsInfo, ParamEntry,
+              TuneResultInfo } from "./bindings";
 export const CONTROL_MODE = { standby: 0, velocity: 1, position: 2 } as const;
-export const OP_STATE = { standby: 0, operating: 1, fault: 2 } as const;
+export const OP_STATE = { standby: 0, operating: 1, fault: 2, tuning: 3 } as const;
 export const CALIB_STATE = { none: 0, running: 1, done: 2, failed: 3 } as const;
 ```
 
