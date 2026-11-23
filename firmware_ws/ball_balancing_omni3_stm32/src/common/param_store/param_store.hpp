@@ -20,8 +20,10 @@ class param_store {
   static constexpr uint32_t BLOB_MAGIC = 0x42425041U;  // "BBPA"
   static constexpr uint16_t BLOB_SCHEMA_VER = 1;
   static constexpr uint32_t BLOB_HEADER = 4 + 2 + 4;
+  // STM32 のフラッシュ書込みは 8 B（double word）単位必須のため、
+  // 末尾パディングで総サイズを 8 の倍数に揃える（パディングは未使用）。
   static constexpr uint32_t BLOB_SIZE =
-      BLOB_HEADER + sizeof(param_set) + 4;
+      (BLOB_HEADER + sizeof(param_set) + 4 + 7) & ~7U;
 
   static void init_defaults();          // 動作値を constexpr 既定値へ初期化
   static const param_set& params();     // 動作値（get_params() の実体）

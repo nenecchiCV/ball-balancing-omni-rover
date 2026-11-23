@@ -76,10 +76,10 @@ void blob_rejects_corruption() {
   param_store::init_defaults();
   static uint8_t blob[param_store::BLOB_SIZE];
   param_store::build_blob(3, blob);
-  // CRC 破損
+  // CRC 破損（末尾はアライメント用パディングのため crc32 フィールド内を反転）
   uint8_t bad[param_store::BLOB_SIZE];
   memcpy(bad, blob, sizeof(bad));
-  bad[param_store::BLOB_SIZE - 1] ^= 0xFF;
+  bad[param_store::BLOB_HEADER + sizeof(param_set)] ^= 0xFF;
   CHECK_TRUE(!param_store::parse_blob(bad, sizeof(bad), nullptr));
   // magic 不整合
   memcpy(bad, blob, sizeof(bad));
