@@ -2,6 +2,7 @@
 
 #include <etl/algorithm.h>
 #include <math.h>
+#include <zephyr/irq.h>
 
 namespace bb {
 
@@ -36,14 +37,24 @@ vec4 tilt_quat_from_accel(const vec3& specific_force_body,
 
 void state_estimator::init(const config& cfg) {
   p_ = cfg.params;
+  reset_estimate();
+  gyro_bias_z_ = 0.0F;
+  ekf_bias_xy_ = vec2{};
+}
+
+void state_estimator::request_reset() {
+  const unsigned int key = irq_lock();
+  reset_req_ = true;
+  irq_unlock(key);
+}
+
+void state_estimator::reset_estimate() {
   quaternion_ = {1.0F, 0.0F, 0.0F, 0.0F};
   velocity_world_ = vec3{};
   ball_rate_world_ = vec3{};
   relative_position_body_ = vec2{};
-  gyro_bias_z_ = 0.0F;
   qualification_time_ = 0.0F;
   ekf_covariance_ = mat55{};
-  ekf_bias_xy_ = vec2{};
   ekf_accel_world_ = vec3{};
   prev_ball_velocity_world_ = vec3{};
   ekf_init_ = false;
@@ -62,12 +73,14 @@ void state_estimator::init(const config& cfg) {
   ekf_slew_init_ = false;
   inertial_hold_ = 0.0F;
   inertial_reject_hold_ = 0.0F;
+  reset_req_ = false;
 }
 
 vec4 state_estimator::seed_ekf(const vec3& specific_force,
                                const vec4& current) {
   const auto& ek = p_->ekf;
-  ekf_bias_xy_ = vec2{};
+  // ekf_bias_xy_ はシードし直さない: 永続化値・学習値はそのままの
+  // 初期推定として残す（ゼロにすると CALIBRATE_IMU 成果が失われる）。
   ekf_accel_world_ = vec3{};
   prev_ball_velocity_world_ = vec3{};
   ekf_covariance_ = mat55{};
@@ -100,6 +113,15 @@ void state_estimator::set_bias(float gyro_bias_z, float ekf_bias_x,
 state_estimator::output state_estimator::step(const imu_sample& imu,
                                               const vec3& wheel_rate,
                                               float dt) {
+  // SET_POSE 由来の推定リセット要求を消費（リンクスレッド→制御スレッド）。
+  {
+    bool do_reset;
+    const unsigned int key = irq_lock();
+    do_reset = reset_req_;
+    reset_req_ = false;
+    irq_unlock(key);
+    if (do_reset) reset_estimate();
+  }
   const auto& e = p_->estimator;
   const auto& ek = p_->ekf;
   output out{};

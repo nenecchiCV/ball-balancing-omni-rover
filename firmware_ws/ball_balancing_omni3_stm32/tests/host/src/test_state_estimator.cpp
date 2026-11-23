@@ -104,6 +104,39 @@ void test_stuck_filter_reseeds_from_accel() {
   CHECK_TRUE(fabsf(out.euler[1]) < 0.1F);
 }
 
+// 初期位置確定（SET_POSE）由来の推定リセット: 移動中に溜まった動的状態
+// をクリアし、学習済みバイアスを保持したまま姿勢が再シードされることを
+// 確認する。
+void test_placement_reset_reseeds_and_keeps_bias() {
+  const auto& p = get_params();
+  state_estimator::init({&p});
+  // 水平加速度を与えて速度を持たせる（搬送中を模擬）
+  imu_sample mv = still_sample();
+  mv.specific_force = {1.0F, 0.0F, 9.8F};
+  for (int i = 0; i < 400; ++i) {
+    (void)state_estimator::step(mv, vec3{}, p.estimator.sample_time);
+  }
+  state_estimator::set_bias(0.05F, 0.01F, -0.02F);
+  state_estimator::request_reset();
+  state_estimator::output out = state_estimator::step(
+      still_sample(), vec3{}, p.estimator.sample_time);
+  // リセット消費直後: バイアスは保持（ゼロクリアされない）
+  float bz = 0.0F, bx = 0.0F, by = 0.0F;
+  state_estimator::get_bias(&bz, &bx, &by);
+  CHECK_NEAR(bz, 0.05F, 1e-3F);
+  CHECK_NEAR(bx, 0.01F, 1e-3F);
+  CHECK_NEAR(by, -0.02F, 1e-3F);
+  // 速度は初期化され、以後の静止サンプルで姿勢が再シードされる
+  for (int i = 0; i < 400; ++i) {
+    out = state_estimator::step(still_sample(), vec3{},
+                                p.estimator.sample_time);
+  }
+  const float tilt =
+      sqrtf(out.euler[0] * out.euler[0] + out.euler[1] * out.euler[1]);
+  CHECK_TRUE(tilt < 0.1F);
+  CHECK_TRUE(fabsf(out.velocity_world[0]) < 0.05F);
+}
+
 void test_invalid_sample_marks_output() {
   const auto& p = get_params();
   state_estimator::init({&p});
@@ -120,6 +153,7 @@ void state_estimator_tests() {
   test_quaternion_stays_normalized();
   test_tilted_start_seeds_attitude();
   test_stuck_filter_reseeds_from_accel();
+  test_placement_reset_reseeds_and_keeps_bias();
   test_invalid_sample_marks_output();
 }
 

@@ -20,12 +20,15 @@ struct output {
 - `static void init(const config&)` — パラメータ参照を保持し、全内部状態を初期値（quaternion 単位、他 0）でリセットする。
 - `static output step(const imu_sample& imu, const vec3& wheel_rate, float dt)` — `ballbotEstimatorStep` の 1 ステップを実行し、`estimate` と `diagnostics` を返す。`imu_sample` は `common/imu_sample`（device 非依存のデータ構造）のため、本クラスはハードウェア無しでホストテスト可能。
 - `static void reset_bias()` — ジャイロバイアス学習状態（`gyro_bias_z_`・`ekf_bias_xy_`・`qualification_time_`）をリセットする（`CALIBRATE_IMU` 対応）。姿勢・速度など他の推定状態は保持する。外側タスクから呼ぶ（`operation_manager::take_bias_reset_req` 経由）。
+- `static void request_reset()` — 推定リセットを要求する。リンクスレッドから呼び（`SET_POSE` 受理時）、制御スレッドの `step()` 先頭で `reset_req_` を消費して `reset_estimate()` を実行する。
+- `static void reset_estimate()` — 動的推定状態を初期値へ戻す。quaternion を単位に戻し `ekf_init_=false` とすることで次の静止サンプルで姿勢が加速度から再シードされる。速度・輪速・相対位置・`qualification_time_`・補助フィルタも全てリセット。学習済みバイアス（`gyro_bias_z_`・`ekf_bias_xy_`）は保持する。`SET_POSE` で「初期位置にセットした」宣言を受け、起動直後の不安定な配置期間を切り捨てて既知位置から推定を開始する。外側タスクから呼ぶ。
 
 ## 内部状態（MATLAB persistent の写像）
 
 - `state`（14 要素相当）: `quaternion_`, `velocity_world_`, `ball_rate_world_`, `relative_position_body_`, `gyro_bias_z_`, `qualification_time_`
 - EKF: `ekf_covariance_`（mat55）, `ekf_bias_xy_`（vec2）, `ekf_accel_world_`, `prev_ball_velocity_world_`
 - 静止・補助フィルタ: `filtered_wheel_rate_for_still_`, `stillness_hold_`, `ekf_rel_vel_body_`, `ekf_rel_acc_body_`, `ekf_gyro_dot_body_`, `ekf_prev_gyro_body_`, `ekf_wheel_slew_`, `ekf_prev_wheel_rate_`, `inertial_hold_`
+- リセット要求: `reset_req_`（リンクスレッド→制御スレッドの受信箱、`irq_lock` 保護）
 
 ## MATLAB との対応・適応事項
 

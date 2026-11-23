@@ -12,8 +12,10 @@ endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 制限付きC++: 例外・RTTI・動的確保・実行時 static 初期化ガードなし
+# -include tuple: ETL_NO_STL 時も ETL が std::tuple_size/element の
+# 特殊化を出力するため、libc++ の宣言だけを先行して読み込む。
 add_compile_options(-fno-exceptions -fno-rtti -fno-threadsafe-statics -Wall
-                    -Wextra -DETL_NO_STL)
+                    -Wextra -DETL_NO_STL -include tuple)
 
 get_filename_component(FW_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../.. ABSOLUTE)
 

@@ -375,6 +375,9 @@ void link_session::dispatch(const link_protocol::request& req) {
                          s.raw_yaw);
       irq_unlock(key);
       position_controller::clear_target();
+      // 「初期位置にセットした」の宣言とみなし推定器もリセットする。
+      // 起動直後の不安定な配置期間を切り捨て、既知姿勢から推定開始する。
+      state_estimator::request_reset();
       send_ack(req.type, req.seq, link_protocol::ack_result::OK);
       break;
     }

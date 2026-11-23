@@ -50,6 +50,14 @@ class state_estimator {
                        float* ekf_bias_y);
   static void set_bias(float gyro_bias_z, float ekf_bias_x,
                        float ekf_bias_y);
+  // 初期位置確定（SET_POSE）に伴う推定リセットを要求する。リンクスレッド
+  // から呼び、制御スレッドの step() 先頭で消費される（irq_lock 保護）。
+  static void request_reset();
+  // 動的推定状態を初期値へ戻す（quaternion 単位→次の静止サンプルで
+  // 姿勢再シード、速度・輪速・相対位置・qualification・補助フィルタ全て
+  // リセット）。学習済みバイアス（gyro_bias_z_ / ekf_bias_xy_）は保持。
+  // 外側タスクから呼ぶ（step と同一スレッドのため排他不要）。
+  static void reset_estimate();
 
  private:
   // EKF 内部状態をリセットし、比力からロール/ピッチをシードした姿勢を
@@ -89,6 +97,7 @@ class state_estimator {
   static inline bool ekf_slew_init_ = false;
   static inline float inertial_hold_ = 0.0F;
   static inline float inertial_reject_hold_ = 0.0F;  // 種ズレ固着検出用
+  static inline bool reset_req_ = false;  // request_reset の受信箱
 };
 
 }  // namespace bb
