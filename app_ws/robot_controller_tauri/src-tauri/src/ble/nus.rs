@@ -3,7 +3,6 @@
 //! バイトストリームの送受信を上位へ提供する。Tauri には依存しない。
 
 use std::pin::Pin;
-use std::str::FromStr;
 use std::time::Duration;
 
 use btleplug::api::{
@@ -24,6 +23,11 @@ const NUS_TX_CHAR: Uuid = Uuid::from_u128(0x6E400003_B5A3_F393_E0A9_E50E24DCCA9E
 
 /// 既定のデバイス名フィルタ（`uwc-esp32c6`）。
 pub const DEFAULT_NAME_FILTER: &str = "uwc";
+
+/// 接続・通知購読の個別タイムアウト。CoreBluetooth の connectPeripheral は
+/// 接続不能な相手に対して長時間 pending し続けるため、必ず時間制限を設ける。
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
+const SUBSCRIBE_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Debug, Clone, Serialize, Type)]
 pub struct DiscoveredDevice {
@@ -71,7 +75,9 @@ pub async fn scan(
         }
         devices.push(DiscoveredDevice {
             name,
-            address: props.address.to_string(),
+            // Apple 系では Peripheral::address() が常にゼロアドレスを返すため、
+            // 識別子にはプラットフォーム固有 ID（Apple: UUID / その他: BDAddr）を使う。
+            address: p.id().to_string(),
             rssi: props.rssi,
         });
     }
@@ -86,33 +92,30 @@ pub async fn scan(
 }
 
 impl NusLink {
-    /// `address`（"AA:BB:..."）のデバイスへ接続し、RX/TX 特性確保と通知購読まで行う。
+    /// `address`（`DiscoveredDevice.address`）のデバイスへ接続し、RX/TX 特性確保と通知購読まで行う。
     pub async fn connect(address: &str, scan_timeout: Duration) -> Result<NusLink, AppError> {
         let adapter = adapter().await?;
-        let addr = btleplug::api::BDAddr::from_str(address)
-            .map_err(|_| AppError::InvalidParam(format!("アドレス形式が不正: {address}")))?;
+        // Apple 系では address() が常にゼロアドレスのため id()（UUID 文字列）で照合する。
+        // 他プラットフォームではどちらも MAC 文字列になるため、両方を比較対象にする。
+        let matches = |p: &Peripheral| {
+            p.id().to_string() == address || p.address().to_string() == address
+        };
 
         // 0.11 系ではアドレスからの直接取得 API が無いため、既知一覧を走査し、
         // 未発見ならスキャン後に再検索する。
-        let mut found = adapter
-            .peripherals()
-            .await?
-            .into_iter()
-            .find(|p| p.address() == addr);
+        let mut found = adapter.peripherals().await?.into_iter().find(matches);
         if found.is_none() {
             adapter.start_scan(ScanFilter::default()).await?;
             tokio::time::sleep(scan_timeout).await;
             let _ = adapter.stop_scan().await;
-            found = adapter
-                .peripherals()
-                .await?
-                .into_iter()
-                .find(|p| p.address() == addr);
+            found = adapter.peripherals().await?.into_iter().find(matches);
         }
         let peripheral = found
             .ok_or_else(|| AppError::Ble(format!("デバイスが見つからない: {address}")))?;
 
-        peripheral.connect().await?;
+        tokio::time::timeout(CONNECT_TIMEOUT, peripheral.connect())
+            .await
+            .map_err(|_| AppError::Ble("BLE 接続がタイムアウトしました".to_string()))??;
         peripheral.discover_services().await?;
 
         let chars = peripheral.characteristics();
@@ -127,7 +130,9 @@ impl NusLink {
             .cloned()
             .ok_or_else(|| AppError::Ble("NUS TX 特性が見つからない".to_string()))?;
 
-        peripheral.subscribe(&tx_char).await?;
+        tokio::time::timeout(SUBSCRIBE_TIMEOUT, peripheral.subscribe(&tx_char))
+            .await
+            .map_err(|_| AppError::Ble("通知購読がタイムアウトしました".to_string()))??;
 
         Ok(NusLink {
             peripheral,

@@ -8,6 +8,8 @@
 #[serde(rename_all = "camelCase")]
 pub struct DiscoveredDevice {
     pub name: String,
+    /// プラットフォーム固有識別子（Apple 系: UUID 文字列 / その他: MAC 文字列）。
+    /// Apple では `Peripheral::address()` が常にゼロアドレスのため `id()` を使う。
     pub address: String,
     pub rssi: Option<i16>,
 }
@@ -18,7 +20,7 @@ pub struct NusLink { /* Peripheral, RX/TX 特性 */ }
 ## 公開関数
 
 - `async fn scan(name_filter: &str, timeout: Duration) -> Result<Vec<DiscoveredDevice>, AppError>` — アダプタで BLE スキャンし、`name_filter` 部分一致を優先して一覧を返す。既定フィルタは `uwc`。
-- `NusLink::connect(address: &str, scan_timeout: Duration) -> Result<NusLink, AppError>` — 指定アドレスのペリフェラルをアダプタ列挙で探し（未発見なら再スキャン）、接続→NUS サービス検出→TX 特性購読まで完了させる。
+- `NusLink::connect(address: &str, scan_timeout: Duration) -> Result<NusLink, AppError>` — `DiscoveredDevice.address`（`id()` 文字列）でアダプタ列挙を検索し（未発見なら再スキャン）、接続→NUS サービス検出→TX 特性購読まで完了させる。接続は 15 s・購読は 5 s のタイムアウト付き（CoreBluetooth は接続不能な相手へ長時間 pending するため）。
 - `NusLink::notification_stream(&self) -> Result<impl Stream<Item = Vec<u8>>, AppError>` — TX 通知のバイト列ストリームを返す。`Session` のディスパッチャが消費する。
 - `NusLink::send(&self, data: &[u8]) -> Result<(), AppError>` — RX 特性へ Write Without Response で送出する。
 - `NusLink::is_connected(&self) -> bool` — 接続確認。
