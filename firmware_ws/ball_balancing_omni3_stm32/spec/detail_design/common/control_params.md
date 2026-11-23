@@ -27,8 +27,8 @@ struct param_set {
         uint32_t calib_timeout_ms; // CALIBRATE_IMU 完了期限（既定 5000 ms, FR-13）
     };
     struct drive {                // 駆動出力調整（FR-16）
-        float deadzone_comp_pos[3]; // 車輪ごとの不感帯補償デューティ 正転用（既定 0.08）
-        float deadzone_comp_neg[3]; // 同上 逆転用（既定 0.08）
+        float deadzone_comp_pos[3]; // 車輪ごとの不感帯補償デューティ 正転用（既定は掃引同定値）
+        float deadzone_comp_neg[3]; // 同上 逆転用（既定は掃引同定値）
     };
     struct imu {                  // IMU 特性（FR-15 永続化対象）
         float gyro_bias_z;         // ジャイロ z バイアス（CALIBRATE_IMU で学習）

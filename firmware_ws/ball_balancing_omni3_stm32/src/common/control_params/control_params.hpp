@@ -282,11 +282,11 @@ struct param_set {
     uint32_t calib_timeout_ms = 5000;  // CALIBRATE_IMU 完了期限（FR-13）
   } link;
 
-  // FR-16 駆動不感帯補償（車輪ごと・回転方向ごと、既定は
-  // omni_drive_test::DEADZONE_COMP と同値）。duty 符号で pos/neg を選択する。
+  // FR-16 駆動不感帯補償（車輪ごと・回転方向ごと）。duty 符号で pos/neg を
+  // 選択する。既定値は TUNE_DEADZONE 掃引の実機同定値（個体差あり）。
   struct drive {
-    float deadzone_comp_pos[3] = {0.08F, 0.08F, 0.08F};  // duty > 0
-    float deadzone_comp_neg[3] = {0.08F, 0.08F, 0.08F};  // duty < 0
+    float deadzone_comp_pos[3] = {0.1793F, 0.1309F, 0.1726F};  // duty > 0
+    float deadzone_comp_neg[3] = {0.1512F, 0.1266F, 0.1960F};  // duty < 0
   } drive;
 
   // FR-15 IMU 特性（永続化対象。CALIBRATE_IMU の学習結果を保存）。
