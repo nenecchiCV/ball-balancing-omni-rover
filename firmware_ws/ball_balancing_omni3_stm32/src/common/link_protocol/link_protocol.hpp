@@ -73,6 +73,15 @@ constexpr uint8_t NOT_READY = 3;
 constexpr uint8_t UNSUPPORTED = 4;
 }  // namespace ack_result
 
+// STATUS/EVT_STATUS 拡張部（7 バイト目）の ready_mask ビット。
+// START_OPERATION の受理条件を bit=1 で充足として表す。
+namespace ready_mask {
+constexpr uint8_t IMU_OK = 0x01;       // IMU 正常
+constexpr uint8_t ESTOP_FREE = 0x02;   // E-Stop 解除
+constexpr uint8_t QUALIFIED = 0x04;    // 推定器 bias qualification 完了
+constexpr uint8_t TILT_OK = 0x08;      // tilt < controller.fallen_tilt
+}  // namespace ready_mask
+
 // デコード済み受信フレーム。payload は DATA 部のみ（TYPE/SEQ は別フィールド）。
 struct request {
   uint8_t type = 0;

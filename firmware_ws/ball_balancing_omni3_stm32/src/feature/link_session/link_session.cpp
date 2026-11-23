@@ -143,12 +143,17 @@ void link_session::generate_events(uint32_t now_ms) {
   }
 
   // EVT_STATUS: 変化検出 + 100 ms ハートビート（バッチバッファへ投入）。
+  // 先頭 6 B は従来互換で、7 B 以降は START 受理条件の可視化拡張
+  // （ready_mask u8 + tilt f32）。tilt は連続変化するため変化検出は
+  // 先頭 7 B のみで行い、拡張部はハートビート周期で更新される。
   if (subs.status) {
-    const uint8_t cur[6] = {op_state, mode,
-                            static_cast<uint8_t>(s.enable ? 1 : 0),
-                            static_cast<uint8_t>(s.estop ? 1 : 0),
-                            static_cast<uint8_t>(s.imu_ok ? 1 : 0), calib};
-    const bool changed = memcmp(cur, prev_status_, sizeof(cur)) != 0;
+    const uint8_t ready = start_ready_mask(s);
+    uint8_t cur[11] = {op_state, mode,
+                       static_cast<uint8_t>(s.enable ? 1 : 0),
+                       static_cast<uint8_t>(s.estop ? 1 : 0),
+                       static_cast<uint8_t>(s.imu_ok ? 1 : 0), calib, ready};
+    link_protocol::write_f32(&cur[7], s.tilt);
+    const bool changed = memcmp(cur, prev_status_, 7) != 0;
     const bool heartbeat = (now_ms - last_status_tx_ms_) >= 100;
     if (changed || heartbeat) {
       memcpy(prev_status_, cur, sizeof(cur));
@@ -517,7 +522,8 @@ void link_session::dispatch(const link_protocol::request& req) {
       break;
     }
     case link_protocol::req::GET_STATUS: {
-      uint8_t r[11];
+      // 11 B 以降は EVT_STATUS と同じ拡張部（ready_mask + tilt）。
+      uint8_t r[16];
       r[0] = req.seq;
       r[1] = op_state;
       r[2] = mode;
@@ -526,6 +532,8 @@ void link_session::dispatch(const link_protocol::request& req) {
       r[5] = s.imu_ok ? 1 : 0;
       r[6] = operation_manager::calib();
       link_protocol::write_u32(&r[7], now);
+      r[11] = start_ready_mask(s);
+      link_protocol::write_f32(&r[12], s.tilt);
       send_frame(link_protocol::resp::STATUS, 0, r, sizeof(r));
       break;
     }
@@ -553,6 +561,15 @@ void link_session::send_frame(uint8_t type, uint8_t seq, const uint8_t* payload,
   const unsigned int key = irq_lock();
   (void)link_uart::write(buf, n);
   irq_unlock(key);
+}
+
+uint8_t link_session::start_ready_mask(const robot_state& s) {
+  return static_cast<uint8_t>(
+      (s.imu_ok ? link_protocol::ready_mask::IMU_OK : 0) |
+      (!s.estop ? link_protocol::ready_mask::ESTOP_FREE : 0) |
+      (s.qualified ? link_protocol::ready_mask::QUALIFIED : 0) |
+      (s.tilt < p_->controller.fallen_tilt ? link_protocol::ready_mask::TILT_OK
+                                           : 0));
 }
 
 void link_session::send_ack(uint8_t req_type, uint8_t seq, uint8_t result) {

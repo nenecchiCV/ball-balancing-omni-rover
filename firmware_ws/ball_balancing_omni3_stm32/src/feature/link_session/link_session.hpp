@@ -105,6 +105,8 @@ class link_session {
   static void send_frame(uint8_t type, uint8_t seq, const uint8_t* payload,
                          uint8_t len);
   static void send_ack(uint8_t req_type, uint8_t seq, uint8_t result);
+  // START_OPERATION 受理条件の充足ビット（ready_mask::*、STATUS 拡張部用）。
+  static uint8_t start_ready_mask(const robot_state& s);
   // バッチバッファへの投入（irq_lock 使用、どちらのスレッドからも可）。
   static void queue_slot(evt_slot& slot, bool& dirty, uint8_t type,
                          const uint8_t* payload, uint8_t len);
@@ -146,7 +148,7 @@ class link_session {
 
   // イベント分周・変化検出（制御スレッドのみアクセス）。
   static inline uint32_t pose_div_count_ = 0;
-  static inline uint8_t prev_status_[6] = {};
+  static inline uint8_t prev_status_[11] = {};
   static inline uint32_t last_status_tx_ms_ = 0;
   static inline uint8_t prev_log_mode_ = 0xFF;
   static inline bool prev_estop_ = false;

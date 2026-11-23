@@ -64,11 +64,13 @@ class link_session {  // static class
 | `GET_PARAMS` | `param_store::key_at` で `start_key` 以降を昇順列挙し 1 フレーム分（最大 30 件）を `PARAMS(seq, total, count, [key, value]*)` で返す | `PARAMS` — `start_key` が範囲外でも空 `PARAMS` を返す |
 | `SUBSCRIBE` | `event_type ∈ {0x90,0x91,0x92}` かつ `EVT_POSE` の `rate_hz ∈ 1..50`（他は 0 でも可）で購読テーブル更新 | `ACK` |
 | `UNSUBSCRIBE` | 購読テーブル削除 | `ACK(OK)` |
-| `GET_STATUS` | — | `STATUS(seq, op_state, mode, enable, estop, imu_ok, calib_state, uptime_ms)` |
+| `GET_STATUS` | — | `STATUS(seq, op_state, mode, enable, estop, imu_ok, calib_state, uptime_ms, ready_mask, tilt)`（16 B。rev 初期は拡張部なしの 11 B） |
 | `TEST_ECHO` | ペイロードをそのまま格納 | `TEST_ECHO_RESP(seq, data[N])` |
 | その他リクエスト | — | `ACK(result=UNSUPPORTED)` |
 
 `STATUS.mode`・`EVT_STATUS.mode` は `SET_CONTROL_MODE` と同じ定義（リンク側制御モード）。`balance_controller` の mode（0/1/2 倒立状態機械）とは別物で、EVT_STATUS にはリンクモードを載せる。
+
+`STATUS`/`EVT_STATUS` の拡張部は `ready_mask u8` + `tilt f32`（EVT_STATUS は計 11 B、STATUS は計 16 B）。`ready_mask` は `START_OPERATION` 受理条件の充足ビット（`link_protocol::ready_mask`: `0x01`=IMU 正常、`0x02`=E-Stop 解除、`0x04`=qualification 完了、`0x08`=傾斜が `controller.fallen_tilt` 未満）で、`NOT_READY` 拒否時の未充足条件をホスト側で特定できるようにする。`tilt` は推定姿勢の傾斜角 [rad]。`EVT_STATUS` の変化検出は tilt の連続変化で送出が頻発しないよう先頭 7 B（ready_mask まで）のみを比較し、拡張部はハートビート周期で更新される。
 
 ## イベントバッチ送出（FR-14）
 
