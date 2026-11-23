@@ -45,3 +45,4 @@ class tune_deadzone {  // static class
 
 - 平衡制御は実行しないため、車体を人が保持して車輪を無負荷にすることが前提（アプリ画面にガイド表示、FR-10）。
 - `motor_deadzone_test`（テストアプリ）と同じ掃引原理だが、本番では UART CSV 出力ではなく `TUNE_RESULT` で構造化値を返す。
+- `dir` で掃引方向を選ぶ。`suggest` は掃引方向に対応する `deadzone_comp_pos`（dir>0）・`deadzone_comp_neg`（dir<0）へ適用する想定で、正逆両方向の補償値を得るには方向を変えて 2 回掃引する（FR-16）。

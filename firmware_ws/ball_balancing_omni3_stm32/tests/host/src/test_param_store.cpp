@@ -11,8 +11,10 @@ namespace {
 void defaults_match_constexpr() {
   param_store::init_defaults();
   const param_set ref{};
-  CHECK_NEAR(param_store::params().drive.deadzone_comp[0],
-             ref.drive.deadzone_comp[0], 1e-9F);
+  CHECK_NEAR(param_store::params().drive.deadzone_comp_pos[0],
+             ref.drive.deadzone_comp_pos[0], 1e-9F);
+  CHECK_NEAR(param_store::params().drive.deadzone_comp_neg[0],
+             ref.drive.deadzone_comp_neg[0], 1e-9F);
   CHECK_NEAR(param_store::params().lqi.tracking_gain_scale,
              ref.lqi.tracking_gain_scale, 1e-9F);
   CHECK_NEAR(param_store::params().imu.gyro_bias_z, ref.imu.gyro_bias_z,
@@ -21,11 +23,14 @@ void defaults_match_constexpr() {
 
 void key_roundtrip() {
   param_store::init_defaults();
-  // deadzone_comp[1] = key 0x01
+  // deadzone_comp_pos[1] = key 0x01、deadzone_comp_neg[1] = key 0x04
   CHECK_TRUE(param_store::set_key(0x01, 0.12F));
+  CHECK_TRUE(param_store::set_key(0x04, 0.15F));
   float v = 0.0F;
   CHECK_TRUE(param_store::get_key(0x01, &v));
   CHECK_NEAR(v, 0.12F, 1e-9F);
+  CHECK_TRUE(param_store::get_key(0x04, &v));
+  CHECK_NEAR(v, 0.15F, 1e-9F);
   // 範囲外は拒否
   CHECK_TRUE(!param_store::set_key(0x01, 0.5F));
   CHECK_TRUE(param_store::get_key(0x01, &v));

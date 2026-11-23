@@ -75,9 +75,11 @@ wheel_servo::output wheel_servo::step(const input& in) {
       duty = etl::clamp(duty, -p_->driver.max_duty_cycle,
                         p_->driver.max_duty_cycle);
       // FR-16 不感帯補償: 非ゼロ指令をモータ実効デューティへ底上げする。
-      // duty==0（無指令）は 0 を維持する。
+      // duty==0（無指令）は 0 を維持する。補償値は duty 符号方向で選ぶ。
       if (duty != 0.0F) {
-        duty = copysignf(fabsf(duty) + p_->drive.deadzone_comp[i], duty);
+        const float comp = duty > 0.0F ? p_->drive.deadzone_comp_pos[i]
+                                     : p_->drive.deadzone_comp_neg[i];
+        duty = copysignf(fabsf(duty) + comp, duty);
         duty = etl::clamp(duty, -p_->driver.max_duty_cycle,
                           p_->driver.max_duty_cycle);
       }

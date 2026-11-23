@@ -27,8 +27,12 @@ void param_store::init_defaults() {
     ++i;
   };
   for (int w = 0; w < 3; ++w) {
-    reg(static_cast<uint8_t>(0x00 + w), &params_.drive.deadzone_comp[w], 0.0F,
-        0.3F);
+    reg(static_cast<uint8_t>(0x00 + w), &params_.drive.deadzone_comp_pos[w],
+        0.0F, 0.3F);
+  }
+  for (int w = 0; w < 3; ++w) {
+    reg(static_cast<uint8_t>(0x03 + w), &params_.drive.deadzone_comp_neg[w],
+        0.0F, 0.3F);
   }
   reg(0x10, &params_.lqi.tracking_gain_scale, 0.1F, 3.0F);
   reg(0x11, &params_.lqi.anti_windup_gain, 0.0F, 20.0F);

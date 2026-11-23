@@ -18,7 +18,7 @@ class param_store {
   //   magic u32 | schema_ver u16 | seq u32 | param_set | crc32 u32
   // crc32 は magic 先頭から param_set 末尾までの区間に掛ける。
   static constexpr uint32_t BLOB_MAGIC = 0x42425041U;  // "BBPA"
-  static constexpr uint16_t BLOB_SCHEMA_VER = 1;
+  static constexpr uint16_t BLOB_SCHEMA_VER = 2;
   static constexpr uint32_t BLOB_HEADER = 4 + 2 + 4;
   // STM32 のフラッシュ書込みは 8 B（double word）単位必須のため、
   // 末尾パディングで総サイズを 8 の倍数に揃える（パディングは未使用）。
@@ -30,7 +30,7 @@ class param_store {
   static param_set& mutable_params();
 
   // key 単位アクセス（調整対象表は robot_link_protocol.md「調整対象パラメータ」）。
-  static constexpr uint32_t KEY_COUNT = 45;
+  static constexpr uint32_t KEY_COUNT = 48;
   static bool get_key(uint8_t key, float* value);
   static bool set_key(uint8_t key, float value);  // 未定義/範囲外/読取専用は false
   static uint8_t key_at(uint32_t index);          // 昇順列挙（index < KEY_COUNT）

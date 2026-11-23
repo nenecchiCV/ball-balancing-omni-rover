@@ -27,3 +27,5 @@ struct output { vec3 duty; vec3 filtered_speed; };
 
 - 25 ms 時定数のローパス（`back_emf_speed_time_constant`）、推進サーボ（デッドゾーン・P ゲイン・ヘッドルーム・最小シェア・settle 遮断・内側ランプ）、トルク合成・クランプ・電流換算・duty 反転・maxDuty クランプをそのまま実装する。
 - `previousIntegral` は外側側の速度積分とは別物で、本クラス内部のフィルタ状態として保持する。
+- `input.enable` が false のとき `output.duty` は常に 0（無駆動）。背起電力フィードフォワードも停止する。これにより STANDBY/FAULT 中に計測輪速の異常値でモータが自駆することを防ぐ（安全対策、MATLAB にはない追加）。
+- FR-16 の不感帯補償は `duty += copysignf(comp, duty)` で、補償値は duty 符号に応じ `deadzone_comp_pos`（正転）・`deadzone_comp_neg`（逆転）を選択する（方向別パラメータ、MATLAB にはない追加）。
