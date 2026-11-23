@@ -67,6 +67,26 @@ void test_mode0_no_propulsion() {
   }
 }
 
+void test_disabled_outputs_zero_duty() {
+  // enable=false（STANDBY/FAULT）は計測輪速に依らず duty=0。
+  // エンコーダ浮き等で wheel_rate が不定値でもモータを駆動しない。
+  const auto& p = get_params();
+  wheel_servo::init({&p});
+  wheel_servo::input in{};
+  in.enable = false;
+  in.mode = 1;
+  in.attitude_torque = {0.1F, -0.1F, 0.05F};
+  in.wheel_rate = {30.0F, -25.0F, 20.0F};
+  auto out = wheel_servo::step(in);
+  for (int i = 0; i < 3; ++i) {
+    CHECK_NEAR(out.duty[i], 0.0F, 1e-6F);
+  }
+  for (int i = 0; i < 200; ++i) out = wheel_servo::step(in);
+  for (int i = 0; i < 3; ++i) {
+    CHECK_NEAR(out.duty[i], 0.0F, 1e-6F);
+  }
+}
+
 void test_speed_lowpass() {
   const auto& p = get_params();
   wheel_servo::init({&p});
@@ -89,6 +109,7 @@ void wheel_servo_tests() {
   test_duty_sign_matches_torque();
   test_duty_clamped();
   test_mode0_no_propulsion();
+  test_disabled_outputs_zero_duty();
   test_speed_lowpass();
 }
 

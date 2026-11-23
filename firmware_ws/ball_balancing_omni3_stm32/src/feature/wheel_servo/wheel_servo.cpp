@@ -63,18 +63,24 @@ wheel_servo::output wheel_servo::step(const input& in) {
       p_->motor.armature_resistance + p_->driver.bridge_on_resistance;
   output out{};
   for (int i = 0; i < 3; ++i) {
-    const float current = torque[i] / p_->motor.torque_constant;
-    float duty = (resistance * current +
-                  p_->motor.back_emf_constant * filtered_speed_[i]) /
-                 p_->driver.supply_voltage;
-    duty =
-        etl::clamp(duty, -p_->driver.max_duty_cycle, p_->driver.max_duty_cycle);
-    // FR-16 不感帯補償: 非ゼロ指令をモータ実効デューティへ底上げする。
-    // duty==0（無指令）は 0 を維持する。
-    if (duty != 0.0F) {
-      duty = copysignf(fabsf(duty) + p_->drive.deadzone_comp[i], duty);
+    // enable=false（STANDBY/FAULT）は無駆動。ここを通さないと背起電力項が
+    // 計測輪速へ比例した duty を出し続け、エンコーダ断線等の不定値で
+    // 不感帯補償込みの実駆動になり得る。
+    float duty = 0.0F;
+    if (in.enable) {
+      const float current = torque[i] / p_->motor.torque_constant;
+      duty = (resistance * current +
+              p_->motor.back_emf_constant * filtered_speed_[i]) /
+             p_->driver.supply_voltage;
       duty = etl::clamp(duty, -p_->driver.max_duty_cycle,
                         p_->driver.max_duty_cycle);
+      // FR-16 不感帯補償: 非ゼロ指令をモータ実効デューティへ底上げする。
+      // duty==0（無指令）は 0 を維持する。
+      if (duty != 0.0F) {
+        duty = copysignf(fabsf(duty) + p_->drive.deadzone_comp[i], duty);
+        duty = etl::clamp(duty, -p_->driver.max_duty_cycle,
+                          p_->driver.max_duty_cycle);
+      }
     }
     out.duty[i] = duty;
   }
