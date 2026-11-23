@@ -251,7 +251,9 @@ struct param_set {
     float profile_start = 0.5F;
     float profile_stop = 2.5F;
     vec2 profile_velocity_world = {0.12F, 0.0F};
-    bool cycles_enabled = true;
+    // リンク未確立のまま bb start した場合の自動走行は危険なため既定では無効。
+    // true にすると cycle プロファイル（移動＋ヨーパルス）を実行する。
+    bool cycles_enabled = false;
     float cycle_start = 0.5F;
     float cycle_move_duration = 12.0F;
     float cycle_stop_duration = 4.0F;

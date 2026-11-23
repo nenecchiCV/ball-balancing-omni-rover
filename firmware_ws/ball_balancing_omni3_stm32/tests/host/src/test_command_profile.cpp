@@ -22,7 +22,9 @@ void test_zero_before_cycle_start() {
 }
 
 void test_acceleration_limit_respected() {
-  const auto& p = get_params();
+  // サイクル走行は既定 OFF のため、検査用にローカルコピーで有効化する。
+  param_set p = get_params();
+  p.command.cycles_enabled = true;
   command_profile::init({&p});
   // t=0 から 5ms 周期で連続更新し、移動フェーズの変化率を検査する。
   // （初回呼び出し以外は内部 dt = 実時間差になる）
@@ -44,7 +46,8 @@ void test_acceleration_limit_respected() {
 }
 
 void test_stop_phase_decelerates() {
-  const auto& p = get_params();
+  param_set p = get_params();
+  p.command.cycles_enabled = true;
   command_profile::init({&p});
   const float dt = 0.005F;
   const float stop_begin =

@@ -246,6 +246,9 @@ bool robot_application::init(const config& cfg) {
     uint32_t seq = 0;
     if (flash_store::load_latest(blob, sizeof(blob), &seq) &&
         param_store::parse_blob(blob, sizeof(blob), nullptr)) {
+      // command.* は実行時に変更する手段がないため、過去の既定値で書かれた
+      // blob の値は採用せずコンパイル時既定へ戻す。
+      param_store::mutable_params().command = param_set{}.command;
       char line[64];
       const int n = snprintf(line, sizeof(line),
                              "params: restored from flash (seq=%lu)\r\n",
