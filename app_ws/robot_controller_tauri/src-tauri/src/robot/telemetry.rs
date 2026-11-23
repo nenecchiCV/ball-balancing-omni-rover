@@ -29,6 +29,10 @@ pub struct StatusTelemetry {
     pub estop: u8,
     pub imu_ok: u8,
     pub calib_state: u8,
+    /// START_OPERATION 受理条件の充足ビット（ready_mask）。旧ファームは None。
+    pub start_ready: Option<u8>,
+    /// 推定姿勢の傾斜角 [rad]。旧ファームは None。
+    pub tilt: Option<f32>,
 }
 
 impl From<&RobotEvent> for Option<PoseTelemetry> {
@@ -66,6 +70,8 @@ impl From<&RobotEvent> for Option<StatusTelemetry> {
                 estop,
                 imu_ok,
                 calib_state,
+                ready,
+                tilt,
             } => Some(StatusTelemetry {
                 op_state: *op_state,
                 mode: *mode,
@@ -73,6 +79,8 @@ impl From<&RobotEvent> for Option<StatusTelemetry> {
                 estop: *estop,
                 imu_ok: *imu_ok,
                 calib_state: *calib_state,
+                start_ready: *ready,
+                tilt: *tilt,
             }),
             _ => None,
         }

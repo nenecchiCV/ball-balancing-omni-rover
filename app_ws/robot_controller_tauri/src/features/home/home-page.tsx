@@ -12,7 +12,7 @@ import {
   robotStartOperation,
   robotStopOperation,
 } from "@/lib/ipc";
-import { CALIB_STATE, OP_STATE } from "@/lib/types";
+import { CALIB_STATE, OP_STATE, READY_MASK } from "@/lib/types";
 import { confirmAsync } from "@/stores/confirm";
 import { useConnected } from "@/stores/connection";
 import { useLogStore } from "@/stores/logs";
@@ -68,8 +68,26 @@ export function HomePage() {
       await robotStartOperation();
       pushLog(1, "動作開始を受理");
     } catch (e) {
-      pushLog(3, `動作開始拒否: ${formatError(e)}`);
+      pushLog(3, `動作開始拒否: ${formatError(e)}${startBlockers()}`);
     }
+  };
+
+  // START_OPERATION 拒否時に未充足条件を列挙する（新ファームの
+  // startReady 拡張がある場合のみ。旧ファームは空文字）。
+  const startBlockers = (): string => {
+    const r = status?.startReady;
+    if (r == null || r === 0x0f) return "";
+    const missing: string[] = [];
+    if (!(r & READY_MASK.imuOk)) missing.push("IMU 正常");
+    if (!(r & READY_MASK.estopFree)) missing.push("E-Stop 解除");
+    if (!(r & READY_MASK.qualified))
+      missing.push("静止判定（0.5 秒静止が必要）");
+    if (!(r & READY_MASK.tiltOk)) {
+      const deg =
+        status?.tilt != null ? `現在 ${((status.tilt * 180) / Math.PI).toFixed(0)}°` : "";
+      missing.push(`傾斜 35° 未満（${deg}）`);
+    }
+    return missing.length ? `（未充足: ${missing.join("・")}）` : "";
   };
 
   const stopOp = async () => {
@@ -120,6 +138,24 @@ export function HomePage() {
                   <td>
                     {CALIB_NAMES[status.calibState] ??
                       `不明 (${status.calibState})`}
+                  </td>
+                </tr>
+                <tr>
+                  <th>静止判定</th>
+                  <td>
+                    {status.startReady == null
+                      ? "—"
+                      : status.startReady & READY_MASK.qualified
+                        ? "成立"
+                        : "未成立（0.5 秒静止が必要）"}
+                  </td>
+                </tr>
+                <tr>
+                  <th>傾斜</th>
+                  <td>
+                    {status.tilt == null
+                      ? "—"
+                      : `${((status.tilt * 180) / Math.PI).toFixed(1)}°（動作開始は 35° 未満）`}
                   </td>
                 </tr>
               </tbody>

@@ -31,6 +31,10 @@ pub struct RobotStatusInfo {
     pub imu_ok: u8,
     pub calib_state: u8,
     pub uptime_ms: u32,
+    /// START_OPERATION 受理条件の充足ビット（ready_mask）。旧ファームは None。
+    pub start_ready: Option<u8>,
+    /// 推定姿勢の傾斜角 [rad]。旧ファームは None。
+    pub tilt: Option<f32>,
 }
 
 #[derive(Debug, Serialize, Type)]
@@ -191,6 +195,8 @@ pub async fn robot_get_status(state: State<'_, AppState>) -> Result<RobotStatusI
             imu_ok,
             calib_state,
             uptime_ms,
+            ready,
+            tilt,
             ..
         } => Ok(RobotStatusInfo {
             op_state,
@@ -200,6 +206,8 @@ pub async fn robot_get_status(state: State<'_, AppState>) -> Result<RobotStatusI
             imu_ok,
             calib_state,
             uptime_ms,
+            start_ready: ready,
+            tilt,
         }),
         _ => Err(AppError::BadResponse),
     }

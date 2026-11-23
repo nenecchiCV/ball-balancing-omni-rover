@@ -15,7 +15,7 @@ export const commands = {
 	robotStop: (options?: InvokeOptions) => __TAURI_INVOKE<null>("robot_stop", undefined, options),
 	robotSetMode: (mode: number, options?: InvokeOptions) => __TAURI_INVOKE<null>("robot_set_mode", { mode }, options),
 	robotResetOdometry: (options?: InvokeOptions) => __TAURI_INVOKE<null>("robot_reset_odometry", undefined, options),
-	robotGetStatus: (options?: InvokeOptions) => __TAURI_INVOKE<RobotStatusInfo>("robot_get_status", undefined, options),
+	robotGetStatus: (options?: InvokeOptions) => __TAURI_INVOKE<RobotStatusInfo_Serialize>("robot_get_status", undefined, options),
 	robotStartOperation: (options?: InvokeOptions) => __TAURI_INVOKE<null>("robot_start_operation", undefined, options),
 	robotStopOperation: (options?: InvokeOptions) => __TAURI_INVOKE<null>("robot_stop_operation", undefined, options),
 	robotSetPose: (x: number | null, y: number | null, yaw: number | null, options?: InvokeOptions) => __TAURI_INVOKE<null>("robot_set_pose", { x, y, yaw }, options),
@@ -45,7 +45,7 @@ export const commands = {
 	/**  現在値を即時送った後、以後の変化をストリームする。 */
 	watchLinkState: (channel: Channel<LinkState>, options?: InvokeOptions) => __TAURI_INVOKE<null>("watch_link_state", { channel }, options),
 	watchTelemetry: (channel: Channel<PoseTelemetry>, options?: InvokeOptions) => __TAURI_INVOKE<null>("watch_telemetry", { channel }, options),
-	watchStatus: (channel: Channel<StatusTelemetry>, options?: InvokeOptions) => __TAURI_INVOKE<null>("watch_status", { channel }, options),
+	watchStatus: (channel: Channel<StatusTelemetry_Deserialize>, options?: InvokeOptions) => __TAURI_INVOKE<null>("watch_status", { channel }, options),
 	watchLog: (channel: Channel<LogMessage>, options?: InvokeOptions) => __TAURI_INVOKE<null>("watch_log", { channel }, options),
 };
 
@@ -110,7 +110,9 @@ export type PoseTelemetry = {
 	yawRate: number | null,
 };
 
-export type RobotStatusInfo = {
+export type RobotStatusInfo = RobotStatusInfo_Serialize | RobotStatusInfo_Deserialize;
+
+export type RobotStatusInfo_Deserialize = {
 	opState: number,
 	mode: number,
 	enable: number,
@@ -118,16 +120,55 @@ export type RobotStatusInfo = {
 	imuOk: number,
 	calibState: number,
 	uptimeMs: number,
+	/**  START_OPERATION 受理条件の充足ビット（ready_mask）。旧ファームは None。 */
+	startReady?: number | null,
+	/**  推定姿勢の傾斜角 [rad]。旧ファームは None。 */
+	tilt?: number | null,
 };
 
-/**  EVT_STATUS。 */
-export type StatusTelemetry = {
+export type RobotStatusInfo_Serialize = {
 	opState: number,
 	mode: number,
 	enable: number,
 	estop: number,
 	imuOk: number,
 	calibState: number,
+	uptimeMs: number,
+	/**  START_OPERATION 受理条件の充足ビット（ready_mask）。旧ファームは None。 */
+	startReady: number | null,
+	/**  推定姿勢の傾斜角 [rad]。旧ファームは None。 */
+	tilt: number | null,
+};
+
+/**  EVT_STATUS。 */
+export type StatusTelemetry = StatusTelemetry_Serialize | StatusTelemetry_Deserialize;
+
+/**  EVT_STATUS。 */
+export type StatusTelemetry_Deserialize = {
+	opState: number,
+	mode: number,
+	enable: number,
+	estop: number,
+	imuOk: number,
+	calibState: number,
+	/**  START_OPERATION 受理条件の充足ビット（ready_mask）。旧ファームは None。 */
+	startReady?: number | null,
+	/**  推定姿勢の傾斜角 [rad]。旧ファームは None。 */
+	tilt?: number | null,
+};
+
+/**  EVT_STATUS。 */
+export type StatusTelemetry_Serialize = {
+	opState: number,
+	mode: number,
+	enable: number,
+	estop: number,
+	imuOk: number,
+	calibState: number,
+	/**  START_OPERATION 受理条件の充足ビット（ready_mask）。旧ファームは None。 */
+	startReady: number | null,
+	/**  推定姿勢の傾斜角 [rad]。旧ファームは None。 */
+	tilt: number | null,
 };
 
 export type TestEchoInfo = {

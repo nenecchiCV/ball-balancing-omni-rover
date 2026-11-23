@@ -64,14 +64,16 @@
 |---|---|---|---|
 | `0x80` | `ACK` | `req_type u8, seq u8, result u8`（3 B） | リクエスト受理結果。`result`: `0`=OK、`1`=INVALID_PARAM、`2`=REJECTED_STATE（モード・動作状態の不整合等）、`3`=NOT_READY（推定・制御の準備未完）、`4`=UNSUPPORTED |
 | `0x81` | `PONG` | `seq u8, proto_ver u8, robot_caps u8`（3 B） | `PING` 応答。`robot_caps` ビット: bit0=位置制御対応、bit1=オドメトリ送出対応、bit2=ログ送出対応、bit3=テストビルド、bit4=運転管理対応（`START_OPERATION`/`STOP_OPERATION`/`CALIBRATE_IMU`/`SET_POSE`） |
-| `0x82` | `STATUS` | `seq u8, op_state u8, mode u8, enable u8, estop u8, imu_ok u8, calib_state u8, uptime_ms u32`（11 B） | `GET_STATUS` 応答。`op_state`: `0`=待機、`1`=動作中、`2`=終端（fault）、`3`=調整中（`TUNE_DEADZONE` 掃引実行中）。`mode` は `SET_CONTROL_MODE` と同じ定義。`calib_state`: `0`=未実施、`1`=実施中、`2`=完了、`3`=失敗 |
+| `0x82` | `STATUS` | `seq u8, op_state u8, mode u8, enable u8, estop u8, imu_ok u8, calib_state u8, uptime_ms u32, ready_mask u8, tilt f32`（16 B。旧ファームは拡張部なしの 11 B） | `GET_STATUS` 応答。`op_state`: `0`=待機、`1`=動作中、`2`=終端（fault）、`3`=調整中（`TUNE_DEADZONE` 掃引実行中）。`mode` は `SET_CONTROL_MODE` と同じ定義。`calib_state`: `0`=未実施、`1`=実施中、`2`=完了、`3`=失敗 |
 | `0x83` | `CALIB_RESULT` | `seq u8, result u8, gyro_bias_z f32`（6 B） | `CALIBRATE_IMU` の完了報告（単発応答として即時送出）。`result`: `0`=成功（静止資格成立）、`1`=失敗（静止未検出・タイムアウト）、`2`=失敗（IMU 異常） |
 | `0x84` | `TEST_ECHO_RESP` | `seq u8, data u8[LEN-1]` | `TEST_ECHO` ペイロードのエコー |
 | `0x85` | `PARAMS` | `seq u8, total u8, count u8, [key u8, value f32]×count` | `GET_PARAMS` 応答。`total` は調整対象 key の全件数、`count` は本フレーム内の件数。収集件数が `total` に達するまで `start_key` を進めて再要求する |
 | `0x86` | `TUNE_RESULT` | `seq u8, result u8, dz_start f32[3], dz_keep f32[3], recommended f32[3]`（38 B） | `TUNE_DEADZONE` の完了報告（単発応答として即時送出）。`result`: `0`=成功、`1`=中断（E-Stop・タイムアウト）、`2`=失敗（車輪未回転）。`dz_start` は上り掃引の立上りデューティ、`dz_keep` は下り掃引の維持限界、`recommended` は推奨 `deadzone_comp`（車輪ごと） |
 | `0x90` | `EVT_POSE` | `t_ms u32, x f32, y f32, yaw f32, vx f32, vy f32, yaw_rate f32`（28 B） | 自己位置推定結果。`SUBSCRIBE` で指定したレートで送出 |
 | `0x91` | `EVT_LOG` | `level u8, text utf8[LEN-1]` | ログメッセージ。`level`: `0`=DEBUG、`1`=INFO、`2`=WARN、`3`=ERROR |
-| `0x92` | `EVT_STATUS` | `op_state u8, mode u8, enable u8, estop u8, imu_ok u8, calib_state u8`（6 B） | 状態変化時の送出。購読時は変化検出 + 10 Hz 上限のハートビートで送出する。フィールド定義は `STATUS` と同じ |
+| `0x92` | `EVT_STATUS` | `op_state u8, mode u8, enable u8, estop u8, imu_ok u8, calib_state u8, ready_mask u8, tilt f32`（11 B。旧ファームは拡張部なしの 6 B） | 状態変化時の送出。購読時は変化検出（先頭 7 B）+ 10 Hz 上限のハートビートで送出する。`ready_mask`/`tilt` 以外のフィールド定義は `STATUS` と同じ |
+
+`ready_mask` は `START_OPERATION` 受理条件の充足を bit=1 で示すビットマスク: `0x01`=IMU 正常、`0x02`=E-Stop 解除、`0x04`=推定器 qualification 完了（0.5 秒静止）、`0x08`=傾斜が転倒角未満。`tilt` は推定姿勢の傾斜角 [rad]（`sqrt(roll² + pitch²)`）。`START_OPERATION` が `NOT_READY` で拒否された場合、これらで未充足条件を特定できる。 |
 
 ## 調整対象パラメータ（`SET_PARAM`/`GET_PARAMS` の key）
 

@@ -172,7 +172,8 @@ pub enum Response {
     Ack { req_type: u8, seq: u8, result: u8 },
     Pong { seq: u8, proto_ver: u8, robot_caps: u8 },
     Status { seq: u8, op_state: u8, mode: u8, enable: u8, estop: u8, imu_ok: u8,
-             calib_state: u8, uptime_ms: u32 },
+             calib_state: u8, uptime_ms: u32, ready: Option<u8>,
+             tilt: Option<f32> },
     CalibResult { seq: u8, result: u8, gyro_bias_z: f32 },
     TestEchoResp { seq: u8, data: Vec<u8> },
     Params { seq: u8, total: u8, entries: Vec<(u8, f32)> },
@@ -194,16 +195,25 @@ impl Response {
                 proto_ver: p[1],
                 robot_caps: p[2],
             }),
-            msg_type::STATUS if p.len() == 11 => Some(Response::Status {
-                seq: p[0],
-                op_state: p[1],
-                mode: p[2],
-                enable: p[3],
-                estop: p[4],
-                imu_ok: p[5],
-                calib_state: p[6],
-                uptime_ms: u32::from_le_bytes(p[7..11].try_into().ok()?),
-            }),
+            msg_type::STATUS if p.len() == 11 || p.len() == 16 => {
+                Some(Response::Status {
+                    seq: p[0],
+                    op_state: p[1],
+                    mode: p[2],
+                    enable: p[3],
+                    estop: p[4],
+                    imu_ok: p[5],
+                    calib_state: p[6],
+                    uptime_ms: u32::from_le_bytes(p[7..11].try_into().ok()?),
+                    // 拡張部: ready_mask u8 + tilt f32（旧ファームは 11 B で未送信）。
+                    ready: (p.len() == 16).then_some(p[11]),
+                    tilt: if p.len() == 16 {
+                        Some(f32::from_le_bytes(p[12..16].try_into().ok()?))
+                    } else {
+                        None
+                    },
+                })
+            }
             msg_type::CALIB_RESULT if p.len() == 6 => Some(Response::CalibResult {
                 seq: p[0],
                 result: p[1],
@@ -269,6 +279,8 @@ pub enum RobotEvent {
         estop: u8,
         imu_ok: u8,
         calib_state: u8,
+        ready: Option<u8>,
+        tilt: Option<f32>,
     },
 }
 
@@ -298,14 +310,23 @@ impl RobotEvent {
                 level: p[0],
                 text: String::from_utf8_lossy(&p[1..]).into_owned(),
             }),
-            msg_type::EVT_STATUS if p.len() == 6 => Some(RobotEvent::Status {
-                op_state: p[0],
-                mode: p[1],
-                enable: p[2],
-                estop: p[3],
-                imu_ok: p[4],
-                calib_state: p[5],
-            }),
+            msg_type::EVT_STATUS if p.len() == 6 || p.len() == 11 => {
+                Some(RobotEvent::Status {
+                    op_state: p[0],
+                    mode: p[1],
+                    enable: p[2],
+                    estop: p[3],
+                    imu_ok: p[4],
+                    calib_state: p[5],
+                    // 拡張部: ready_mask u8 + tilt f32（旧ファームは 6 B で未送信）。
+                    ready: (p.len() == 11).then_some(p[6]),
+                    tilt: if p.len() == 11 {
+                        Some(f32::from_le_bytes(p[7..11].try_into().ok()?))
+                    } else {
+                        None
+                    },
+                })
+            }
             _ => None,
         }
     }

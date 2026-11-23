@@ -39,6 +39,15 @@ export const CALIB_STATE = {
 } as const;
 export type CalibState = (typeof CALIB_STATE)[keyof typeof CALIB_STATE];
 
+// STATUS/EVT_STATUS 拡張部の ready_mask ビット（START_OPERATION 受理条件、
+// bit=1 で充足）。旧ファーム（6 B ペイロード）では startReady が null。
+export const READY_MASK = {
+  imuOk: 0x01,
+  estopFree: 0x02,
+  qualified: 0x04,
+  tiltOk: 0x08,
+} as const;
+
 // 調整対象パラメータの key ↔ 名称・単位写像（robot_link_protocol.md
 // 「調整対象パラメータ」準拠）。ゲイン行列は [row][col] で展開する。
 export interface ParamDef {
