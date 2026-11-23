@@ -77,7 +77,8 @@
 
 | key | パラメータ | 範囲 | 説明 |
 |---|---|---|---|
-| `0x00-0x02` | `drive.deadzone_comp[0-2]` | 0–0.3 | 車輪ごとの駆動不感帯補償デューティ。`duty += sign(duty)*comp`（0 指令は 0 のまま） |
+| `0x00-0x02` | `drive.deadzone_comp_pos[0-2]` | 0–0.3 | 車輪ごとの駆動不感帯補償デューティ（正転用）。`duty += sign(duty)*comp_pos`（0 指令は 0 のまま） |
+| `0x03-0x05` | `drive.deadzone_comp_neg[0-2]` | 0–0.3 | 車輪ごとの駆動不感帯補償デューティ（逆転用）。`duty -= sign(duty)*comp_neg` 相当（`duty<0` で `comp_neg` を加算方向へ適用） |
 | `0x10` | `lqi.tracking_gain_scale` | 0.1–3.0 | 速度外ループ追従ゲインのスケール |
 | `0x11` | `lqi.anti_windup_gain` | 0–20 | 積分アンチワインドアップ |
 | `0x12` | `torque_drive.yaw_damping_gain` | 0–1 | ヨーレート減衰 |

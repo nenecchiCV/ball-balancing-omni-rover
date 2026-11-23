@@ -36,10 +36,11 @@ export function TuningPage() {
   const [dirty, setDirty] = useState<Set<number>>(new Set());
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [tuneDir, setTuneDir] = useState("1");
+  const [tuneDir, setTuneDir] = useState<"pos" | "neg" | "both">("pos");
   const [tuneMax, setTuneMax] = useState("0.25");
   const [tuneRamp, setTuneRamp] = useState("15");
-  const [tuneResult, setTuneResult] = useState<TuneResultInfo | null>(null);
+  const [tuneResultPos, setTuneResultPos] = useState<TuneResultInfo | null>(null);
+  const [tuneResultNeg, setTuneResultNeg] = useState<TuneResultInfo | null>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -112,33 +113,43 @@ export function TuningPage() {
   };
 
   const tune = async () => {
-    const dir = parseFloat(tuneDir) >= 0 ? 1 : -1;
     const maxDuty = parseFloat(tuneMax);
     const rampS = parseFloat(tuneRamp);
     if (Number.isNaN(maxDuty) || Number.isNaN(rampS)) {
       setNote("掃引パラメータが数値ではない");
       return;
     }
+    // 両方向は正転→逆転の順に 2 セッション連続実行（時間は 2 倍）。
+    const dirs: number[] =
+      tuneDir === "both" ? [1, -1] : [tuneDir === "pos" ? 1 : -1];
+    const sweepSecs = Math.ceil(2 * rampS * dirs.length);
     if (
       !(await confirmAsync(
-        `不感帯掃引を開始します（約 ${Math.ceil(2 * rampS)} 秒）。` +
+        `不感帯掃引を開始します（約 ${sweepSecs} 秒）。` +
           "車体を手で保持し、3 輪すべて地面から浮かせた無負荷状態にしてください。" +
           "掃引中モータが回転します。よろしいですか？",
       ))
     )
       return;
     setBusy(true);
-    setTuneResult(null);
-    setNote(`掃引実行中…（約 ${Math.ceil(2 * rampS)} 秒、完了まで操作しない）`);
+    if (dirs.includes(1)) setTuneResultPos(null);
+    if (dirs.includes(-1)) setTuneResultNeg(null);
     try {
-      const r = await robotTuneDeadzone(dir, maxDuty, rampS);
-      setTuneResult(r);
-      setNote(
-        r.result === 0
-          ? "掃引完了。推奨値を確認して「推奨値を適用」してください"
-          : "掃引が中断されました（E-Stop/キャンセル）",
-      );
-      pushLog(r.result === 0 ? 1 : 2, `不感帯掃引 result=${r.result}`);
+      for (const [i, dir] of dirs.entries()) {
+        const label = dir > 0 ? "正転" : "逆転";
+        setNote(
+          `掃引実行中（${label} ${i + 1}/${dirs.length}、約 ${Math.ceil(2 * rampS)} 秒、完了まで操作しない）`,
+        );
+        const r = await robotTuneDeadzone(dir, maxDuty, rampS);
+        if (dir > 0) setTuneResultPos(r);
+        else setTuneResultNeg(r);
+        pushLog(r.result === 0 ? 1 : 2, `不感帯掃引(${label}) result=${r.result}`);
+        if (r.result !== 0) {
+          setNote(`掃引（${label}）が中断されました（E-Stop/キャンセル）`);
+          return;
+        }
+      }
+      setNote("掃引完了。推奨値を確認して「推奨値を適用」してください");
     } catch (e) {
       setNote(`掃引失敗: ${formatError(e)}`);
       pushLog(3, `不感帯掃引失敗: ${formatError(e)}`);
@@ -148,14 +159,25 @@ export function TuningPage() {
   };
 
   const applySuggest = async () => {
-    if (!tuneResult) return;
+    const entries: [TuneResultInfo | null, number][] = [
+      [tuneResultPos, 0x00],
+      [tuneResultNeg, 0x03],
+    ];
+    const targets = entries.filter(([r]) => r?.result === 0);
+    if (targets.length === 0) return;
     try {
-      for (let i = 0; i < 3; ++i) {
-        await robotSetParam(i, tuneResult.suggest[i] ?? 0);
+      const applied: string[] = [];
+      for (const [r, base] of targets) {
+        for (let i = 0; i < 3; ++i) {
+          await robotSetParam(base + i, r!.suggest[i] ?? 0);
+        }
+        setDirty((d) => new Set([...d, base, base + 1, base + 2]));
+        applied.push(base === 0 ? "正転" : "逆転");
       }
-      setDirty((d) => new Set([...d, 0, 1, 2]));
       await reload();
-      setNote("推奨 deadzone_comp を適用しました（保存は「保存」ボタン）");
+      setNote(
+        `推奨 deadzone_comp（${applied.join("・")}）を適用しました（保存は「保存」ボタン）`,
+      );
     } catch (e) {
       setNote(`推奨値適用失敗: ${formatError(e)}`);
     }
@@ -261,11 +283,17 @@ export function TuningPage() {
         <div className="row">
           <label>
             方向{" "}
-            <input
-              className="num w-16"
+            <select
+              className="num w-32"
               value={tuneDir}
-              onChange={(e) => setTuneDir(e.target.value)}
-            />
+              onChange={(e) =>
+                setTuneDir(e.target.value as "pos" | "neg" | "both")
+              }
+            >
+              <option value="pos">正転</option>
+              <option value="neg">逆転</option>
+              <option value="both">両方向（順次）</option>
+            </select>
           </label>
           <label>
             max duty{" "}
@@ -287,32 +315,50 @@ export function TuningPage() {
             {busy ? "掃引中…" : "掃引実行"}
           </button>
         </div>
-        {tuneResult && (
-          <div className="mt-2">
-            <table className="list">
-              <thead>
-                <tr>
-                  <th>車輪</th>
-                  <th>立上り duty</th>
-                  <th>維持 duty</th>
-                  <th>推奨 comp</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[0, 1, 2].map((i) => (
-                  <tr key={i}>
-                    <th>{i}</th>
-                    <td>{tuneResult.onset[i]?.toFixed(4) ?? "-"}</td>
-                    <td>{tuneResult.sustain[i]?.toFixed(4) ?? "-"}</td>
-                    <td>{tuneResult.suggest[i]?.toFixed(4) ?? "-"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {(tuneResultPos || tuneResultNeg) && (
+          <div className="mt-2 space-y-3">
+            {(
+              [
+                { label: "正転", r: tuneResultPos },
+                { label: "逆転", r: tuneResultNeg },
+              ] as { label: string; r: TuneResultInfo | null }[]
+            )
+              .filter((e): e is { label: string; r: TuneResultInfo } => e.r != null)
+              .map(({ label, r }) => (
+                <div key={label}>
+                  <h3 className="mb-1 text-[14px]">{label}</h3>
+                  <table className="list">
+                    <thead>
+                      <tr>
+                        <th>車輪</th>
+                        <th>立上り duty</th>
+                        <th>維持 duty</th>
+                        <th>推奨 comp</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[0, 1, 2].map((i) => (
+                        <tr key={i}>
+                          <th>{i}</th>
+                          <td>{r.onset[i]?.toFixed(4) ?? "-"}</td>
+                          <td>{r.sustain[i]?.toFixed(4) ?? "-"}</td>
+                          <td>{r.suggest[i]?.toFixed(4) ?? "-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {r.result !== 0 && (
+                    <p className="muted mt-1">中断/失敗のため適用対象外</p>
+                  )}
+                </div>
+              ))}
             <button
-              className="btn mt-2"
+              className="btn"
               onClick={applySuggest}
-              disabled={!enabled || tuneResult.result !== 0}
+              disabled={
+                !enabled ||
+                (tuneResultPos?.result !== 0 && tuneResultNeg?.result !== 0)
+              }
             >
               推奨値を deadzone_comp へ適用
             </button>

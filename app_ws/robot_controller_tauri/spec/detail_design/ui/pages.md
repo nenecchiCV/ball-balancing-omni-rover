@@ -17,7 +17,7 @@
 - `odometry-page`（`/odometry`）— `EVT_POSE` 購読（`robotSubscribe(0x90, 20)`）。telemetry store の `pose`/`trail` を `odometry-map` へ渡し、数値表示と `robotResetOdometry`（確認ダイアログ付き、成功時 `clearTrail`）を提供する（FR-04）。
 - `logs-page`（`/logs`）— `robotSubscribe(0x91, 0)` でロボットの `EVT_LOG` を購読する。表示は logs store の `entries`（robot/app ソース混在）で、レベルフィルタ・一時停止・クリアを提供する（FR-05）。
 - `test-page`（`/test`）— テストコマンド送受信画面（FR-08）。`robotPing`（PongInfo 表示）、`robotGetStatus`（RobotStatusInfo 全項目表示）、`robotTestEcho`（任意バイト列またはテキスト入力→エコー内容と rttMs 表示）の実行ボタンと結果リストを持つ。本番ファームとテストファーム（`robotCaps` bit3）の両方で使い、`robotCaps` も併せて表示する。テストファーム使用時は「STM32 側で `test link` を起動してから実行」のガイドを併記する（FR-10）。
-- `tuning-page`（`/tuning`）— パラメータ調整画面（FR-09, FR-10）。`robotGetParams` で調整対象パラメータを key 昇順・名称付きで一覧表示し、各行を `robotSetParam` で編集・即時反映する（RAM のみ、未保存注記あり）。「保存」=`robotSaveParams`（待機中のみ）、「既定値に戻す」=`robotResetParams`（確認ダイアログ付き）。不感帯掃引は「車体を手で保持し 3 輪を無負荷にして実行（掃引中モータ回転）」のガイド + 確認のうえ `robotTuneDeadzone` を実行し、`TuneResultInfo` の立上り・維持・推奨値を車輪ごとに表示、「推奨値を適用」で `deadzone_comp` へ `SET_PARAM` する。IMU 特性は現在値表示 + `robotCalibrateImu` 実行 + 保存を提供する。`opState!==standby` 時は各操作を disabled とする。
+- `tuning-page`（`/tuning`）— パラメータ調整画面（FR-09, FR-10）。`robotGetParams` で調整対象パラメータを key 昇順・名称付きで一覧表示し、各行を `robotSetParam` で編集・即時反映する（RAM のみ、未保存注記あり）。「保存」=`robotSaveParams`（待機中のみ）、「既定値に戻す」=`robotResetParams`（確認ダイアログ付き）。不感帯掃引は「車体を手で保持し 3 輪を無負荷にして実行（掃引中モータ回転）」のガイド + 確認のうえ `robotTuneDeadzone` を実行し、`TuneResultInfo` の立上り・維持・推奨値を車輪ごとに表示する。方向は正転/逆転/両方向（順次 2 回掃引）のセレクトで指定し、「推奨値を適用」で方向に対応する `deadzone_comp_pos`/`deadzone_comp_neg` へ `SET_PARAM` する。IMU 特性は現在値表示 + `robotCalibrateImu` 実行 + 保存を提供する。`opState!==standby` 時は各操作を disabled とする。
 
 ## 内部状態
 

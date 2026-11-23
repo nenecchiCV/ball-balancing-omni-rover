@@ -48,9 +48,12 @@ export interface ParamDef {
   readOnly?: boolean;
 }
 export const PARAM_DEFS: ParamDef[] = [
-  { key: 0x00, name: "drive.deadzone_comp[0]" },
-  { key: 0x01, name: "drive.deadzone_comp[1]" },
-  { key: 0x02, name: "drive.deadzone_comp[2]" },
+  { key: 0x00, name: "drive.deadzone_comp_pos[0]" },
+  { key: 0x01, name: "drive.deadzone_comp_pos[1]" },
+  { key: 0x02, name: "drive.deadzone_comp_pos[2]" },
+  { key: 0x03, name: "drive.deadzone_comp_neg[0]" },
+  { key: 0x04, name: "drive.deadzone_comp_neg[1]" },
+  { key: 0x05, name: "drive.deadzone_comp_neg[2]" },
   { key: 0x10, name: "lqi.tracking_gain_scale" },
   { key: 0x11, name: "lqi.anti_windup_gain" },
   { key: 0x12, name: "torque_drive.yaw_damping_gain" },
