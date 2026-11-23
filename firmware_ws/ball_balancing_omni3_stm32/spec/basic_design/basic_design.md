@@ -18,7 +18,7 @@
 | 層 | 責務 | 例 |
 |---|---|---|
 | `manager` | 機能管理・タスク統合・コンポーネント配線 | `robot_application`, `task_scheduler` |
-| `feature` | 機能（推定・制御・計測・指令生成・リンク管理） | `state_estimator`, `balance_controller`, `wheel_servo`, `link_session`, `odometry`, `position_controller` |
+| `feature` | 機能（推定・制御・計測・指令生成・リンク管理） | `state_estimator`, `balance_controller`, `wheel_servo`, `link_session`, `odometry`, `position_controller`, `operation_manager` |
 | `device` | 1 つの IC・センサ/アクチュエータ | `lsm6dso`, `mdd3a_motor`, `wheel_encoder` |
 | `peripheral` | MCU ペリフェラル制御（Zephyr ドライバ/LL の薄いラッパ） | `gpio_pin`, `pwm_output`, `encoder_counter`, `control_tick`, `timebase`, `debug_uart`, `link_uart` |
 | `common` | 純粋ユーティリティ・定数・データ構造（依存なし） | `vector_math`, `control_params`, `imu_sample` |
@@ -48,7 +48,7 @@ TIM6 の 1 kHz 更新割込を基準に、単一の制御スレッド上で 3 �
 - 制御スレッド（本アプリの `run()`）が上記 3 タスクを逐次実行する。
 - **リンクスレッド**（`robot_application` が生成する別 Zephyr スレッド）が USART1 の受信フレーム処理とイベント送出を担当する。制御スレッドの実時間性を阻害しないよう、受信デコード・応答生成・TX 送出はすべてリンクスレッド側で行う。
 - Zephyr の shell スレッドからは `snapshot()` 経由でのみ状態を参照する。`snapshot()` は `irq_lock()` で短いクリティカル区間を取り、構造体ごと整合コピーを返す。
-- リンクスレッド ↔ 制御スレッド間の共有データ（速度指令スロット・ロボット状態メールボックス・購読状態・位置目標スロット）は、小さい構造体の `irq_lock()` 整合コピーで受け渡す。イベント送出は `k_msgq`（イベントキュー）で受け渡し、ドロップ発生時は計数のみ行う。
+- リンクスレッド ↔ 制御スレッド間の共有データ（速度指令スロット・ロボット状態メールボックス・購読状態・位置目標スロット・動作状態）は、小さい構造体の `irq_lock()` 整合コピーで受け渡す。イベント送出は `k_msgq`（イベントキュー）で受け渡し、ドロップ発生時は計数のみ行う。
 - `telem_enabled_` のような 1 ワードフラグは `volatile` で共有する（Cortex-M 上でロード/ストアはアトミック）。
 
 ## 通信
@@ -56,7 +56,7 @@ TIM6 の 1 kHz 更新割込を基準に、単一の制御スレッド上で 3 �
 - **センサ**: LSM6DSO は Zephyr sensor ドライバ（`st,lsm6dso`）経由で I2C1 から読取る。読取は外側タスクの先頭で行い、推定・制御は同一サンプルを共有する。軸写像は `device/lsm6dso` が `mat33` で適用する。
 - **車輪**: エンコーダは devicetree の `st,stm32-qdec` ノードが TIM エンコーダモードを初期化する。`encoder_counter` は `LL_TIM` 経由で `CNT` を読み、2^n CPR 設定による自由周回の 16 ビット差分を取得する。MxA/MxB の CW/CCW-PWM は内側タスクで Zephyr PWM ドライバ経由で更新する。
 - **ホスト**: USART2（115200 8N1）を Zephyr console/shell バックエンドとして使用する。`bb status` で状態照会、`bb telem on|off` で CSV テレメトリの送出を切替える。テレメトリ本体は `printk` 経由で送出する。
-- **リンク**: USART1（115200 8N1、PC4=TX / PC5=RX）は `uart_wireless_converter_esp32` 経由の BLE 透過リンクで、`app_ws/robot_controller_tauri` とロボットリンクプロトコル（`app_ws/robot_controller_tauri/spec/basic_design/robot_link_protocol.md` が正本）を交換する。フレーム符号化は `common/link_protocol` に、USART1 ドライバは `peripheral/link_uart` に、セッション管理は `feature/link_session` に集約する。受信は割込駆動リングバッファ + リンクスレッド処理、送信は割込駆動 TX リングで制御スレッドをブロックしない。
+- **リンク**: USART1（115200 8N1、PC4=TX / PC5=RX）は `uart_wireless_converter_esp32` 経由の BLE 透過リンクで、`app_ws/robot_controller_tauri` とロボットリンクプロトコル（`app_ws/robot_controller_tauri/spec/basic_design/robot_link_protocol.md` が正本）を交換する。フレーム符号化は `common/link_protocol` に、USART1 ドライバは `peripheral/link_uart` に、セッション管理は `feature/link_session` に、動作状態（待機/動作中/終端）の管理は `feature/operation_manager` に集約する。受信は割込駆動リングバッファ + リンクスレッド処理、送信は割込駆動 TX リングで制御スレッドをブロックしない。購読イベントは `link_session` がバッファへ集約し `link.event_batch_ms`（既定 100 ms）周期でまとめて送出し、単発応答は即時送出する（FR-14）。
 
 ## メモリ管理
 
@@ -99,7 +99,8 @@ TIM6 の 1 kHz 更新割込を基準に、単一の制御スレッド上で 3 �
 
 ## 安全性
 
+- 動作状態（FR-12）: 起動直後は `standby`（モータ無駆動）とし、`START_OPERATION` の受理で `operating` へ、`STOP_OPERATION` で `standby` へ戻る。`fault`（mode 0 終端相当）は `operating` 中の異常のみで遷移し、リセット必須とする。
 - E-Stop は GPIO コールバックで即時検出し、イネーブルを落とす。mode 0 は終端で、以後全タスクのトルク出力が 0 に固定される。
 - IMU 不在・読取失敗時は推定を停止し mode 0 に移行する（`state_estimator` が健全性フラグを返す）。
-- 起動直後は `startup_torque_ramp_time`（0.4 s）で全トルク経路をランプし、初期トランジェントを抑える。
-- リンク安全機構（FR-09）: 最終 `SET_VELOCITY` 受信から 500 ms 無指令で指令をゼロとするウォッチドッグと、UART アイドル 1 s 超過での指令ゼロ・購読リセットを `link_session` が行う。
+- 動作開始時は `startup_torque_ramp_time`（0.4 s）で全トルク経路をランプし、初期トランジェントを抑える。
+- リンク安全機構（FR-09）: 最終 `SET_VELOCITY` 受信から 500 ms 無指令で指令をゼロとするウォッチドッグと、UART アイドル 1 s 超過での指令ゼロ・購読リセットを `link_session` が行う。リンク断絶時は `operating` を維持してその場保持とし、`standby` へは遷移しない（転倒防止）。

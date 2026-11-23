@@ -272,10 +272,12 @@ struct param_set {
     float arrive_radius = 0.03F;  // 到達判定半径 [m]
   } position;
 
-  // FR-09 ロボットリンク安全監視。
+  // FR-09 ロボットリンク安全監視 + FR-13/FR-14 運転管理。
   struct link {
-    uint32_t watchdog_ms = 500;  // SET_VELOCITY 指令の有効期限
-    uint32_t idle_ms = 1000;     // UART 無受信フェイルセーフ
+    uint32_t watchdog_ms = 500;      // SET_VELOCITY 指令の有効期限
+    uint32_t idle_ms = 1000;         // UART 無受信フェイルセーフ
+    uint32_t event_batch_ms = 100;   // イベントバッチ送出周期（FR-14）
+    uint32_t calib_timeout_ms = 5000;  // CALIBRATE_IMU 完了期限（FR-13）
   } link;
 };
 

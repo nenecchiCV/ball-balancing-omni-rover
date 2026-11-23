@@ -40,6 +40,10 @@ class state_estimator {
 
   static void init(const config& cfg);
   static output step(const imu_sample& imu, const vec3& wheel_rate, float dt);
+  // ジャイロバイアス学習状態（gyro_bias_z / EKF bias / qualification_time）
+  // をリセットする（CALIBRATE_IMU、FR-13）。姿勢・速度等は保持する。
+  // 外側タスクから呼ぶ（step と同一スレッドのため排他不要）。
+  static void reset_bias();
 
  private:
   static inline const param_set* p_ = nullptr;

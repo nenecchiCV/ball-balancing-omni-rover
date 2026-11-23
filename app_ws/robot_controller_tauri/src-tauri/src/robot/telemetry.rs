@@ -23,10 +23,12 @@ pub struct PoseTelemetry {
 #[derive(Debug, Clone, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct StatusTelemetry {
+    pub op_state: u8,
     pub mode: u8,
     pub enable: u8,
     pub estop: u8,
     pub imu_ok: u8,
+    pub calib_state: u8,
 }
 
 impl From<&RobotEvent> for Option<PoseTelemetry> {
@@ -58,15 +60,19 @@ impl From<&RobotEvent> for Option<StatusTelemetry> {
     fn from(ev: &RobotEvent) -> Self {
         match ev {
             RobotEvent::Status {
+                op_state,
                 mode,
                 enable,
                 estop,
                 imu_ok,
+                calib_state,
             } => Some(StatusTelemetry {
+                op_state: *op_state,
                 mode: *mode,
                 enable: *enable,
                 estop: *estop,
                 imu_ok: *imu_ok,
+                calib_state: *calib_state,
             }),
             _ => None,
         }

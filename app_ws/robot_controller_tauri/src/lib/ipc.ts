@@ -24,6 +24,12 @@ export const robotStop = () => commands.robotStop();
 export const robotSetMode = (mode: number) => commands.robotSetMode(mode);
 export const robotResetOdometry = () => commands.robotResetOdometry();
 export const robotGetStatus = () => commands.robotGetStatus();
+export const robotStartOperation = () => commands.robotStartOperation();
+export const robotStopOperation = () => commands.robotStopOperation();
+export const robotSetPose = (x: number, y: number, yaw: number) =>
+  commands.robotSetPose(x, y, yaw);
+export const robotCalibrateImu = () => commands.robotCalibrateImu();
+export const robotTestEcho = (data: number[]) => commands.robotTestEcho(data);
 export const robotSubscribe = (eventType: number, rateHz: number) =>
   commands.robotSubscribe(eventType, rateHz);
 export const robotUnsubscribe = (eventType: number) =>

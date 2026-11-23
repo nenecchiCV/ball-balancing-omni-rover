@@ -14,7 +14,7 @@ import {
   watchStatus,
   watchTelemetry,
 } from "@/lib/ipc";
-import type { LinkState } from "@/lib/types";
+import { OP_STATE, type LinkState } from "@/lib/types";
 import { useConnectionStore } from "@/stores/connection";
 import { useLogStore } from "@/stores/logs";
 import { useTelemetryStore } from "@/stores/telemetry";
@@ -25,6 +25,7 @@ const NAV = [
   { href: "/position", label: "Position" },
   { href: "/odometry", label: "Odometry" },
   { href: "/logs", label: "Logs" },
+  { href: "/test", label: "Test" },
 ];
 
 const STATE_LABEL: Record<LinkState, string> = {
@@ -34,9 +35,22 @@ const STATE_LABEL: Record<LinkState, string> = {
   connected: "接続済",
 };
 
+const OP_STATE_LABEL: Record<number, string> = {
+  [OP_STATE.standby]: "待機",
+  [OP_STATE.operating]: "動作中",
+  [OP_STATE.fault]: "故障",
+};
+
+const OP_STATE_STYLE: Record<number, string> = {
+  [OP_STATE.standby]: "bg-[#333a44] text-text",
+  [OP_STATE.operating]: "bg-[#1d4d2b] text-ok",
+  [OP_STATE.fault]: "bg-[#7a1f1f] text-white",
+};
+
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const linkState = useConnectionStore((s) => s.linkState);
+  const opState = useTelemetryStore((s) => s.status?.opState);
   const pushLog = useLogStore((s) => s.push);
   const stopping = useRef(false);
 
@@ -83,7 +97,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-line bg-panel px-4 py-2.5">
-          <span
+          <div className="flex items-center gap-2">
+            <span
             className={`rounded-[10px] px-2.5 py-1 text-[13px] ${
               linkState === "connected"
                 ? "bg-[#1d4d2b] text-ok"
@@ -94,6 +109,16 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             {STATE_LABEL[linkState]}
           </span>
+            {linkState === "connected" && opState != null && (
+              <span
+                className={`rounded-[10px] px-2.5 py-1 text-[13px] ${
+                  OP_STATE_STYLE[opState] ?? "bg-[#333a44] text-text"
+                }`}
+              >
+                {OP_STATE_LABEL[opState] ?? `状態 ${opState}`}
+              </span>
+            )}
+          </div>
           <button
             className="cursor-pointer rounded-md border border-[#a33] bg-[#7a1f1f] px-7 py-2 text-[15px] font-bold text-white disabled:cursor-default disabled:opacity-40"
             onClick={emergencyStop}

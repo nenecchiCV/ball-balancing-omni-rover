@@ -18,6 +18,11 @@ async fn robot_set_pose_target(state, x: f32, y: f32, speed_limit: f32) -> Resul
 async fn robot_stop(state) -> Result<(), AppError>
 async fn robot_set_mode(state, mode: u8) -> Result<(), AppError>
 async fn robot_reset_odometry(state) -> Result<(), AppError>
+async fn robot_start_operation(state) -> Result<(), AppError>
+async fn robot_stop_operation(state) -> Result<(), AppError>
+async fn robot_set_pose(state, x: f32, y: f32, yaw: f32) -> Result<(), AppError>
+async fn robot_calibrate_imu(state) -> Result<CalibResultInfo, AppError>
+async fn robot_test_echo(state, payload: Vec<u8>) -> Result<TestEchoInfo, AppError>
 async fn robot_get_status(state) -> Result<RobotStatusInfo, AppError>
 async fn robot_subscribe(state, event_type: u8, rate_hz: u8) -> Result<(), AppError>
 async fn robot_unsubscribe(state, event_type: u8) -> Result<(), AppError>
@@ -38,9 +43,11 @@ async fn watch_log(state, channel: Channel<LogMessage>) -> Result<(), AppError>
 
 ## 振る舞い
 
-- 各 command は `Request` を組み立てて `Session` を呼ぶ。`robot_set_velocity` は `send_no_ack` 経路、それ以外は `request` で応答を待ち、`ack_to_result` が `result != 0` を `AppError::Rejected` として返す。
+- 各 command は `Request` を組み立てて `Session` を呼ぶ。`robot_set_velocity` は `send_no_ack` 経路、`robot_calibrate_imu`/`robot_test_echo` は `request_data`（2 段応答）経路、それ以外は `request` で応答を待ち、`ack_to_result` が `result != 0` を `AppError::Rejected` として返す。
 - `robot_set_mode` は mode 上限（`control_mode::POSITION`）を検証し、超過は `InvalidParam`。
-- `PongInfo` は `{ protoVer, robotCaps }`、`RobotStatusInfo` は `{ mode, enable, estop, imuOk, uptimeMs }`（camelCase）。
+- `robot_calibrate_imu` は `request_data` で `CALIB_RESULT` を待ち、`CalibResultInfo { result, gyroBiasZ }` を返す。`result!=0`（タイムアウト/IMU異常）も正常応答として返し、失敗表示は UI 側で行う。
+- `robot_test_echo` は `request_data` で `TEST_ECHO_RESP` を待ち、往復時間を測って `TestEchoInfo { data, rttMs }` を返す。`data` は送信値と一致する前提のエコーペイロード。
+- `PongInfo` は `{ protoVer, robotCaps }`、`RobotStatusInfo` は `{ opState, mode, enable, estop, imuOk, calibState, uptimeMs }`（camelCase）。
 
 ## error.rs（AppError）
 

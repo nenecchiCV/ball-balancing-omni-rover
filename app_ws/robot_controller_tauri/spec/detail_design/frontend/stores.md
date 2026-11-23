@@ -19,7 +19,7 @@ export const useConnected = () => /* linkState === "connected" 専用 selector *
 ```ts
 interface TelemetryStore {
   pose: PoseTelemetry | null;        // 最新 EVT_POSE
-  status: StatusTelemetry | null;    // 最新 EVT_STATUS
+  status: StatusTelemetry | null;    // 最新 EVT_STATUS（opState/calibState を含む。動作状態バッジ・準備パネル・操作ガードはここから導出）
   trail: [number, number][];         // 軌跡リング（20000 点上限）
   pushPose(p): void;   // x/y 欠落フレームは軌跡へ追加しない
   setStatus(s): void;

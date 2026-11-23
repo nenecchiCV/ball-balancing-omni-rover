@@ -132,4 +132,9 @@ void uart_echo_test::stop_cb() {
   debug_uart::write_line("echo test: stopped");
 }
 
+void uart_echo_test::resume() {
+  uart_irq_callback_set(uart_dev, uart_rx_cb);
+  uart_irq_rx_enable(uart_dev);
+}
+
 }  // namespace bb

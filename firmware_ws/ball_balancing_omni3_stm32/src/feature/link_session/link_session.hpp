@@ -17,12 +17,15 @@ constexpr uint8_t VELOCITY = 1;
 constexpr uint8_t POSITION = 2;
 }  // namespace link_mode
 
-// ロボットリンクのセッション管理（FR-09, FR-11、static class）。
+// ロボットリンクのセッション管理（FR-09, FR-11, FR-14、static class）。
 // 受信フレームの振分け・モード/指令スロット・購読・安全ウォッチドッグ・
-// イベント生成を担う。スレッドモデル:
-//   リンクスレッド: run_once() を繰返す。受信排水・振分け・応答/イベント送出。
-//   制御スレッド:   publish_state / command / generate_events のみ
-//                  （整合コピーか K_NO_WAIT の msgq 投入でブロックしない）。
+// イベントバッチ生成を担う。スレッドモデル:
+//   リンクスレッド: run_once() を繰返す。rx_sem/evt_sem の k_poll を
+//                   バッチ期限付きタイムアウトで待ち、受信排水・振分け・
+//                   単発応答・バッチフラッシュを行う。
+//   制御スレッド:   publish_state / command / generate_events /
+//                   notify_calib_result（整合コピー・irq_lock 下の短い
+//                   バッファ投入でブロックしない）。
 class link_session {
  public:
   link_session() = delete;
@@ -37,7 +40,8 @@ class link_session {
     bool estop;
     bool imu_ok;
     bool qualified;               // bias qualification 完了（位置制御成立条件）
-    float raw_x, raw_y, raw_yaw;  // RESET_ODOMETRY / STOP 用の生値
+    float tilt;                   // 推定姿勢の傾斜角（START 受理判定用）
+    float raw_x, raw_y, raw_yaw;  // RESET_ODOMETRY / SET_POSE / STOP 用の生値
     float x, y, yaw;              // イベント用オフセット済 pose
     float vx, vy, yaw_rate;
   };
@@ -58,24 +62,24 @@ class link_session {
   };
 
   static void init(const config& cfg);
-  // リンクスレッドのループ本体。rx_sem/tx_msgq の k_poll で起床する。
+  // リンクスレッドのループ本体。rx_sem/evt_sem の k_poll を
+  // バッチ期限付きタイムアウトで待つ。
   static void run_once();
 
-  // 以下は制御スレッドから呼ぶ（短い整合コピー / K_NO_WAIT 投入）。
+  // 以下は制御スレッドから呼ぶ（短い整合コピー / irq_lock 下の投入）。
   static void publish_state(const robot_state& s);
   static command_output command();
   static void generate_events(uint32_t now_ms);
+
+  // CALIB_RESULT の即時送出（制御スレッド、FR-13）。バッチを経由しない。
+  static void notify_calib_result(uint8_t result, uint8_t seq,
+                                  float gyro_bias_z);
 
   // EVT_LOG 生成（両スレッドから呼べる）。level: 1=info 2=warn 3=error。
   static void log(uint8_t level, const char* text);
   static stats get_stats();
 
  private:
-  struct tx_item {  // k_msgq 要素（エンコード済みフレーム）
-    uint8_t len;
-    uint8_t data[link_protocol::MAX_FRAME];
-  };
-
   // complete-class 規則を避けるためメンバ初期化子を持たない POD。
   struct subscriptions {
     uint8_t pose_rate_hz;
@@ -83,11 +87,26 @@ class link_session {
     bool status;
   };
 
+  // エンコード済みフレーム 1 件分のスロット（バッチバッファ用）。
+  struct evt_slot {
+    uint8_t len;
+    uint8_t data[link_protocol::MAX_FRAME];
+  };
+
+  static constexpr uint8_t LOG_FIFO_DEPTH = 4;     // EVT_LOG リング深さ
+  static constexpr uint32_t FLUSH_THRESHOLD = 192; // 早期フラッシュ閾値 [B]
+  static constexpr uint32_t BATCH_BUF_SIZE = 384;  // フラッシュ連結バッファ
+
   static void dispatch(const link_protocol::request& req);
   static void send_frame(uint8_t type, uint8_t seq, const uint8_t* payload,
                          uint8_t len);
   static void send_ack(uint8_t req_type, uint8_t seq, uint8_t result);
-  static void queue_frame(uint8_t type, const uint8_t* payload, uint8_t len);
+  // バッチバッファへの投入（irq_lock 使用、どちらのスレッドからも可）。
+  static void queue_slot(evt_slot& slot, bool& dirty, uint8_t type,
+                         const uint8_t* payload, uint8_t len);
+  static void queue_log_frame(const uint8_t* payload, uint8_t len);
+  // フラッシュ判定・一括送出（リンクスレッドのみ）。
+  static void flush_batch(uint32_t now_ms);
   static void clear_link_state_locked();  // irq_lock 保持中に呼ぶ
 
   static inline const param_set* p_ = nullptr;
@@ -106,13 +125,24 @@ class link_session {
   static inline subscriptions subs_{};
   static inline robot_state state_box_{};
 
-  static inline struct k_msgq tx_msgq_ = {};
-  static inline char tx_msgq_buf_[8 * sizeof(tx_item)] = {};
+  // イベントバッチバッファ（irq_lock 保護、FR-14）。
+  // POSE/STATUS は最新値スロット、LOG は FIFO。
+  static inline evt_slot pose_slot_{};
+  static inline evt_slot status_slot_{};
+  static inline bool pose_dirty_ = false;
+  static inline bool status_dirty_ = false;
+  static inline evt_slot log_fifo_[LOG_FIFO_DEPTH] = {};
+  static inline uint8_t log_head_ = 0;  // 最古要素の index
+  static inline uint8_t log_count_ = 0;
+  static inline uint32_t pending_bytes_ = 0;  // 滞留バイト見積
+  static inline uint32_t next_flush_ms_ = 0;
+
+  static inline struct k_sem evt_sem_ = {};
   static inline struct k_poll_event poll_events_[2] = {};
 
   // イベント分周・変化検出（制御スレッドのみアクセス）。
   static inline uint32_t pose_div_count_ = 0;
-  static inline uint8_t prev_status_[4] = {};
+  static inline uint8_t prev_status_[6] = {};
   static inline uint32_t last_status_tx_ms_ = 0;
   static inline uint8_t prev_log_mode_ = 0xFF;
   static inline bool prev_estop_ = false;

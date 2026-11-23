@@ -42,6 +42,12 @@ void state_estimator::init(const config& cfg) {
   inertial_hold_ = 0.0F;
 }
 
+void state_estimator::reset_bias() {
+  gyro_bias_z_ = 0.0F;
+  ekf_bias_xy_ = vec2{};
+  qualification_time_ = 0.0F;
+}
+
 state_estimator::output state_estimator::step(const imu_sample& imu,
                                               const vec3& wheel_rate,
                                               float dt) {

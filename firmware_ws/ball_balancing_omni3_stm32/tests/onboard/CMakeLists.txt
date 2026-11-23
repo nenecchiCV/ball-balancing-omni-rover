@@ -44,6 +44,9 @@ target_sources(app PRIVATE
   ${APP_SRC}/peripheral/timebase/timebase.cpp
   ${APP_SRC}/peripheral/control_tick/control_tick.cpp
   ${APP_SRC}/peripheral/debug_uart/debug_uart.cpp
+  ${APP_SRC}/peripheral/link_uart/link_uart.cpp
+
+  ${APP_SRC}/common/link_protocol/link_protocol.cpp
 
   ${APP_SRC}/device/lsm6dso/lsm6dso.cpp
   ${APP_SRC}/device/wheel_encoder/wheel_encoder.cpp
@@ -63,4 +66,5 @@ target_sources(app PRIVATE
   src/omni_drive_test/omni_drive_test.cpp
   src/motor_deadzone_test/motor_deadzone_test.cpp
   src/uart_echo_test/uart_echo_test.cpp
+  src/link_test/link_test.cpp
 )

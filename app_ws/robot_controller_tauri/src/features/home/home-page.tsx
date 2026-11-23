@@ -1,15 +1,89 @@
 "use client";
 
-import Link from "next/link";
+// FR-07: 運転開始・停止と開始前準備（IMU キャリブレーション・位置設定）。
 
+import Link from "next/link";
+import { useState } from "react";
+
+import {
+  robotCalibrateImu,
+  robotSetPose,
+  robotStartOperation,
+  robotStopOperation,
+} from "@/lib/ipc";
+import { CALIB_STATE, OP_STATE } from "@/lib/types";
 import { useConnected } from "@/stores/connection";
+import { useLogStore } from "@/stores/logs";
 import { useTelemetryStore } from "@/stores/telemetry";
 
 const MODE_NAMES = ["スタンバイ", "速度指令", "位置制御"] as const;
+const OP_NAMES = ["待機", "動作中", "故障"] as const;
+const CALIB_NAMES = ["未実施", "実行中", "完了", "失敗"] as const;
 
 export function HomePage() {
   const connected = useConnected();
   const status = useTelemetryStore((s) => s.status);
+  const pushLog = useLogStore((s) => s.push);
+  const opState = status?.opState;
+  const standby = opState === OP_STATE.standby;
+  const [px, setPx] = useState("0.0");
+  const [py, setPy] = useState("0.0");
+  const [pyaw, setPyaw] = useState("0.0");
+  const [calibNote, setCalibNote] = useState<string | null>(null);
+
+  const calibrate = async () => {
+    setCalibNote("キャリブレーション実行中…（ロボットを静止させる）");
+    try {
+      const r = await robotCalibrateImu();
+      const ok = r.result === 0;
+      setCalibNote(
+        `${ok ? "完了" : "失敗"}: gyro_bias_z=${r.gyroBiasZ?.toFixed(6) ?? "?"} rad/s`,
+      );
+      pushLog(ok ? 1 : 3, `IMU キャリブレーション${ok ? "完了" : "失敗"}`);
+    } catch (e) {
+      setCalibNote(null);
+      pushLog(3, `キャリブレーション失敗: ${String(e)}`);
+    }
+  };
+
+  const setPose = async () => {
+    const [x, y, yaw] = [px, py, pyaw].map(parseFloat);
+    if ([x, y, yaw].some(Number.isNaN)) {
+      pushLog(2, "位置設定値が数値ではない");
+      return;
+    }
+    try {
+      await robotSetPose(x, y, yaw);
+      pushLog(1, `初期位置設定: (${x.toFixed(2)}, ${y.toFixed(2)}, ${yaw.toFixed(2)})`);
+    } catch (e) {
+      pushLog(3, `位置設定拒否: ${String(e)}`);
+    }
+  };
+
+  const startOp = async () => {
+    if (!window.confirm("モータ駆動を開始します。よろしいですか？")) return;
+    try {
+      await robotStartOperation();
+      pushLog(1, "動作開始を受理");
+    } catch (e) {
+      pushLog(3, `動作開始拒否: ${String(e)}`);
+    }
+  };
+
+  const stopOp = async () => {
+    if (
+      !window.confirm(
+        "モータ駆動を停止します。ロボットは姿勢を保持できず転倒します。よろしいですか？",
+      )
+    )
+      return;
+    try {
+      await robotStopOperation();
+      pushLog(1, "動作停止を受理");
+    } catch (e) {
+      pushLog(3, `動作停止失敗: ${String(e)}`);
+    }
+  };
 
   return (
     <div>
@@ -19,6 +93,10 @@ export function HomePage() {
           status ? (
             <table className="list">
               <tbody>
+                <tr>
+                  <th>動作状態</th>
+                  <td>{OP_NAMES[status.opState] ?? `不明 (${status.opState})`}</td>
+                </tr>
                 <tr>
                   <th>制御モード</th>
                   <td>{MODE_NAMES[status.mode] ?? `不明 (${status.mode})`}</td>
@@ -35,6 +113,13 @@ export function HomePage() {
                   <th>IMU</th>
                   <td>{status.imuOk ? "正常" : "異常"}</td>
                 </tr>
+                <tr>
+                  <th>キャリブレーション</th>
+                  <td>
+                    {CALIB_NAMES[status.calibState] ??
+                      `不明 (${status.calibState})`}
+                  </td>
+                </tr>
               </tbody>
             </table>
           ) : (
@@ -45,6 +130,74 @@ export function HomePage() {
             ロボット未接続。<Link href="/connect">Connect</Link> から接続する。
           </p>
         )}
+      </div>
+      <div className="card">
+        <h2 className="mb-2 text-base">運転準備（待機中のみ実行可）</h2>
+        <div className="row">
+          <button
+            className="btn"
+            onClick={calibrate}
+            disabled={
+              !connected ||
+              !standby ||
+              status?.calibState === CALIB_STATE.running
+            }
+          >
+            IMU キャリブレーション
+          </button>
+          {calibNote && <span className="muted">{calibNote}</span>}
+        </div>
+        <div className="row mt-2">
+          <label>
+            x [m]{" "}
+            <input
+              className="num"
+              value={px}
+              onChange={(e) => setPx(e.target.value)}
+            />
+          </label>
+          <label>
+            y [m]{" "}
+            <input
+              className="num"
+              value={py}
+              onChange={(e) => setPy(e.target.value)}
+            />
+          </label>
+          <label>
+            yaw [rad]{" "}
+            <input
+              className="num"
+              value={pyaw}
+              onChange={(e) => setPyaw(e.target.value)}
+            />
+          </label>
+          <button
+            className="btn"
+            onClick={setPose}
+            disabled={!connected || !standby}
+          >
+            位置設定
+          </button>
+        </div>
+        <div className="row mt-2">
+          {opState !== OP_STATE.operating ? (
+            <button
+              className="btn"
+              onClick={startOp}
+              disabled={!connected || !standby}
+            >
+              動作開始
+            </button>
+          ) : (
+            <button className="btn" onClick={stopOp} disabled={!connected}>
+              動作停止
+            </button>
+          )}
+          <span className="muted">
+            動作開始には IMU 正常・E-Stop 解除・キャリブレーション完了・姿勢正常が必要。
+          </span>
+        </div>
       </div>
       <div className="flex gap-4">
         {[

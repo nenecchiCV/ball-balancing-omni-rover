@@ -52,13 +52,13 @@
 
 | コンポーネント | ファイル | 責務 |
 |---|---|---|
-| app-shell | `src/components/app-shell.tsx` | 全画面共通シェル（ナビ、接続バッジ、緊急停止、`watch_*` 一元起動） |
+| app-shell | `src/components/app-shell.tsx` | 全画面共通シェル（ナビ、接続バッジ、動作状態バッジ、緊急停止、`watch_*` 一元起動） |
 
 ### features（画面 = ルート）
 
 | コンポーネント | ファイル | 責務 |
 |---|---|---|
-| home-page | `features/home/home-page.tsx` + `app/page.tsx` | 接続状態・STATUS サマリ・機能ナビ |
+| home-page | `features/home/home-page.tsx` + `app/page.tsx` | 接続状態・動作状態サマリ・機能ナビ・開始前準備パネル（FR-07） |
 | connection-page | `features/connection/connection-page.tsx` + `app/connect/page.tsx` | スキャン・接続・切断・PING 照合（FR-01） |
 | rc-page | `features/rc/rc-page.tsx` + `app/rc/page.tsx` | 2 本ジョイスティックの速度指令（FR-02） |
 | joystick | `features/rc/joystick.tsx` | ポインタ操作型バーチャルジョイスティック（-1.0〜1.0 正規化出力） |
@@ -66,6 +66,7 @@
 | odometry-page | `features/odometry/odometry-page.tsx` + `app/odometry/page.tsx` | 軌跡・数値表示と原点リセット（FR-04） |
 | odometry-map | `features/odometry/odometry-map.tsx` | 俯瞰マップ canvas（位置・向き・軌跡・目標点描画） |
 | logs-page | `features/logs/logs-page.tsx` + `app/logs/page.tsx` | ログリスト・フィルタ・一時停止・クリア（FR-05） |
+| test-page | `features/test/test-page.tsx` + `app/test/page.tsx` | プロトコル疎通・テストコマンド送受信（FR-08） |
 
 ## エントリ
 

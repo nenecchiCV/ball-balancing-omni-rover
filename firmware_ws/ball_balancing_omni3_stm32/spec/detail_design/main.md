@@ -55,6 +55,7 @@
 - [wheel_servo](feature/wheel_servo.md)
 - [command_profile](feature/command_profile.md)
 - [link_session](feature/link_session.md)
+- [operation_manager](feature/operation_manager.md)
 - [odometry](feature/odometry.md)
 - [position_controller](feature/position_controller.md)
 

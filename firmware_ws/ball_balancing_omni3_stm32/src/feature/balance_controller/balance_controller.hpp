@@ -29,6 +29,9 @@ class balance_controller {
   };
 
   static void init(const config& cfg);
+  // 全内部状態（モードラッチ・積分・フィルタ・ランプ時計等）を初期状態へ
+  // 戻す（START_OPERATION 受理時、FR-12）。パラメータ参照は保持する。
+  static void reset();
   static output step(const state_estimator::output& est, const vec3& command,
                      bool enable, const vec3& wheel_rate);
 

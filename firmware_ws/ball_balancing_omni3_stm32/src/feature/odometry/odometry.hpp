@@ -27,6 +27,10 @@ class odometry {
   // 現在の生位置・生 yaw を新しいワールド原点とする（RESET_ODOMETRY）。
   // 外側タスクと同時実行され得るため呼出し側が排他する。
   static void reset_origin(float raw_x, float raw_y, float raw_yaw);
+  // 現在の get()/yaw_of が (x, y, yaw) を返すようオフセットを設定する
+  // （SET_POSE、FR-13）。呼出し側が排他する。
+  static void set_pose(float x, float y, float yaw, float raw_x, float raw_y,
+                       float raw_yaw);
 
  private:
   static inline float raw_x_ = 0.0F;

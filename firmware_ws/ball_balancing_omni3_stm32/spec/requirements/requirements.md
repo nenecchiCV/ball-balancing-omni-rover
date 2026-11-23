@@ -17,6 +17,9 @@
 | FR-09 | USART1 でロボットリンクプロトコルを受付・応答する | [functional/FR-09.md](functional/FR-09.md) |
 | FR-10 | 目標位置への位置制御を行う | [functional/FR-10.md](functional/FR-10.md) |
 | FR-11 | 自己位置・ログをプロトコルイベントとして送出する | [functional/FR-11.md](functional/FR-11.md) |
+| FR-12 | アプリ指示で待機 ⇔ 動作中を遷移しモータ駆動を管理する | [functional/FR-12.md](functional/FR-12.md) |
+| FR-13 | IMU キャリブレーションと初期位置設定をリンク経由で行う | [functional/FR-13.md](functional/FR-13.md) |
+| FR-14 | 購読イベントを周期バッチでまとめて送出する | [functional/FR-14.md](functional/FR-14.md) |
 
 ## 非機能要求
 

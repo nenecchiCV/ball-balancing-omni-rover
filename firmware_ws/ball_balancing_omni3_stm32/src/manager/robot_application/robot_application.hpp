@@ -17,6 +17,7 @@
 #include "feature/command_profile/command_profile.hpp"
 #include "feature/link_session/link_session.hpp"
 #include "feature/odometry/odometry.hpp"
+#include "feature/operation_manager/operation_manager.hpp"
 #include "feature/position_controller/position_controller.hpp"
 #include "feature/state_estimator/state_estimator.hpp"
 #include "feature/wheel_servo/wheel_servo.hpp"
@@ -102,6 +103,7 @@ class robot_application {
   static inline vec3 wheel_rate_{};
   static inline bool enable_ = false;
   static inline bool imu_ok_ = false;
+  static inline bool prev_operating_ = false;
   static inline uint32_t outer_index_ = 0;
   // shell スレッドから書き換えられるため volatile。bool 単一ワードの
   // 読み書きは Cortex-M 上でアトミック。

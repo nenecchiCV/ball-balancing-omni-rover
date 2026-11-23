@@ -1,5 +1,6 @@
 build/
 build-*/
+build_*/
 tools/arm-toolchain.zip
 tools/arm-gnu-toolchain-*/
 *.elf

@@ -23,6 +23,7 @@ add_executable(
   ${FW_ROOT}/src/feature/balance_controller/balance_controller.cpp
   ${FW_ROOT}/src/feature/command_profile/command_profile.cpp
   ${FW_ROOT}/src/feature/odometry/odometry.cpp
+  ${FW_ROOT}/src/feature/operation_manager/operation_manager.cpp
   ${FW_ROOT}/src/feature/position_controller/position_controller.cpp
   ${FW_ROOT}/src/feature/state_estimator/state_estimator.cpp
   ${FW_ROOT}/src/feature/wheel_servo/wheel_servo.cpp
@@ -31,6 +32,7 @@ add_executable(
   src/test_link_protocol.cpp
   src/test_main.cpp
   src/test_odometry.cpp
+  src/test_operation_manager.cpp
   src/test_position_controller.cpp
   src/test_state_estimator.cpp
   src/test_wheel_servo.cpp)

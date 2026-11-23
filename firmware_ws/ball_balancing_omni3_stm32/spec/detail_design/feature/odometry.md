@@ -19,6 +19,7 @@ class odometry {  // static class
 - `static pose get()` — `raw - origin` の現在ワールド位置。
 - `static float yaw_of(float raw_yaw)` — `raw_yaw - yaw_offset` の現在ワールド yaw。yaw 自体は推定器の euler を入力とし、ここでは原点オフセットのみ適用する。
 - `static void reset_origin(float raw_x, float raw_y, float raw_yaw)` — 現在の生位置・生 yaw を原点として `origin`/`yaw_offset` に記録する（`RESET_ODOMETRY` 対応）。
+- `static void set_pose(float x, float y, float yaw, float raw_x, float raw_y, float raw_yaw)` — `origin`/`yaw_offset` を、現在の `get()`/`yaw_of` が指定値 `(x, y, yaw)` を返すよう設定する（`SET_POSE` 対応。`reset_origin` は `set_pose(0,0,0)` 相当）。
 
 ## 内部状態
 

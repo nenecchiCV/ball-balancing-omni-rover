@@ -16,6 +16,11 @@ export const commands = {
 	robotSetMode: (mode: number, options?: InvokeOptions) => __TAURI_INVOKE<null>("robot_set_mode", { mode }, options),
 	robotResetOdometry: (options?: InvokeOptions) => __TAURI_INVOKE<null>("robot_reset_odometry", undefined, options),
 	robotGetStatus: (options?: InvokeOptions) => __TAURI_INVOKE<RobotStatusInfo>("robot_get_status", undefined, options),
+	robotStartOperation: (options?: InvokeOptions) => __TAURI_INVOKE<null>("robot_start_operation", undefined, options),
+	robotStopOperation: (options?: InvokeOptions) => __TAURI_INVOKE<null>("robot_stop_operation", undefined, options),
+	robotSetPose: (x: number | null, y: number | null, yaw: number | null, options?: InvokeOptions) => __TAURI_INVOKE<null>("robot_set_pose", { x, y, yaw }, options),
+	robotCalibrateImu: (options?: InvokeOptions) => __TAURI_INVOKE<CalibResultInfo>("robot_calibrate_imu", undefined, options),
+	robotTestEcho: (data: number[], options?: InvokeOptions) => __TAURI_INVOKE<TestEchoInfo>("robot_test_echo", { data }, options),
 	robotSubscribe: (eventType: number, rateHz: number, options?: InvokeOptions) => __TAURI_INVOKE<null>("robot_subscribe", { eventType, rateHz }, options),
 	robotUnsubscribe: (eventType: number, options?: InvokeOptions) => __TAURI_INVOKE<null>("robot_unsubscribe", { eventType }, options),
 	/**  現在値を即時送った後、以後の変化をストリームする。 */
@@ -27,6 +32,11 @@ export const commands = {
 
 /* Types */
 export type AppError = { kind: "ble"; message: string } | { kind: "notConnected" } | { kind: "timeout" } | { kind: "badResponse" } | { kind: "invalidParam"; message: string } | { kind: "rejected"; message: string } | { kind: "send"; message: string };
+
+export type CalibResultInfo = {
+	result: number,
+	gyroBiasZ: number | null,
+};
 
 export type DiscoveredDevice = DiscoveredDevice_Serialize | DiscoveredDevice_Deserialize;
 
@@ -70,17 +80,26 @@ export type PoseTelemetry = {
 };
 
 export type RobotStatusInfo = {
+	opState: number,
 	mode: number,
 	enable: number,
 	estop: number,
 	imuOk: number,
+	calibState: number,
 	uptimeMs: number,
 };
 
 /**  EVT_STATUS。 */
 export type StatusTelemetry = {
+	opState: number,
 	mode: number,
 	enable: number,
 	estop: number,
 	imuOk: number,
+	calibState: number,
+};
+
+export type TestEchoInfo = {
+	/**  エコーバックされたペイロード（バイト配列）。 */
+	data: number[],
 };

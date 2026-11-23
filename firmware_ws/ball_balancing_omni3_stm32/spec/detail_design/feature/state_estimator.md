@@ -19,6 +19,7 @@ struct output {
 
 - `static void init(const config&)` — パラメータ参照を保持し、全内部状態を初期値（quaternion 単位、他 0）でリセットする。
 - `static output step(const imu_sample& imu, const vec3& wheel_rate, float dt)` — `ballbotEstimatorStep` の 1 ステップを実行し、`estimate` と `diagnostics` を返す。`imu_sample` は `common/imu_sample`（device 非依存のデータ構造）のため、本クラスはハードウェア無しでホストテスト可能。
+- `static void reset_bias()` — ジャイロバイアス学習状態（`gyro_bias_z_`・`ekf_bias_xy_`・`qualification_time_`）をリセットする（`CALIBRATE_IMU` 対応）。姿勢・速度など他の推定状態は保持する。外側タスクから呼ぶ（`operation_manager::take_bias_reset_req` 経由）。
 
 ## 内部状態（MATLAB persistent の写像）
 

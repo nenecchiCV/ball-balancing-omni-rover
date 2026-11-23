@@ -27,6 +27,10 @@ inline vec3 mat_vec(const float m[3][10], const vec10& v) {
 
 void balance_controller::init(const config& cfg) {
   p_ = cfg.params;
+  reset();
+}
+
+void balance_controller::reset() {
   prev_mode_ = 0;
   mode0_latch_ = false;
   elevated_authority_ = false;

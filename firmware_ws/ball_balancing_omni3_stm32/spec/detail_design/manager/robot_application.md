@@ -21,7 +21,7 @@ struct telemetry_snapshot {
 
 ## 公開関数
 
-- `static bool init(const config&)` — 全コンポーネントへ設定を注入し初期化する。ピン・PWM・QDEC・IMU はすべて devicetree（`bb,pins`/`timersN`/`imu0` エイリアス）から `DT_*` マクロで取得する。`odometry`/`position_controller`/`link_session` も初期化し、リンクスレッド開始用 `link_init_sem` を give する。最後に `control_tick::init()` + `start()` で 1 kHz ティックを開始する。IMU 検出失敗時は false。
+- `static bool init(const config&)` — 全コンポーネントへ設定を注入し初期化する。ピン・PWM・QDEC・IMU はすべて devicetree（`bb,pins`/`timersN`/`imu0` エイリアス）から `DT_*` マクロで取得する。`odometry`/`position_controller`/`operation_manager`/`link_session` も初期化し、リンクスレッド開始用 `link_init_sem` を give する。最後に `control_tick::init()` + `start()` で 1 kHz ティックを開始する。IMU 検出失敗時は false。
 - `[[noreturn]] static void run()` — `task_scheduler` に `inner_task_cb`/`outer_task_cb`/`diag_task_cb` を渡して実行する。
 - `static link_session::stats link_stats()` — `bb link` 診断用カウンタを返す。
 - `static telemetry_snapshot snapshot()` — shell スレッドからの状態参照用に `irq_lock()` で整合コピーを返す。
@@ -31,24 +31,33 @@ struct telemetry_snapshot {
 
 | コマンド | 内容 |
 |---|---|
-| `bb status` | モード・IMU 健全性・オイラー角・輪速・トルク・オーバーラン・最大実行時間を表示（`status_cmd_cb`） |
+| `bb status` | 動作状態・キャリブ状態・モード・IMU 健全性・オイラー角・輪速・トルク・オーバーラン・最大実行時間を表示（`status_cmd_cb`） |
 | `bb telem [on\|off]` | 200 ms 周期の CSV テレメトリ送出を切替える（`telem_cmd_cb`） |
 | `bb link` | ロボットリンクの受信フレーム数・CRC ドロップ・UART オーバーラン・TX ドロップ・最終受信時刻を表示（`link_cmd_cb`） |
+| `bb start` | `operation_manager::request_start_shell` を呼び、受理判定結果を表示する（FR-12 の机上検証経路） |
+| `bb stop` | `operation_manager::request_stop` を呼び待機へ遷移する |
+| `bb calib` | `operation_manager::request_calib` を呼び、受理判定と完了結果を表示する（FR-13） |
 
 ## リンクスレッド
 
 `K_THREAD_DEFINE` で生成される低優先度スレッド（`K_PRIO_PREEMPT(7)`）。`link_init_sem` で `init()` 完了を待ってから `link_session::run_once()` を無限ループで呼ぶ。制御スレッド（main）より低優先度のため、UART 受信処理が 1 kHz/200 Hz タスクをプリエンプトしない。
 
-## 外側タスクの指令選択（FR-09/FR-10）
+## 外側タスクの指令選択（FR-09/FR-10/FR-12/FR-13）
 
-`outer_task_cb` は `odometry::update` で推定器の `velocity_world2` を積分し、`link_session::command()` の結果で指令源を切替える:
+`outer_task_cb` は `odometry::update` で推定器の `velocity_world2` を積分した後、まず動作状態を処理する（FR-12）:
 
-1. `link_active=false`（一度もフレームを受けていない）→ 従来どおり `command_profile` の出力。
-2. `link_mode::VELOCITY` → `velocity_cmd`（500 ms WDG 失効時はゼロ化済み）。
-3. `link_mode::POSITION` → `position_controller::update(pose)` の出力。
-4. `link_mode::STANDBY` → 零指令。
+- `operation_manager::take_bias_reset_req()` が真なら `state_estimator::reset_bias()` を呼ぶ（FR-13 キャリブレーション開始）。
+- `operation_manager::calib_update(now_ms, qualified, imu_ok)` の返値が `>=0` なら `link_session::notify_calib_result(result, calib_seq, gyro_bias_z)` で `CALIB_RESULT` を送出する。
+- `drives_motors()==false`（`STANDBY`/`FAULT`）→ `balance_controller::step` を**実行せず**、制御出力はゼロ化した `output`（`mode` は直前値維持、`attitude_torque=0`）として扱う。`STANDBY`→`OPERATING` の遷移エッジでは `balance_controller::reset()` を呼んでから次項へ進む。
+- `drives_motors()==true`（`OPERATING`）→ `link_session::command()` の結果で指令源を切替える:
+  1. `link_active=false`（一度もフレームを受けていない）→ 従来どおり `command_profile` の出力。
+  2. `link_mode::VELOCITY` → `velocity_cmd`（500 ms WDG 失効時はゼロ化済み）。
+  3. `link_mode::POSITION` → `position_controller::update(pose)` の出力。
+  4. `link_mode::STANDBY` → 零指令（リンク側モード。`OPERATING` 中の「その場保持」に相当）。
 
-その後 `balance_controller::step` へ渡し、`link_session::publish_state`（メールボックス更新）と `generate_events`（EVT_POSE/EVT_STATUS/EVT_LOG 生成）を呼ぶ。qualified は `updated_qualification_time >= bias_qualification_time` で評価する。
+  その後 `balance_controller::step` へ渡す。`OPERATING` 中に `ctrl.mode==0`（mode0 終端ラッチ）に到達したら `operation_manager::notify_controller_terminal()` を呼び `FAULT` へ遷移させる（FR-12）。
+
+最後に `link_session::publish_state`（メールボックス更新。`tilt` は推定姿勢の傾斜角）と `generate_events`（EVT 生成→バッファ投入）を呼ぶ。qualified は `updated_qualification_time >= bias_qualification_time` で評価する。`EST`（推定器）と `odometry` は動作状態に関わらず常に更新する（待機中のキャリブレーション・位置合わせのため）。
 
 ## 内部状態
 

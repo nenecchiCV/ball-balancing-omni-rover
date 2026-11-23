@@ -7,12 +7,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Joystick } from "@/features/rc/joystick";
 import { robotSetMode, robotSetVelocity } from "@/lib/ipc";
 import { MAX_SPEED, MAX_YAW_RATE, RC_SEND_HZ } from "@/lib/limits";
-import { CONTROL_MODE } from "@/lib/types";
+import { CONTROL_MODE, OP_STATE } from "@/lib/types";
 import { useConnected } from "@/stores/connection";
 import { useLogStore } from "@/stores/logs";
+import { useTelemetryStore } from "@/stores/telemetry";
 
 export function RcPage() {
   const connected = useConnected();
+  const operating = useTelemetryStore(
+    (s) => s.status?.opState === OP_STATE.operating,
+  );
   const pushLog = useLogStore((s) => s.push);
   const cmd = useRef({ vx: 0, vy: 0, yawRate: 0 });
   const active = useRef(false);
@@ -21,7 +25,7 @@ export function RcPage() {
 
   // 20 Hz で最新指令を送出する。操作中のみ送信する（解放時はゼロを 1 回送出）。
   useEffect(() => {
-    if (!connected || !modeSet) return;
+    if (!connected || !modeSet || !operating) return;
     const id = setInterval(() => {
       if (!active.current) return;
       const c = cmd.current;
@@ -31,7 +35,7 @@ export function RcPage() {
       setSent({ ...c });
     }, 1000 / RC_SEND_HZ);
     return () => clearInterval(id);
-  }, [connected, modeSet, pushLog]);
+  }, [connected, modeSet, operating, pushLog]);
 
   const onStick = useCallback(
     (which: "trans" | "rot") => (x: number, y: number) => {
@@ -71,7 +75,7 @@ export function RcPage() {
           <button
             className="btn"
             onClick={enterVelocityMode}
-            disabled={!connected}
+            disabled={!connected || !operating}
           >
             速度指令モードへ
           </button>
@@ -81,6 +85,11 @@ export function RcPage() {
             {MAX_YAW_RATE} rad/s）
           </span>
         </div>
+        {connected && !operating && (
+          <p className="muted mt-2">
+            動作中ではないため速度指令は送信されません。ホームで動作開始してください。
+          </p>
+        )}
       </div>
       <div className="card">
         <Joystick label="並進 vx(↑)/vy(↔)" axes="xy" onChange={onStick("trans")} />

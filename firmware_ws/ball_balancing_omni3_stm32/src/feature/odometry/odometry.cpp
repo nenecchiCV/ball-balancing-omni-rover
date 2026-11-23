@@ -33,4 +33,11 @@ void odometry::reset_origin(float raw_x, float raw_y, float raw_yaw) {
   yaw_offset_ = raw_yaw;
 }
 
+void odometry::set_pose(float x, float y, float yaw, float raw_x, float raw_y,
+                        float raw_yaw) {
+  origin_x_ = raw_x - x;
+  origin_y_ = raw_y - y;
+  yaw_offset_ = raw_yaw - yaw;
+}
+
 }  // namespace bb

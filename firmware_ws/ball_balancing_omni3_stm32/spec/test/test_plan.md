@@ -24,6 +24,7 @@ tests/onboard/
     encoder_test/
     omni_drive_test/
     motor_deadzone_test/
+    link_test/
 ```
 
 ### 実行モデル
@@ -83,6 +84,7 @@ uart:~$ test stop       # 現在のテストを停止
 | `test omni <vx> <vy> <yaw>` | オムニ速度・回転指令 | 1 kHz 駆動 / 10 Hz 表示 | [omni_drive.md](omni_drive.md) |
 | `test deadzone [dir] [max] [sec]` | モータ不感帯同定 | 1 kHz 掃引 / 20 Hz CSV | [motor_deadzone.md](motor_deadzone.md) |
 | `test echo` | USART1 バイトエコー（無線変換疎通用） | 常時エコー / 1 Hz 統計 | [uart_echo.md](uart_echo.md) |
+| `test link` | リンクプロトコル応答（アプリ疎通用） | 受信即応答 / 1 Hz 統計 | [link_test.md](link_test.md) |
 
 ## 安全上の注意
 
@@ -90,6 +92,8 @@ uart:~$ test stop       # 現在のテストを停止
 - E-stop（外部 PC0 または基板ボタン PC13）はテスト中も有効であり、
   モータ駆動テストでは検出時に即時停止する。
 - `test omni` は起動から 60 秒で自動停止する。
+- `test link` と `test echo` は USART1 を排他利用する。`test link` 実行中は
+  echo を無効化し、停止時に元の状態へ戻す。
 
 ## 推奨実施順序
 
@@ -122,5 +126,7 @@ Zephyr 非依存の純粋ロジックはホスト（clang++）で単体検証す
 | `position_controller` | 誤差比例指令、slew 制限、`max_speed` 飽和、到達判定・ホールド、`hold_at`、目標解除 | FR-10 |
 
 `link_session`（Zephyr 依存の振分け・送出）と `link_uart`（ドライバ）は
-ホスト対象外とし、`bb link` シェルコマンドのカウンタと実機ログで検証する
-（オンボード側の専用テストは今後追加）。
+ホスト対象外とし、オンボード側は `test link`（[link_test.md](link_test.md)）
+と `bb link` シェルコマンドのカウンタで検証する。
+`operation_manager`（FR-12、純粋ロジック部分）はホストテスト対象として
+追加する（開始受理条件・状態遷移・拒否判定）。

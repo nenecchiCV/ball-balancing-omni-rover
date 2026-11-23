@@ -45,7 +45,7 @@ lib.rs ─→ commands.rs ─→ robot/ ─→ protocol/
                                               +-> event fanout (EVT_POSE/EVT_LOG/EVT_STATUS)
 ```
 
-- **指令系**: UI が `commands.robotSetVelocity(...)` → command が `Session` 経由でフレーム送出。ACK を待たず完了とする高頻度経路（`SET_VELOCITY`）と、ACK を待つ通常経路（残りリクエスト、タイムアウト 1 s）を使い分ける。
+- **指令系**: UI が `commands.robotSetVelocity(...)` → command が `Session` 経由でフレーム送出。ACK を待たず完了とする高頻度経路（`SET_VELOCITY`）と、ACK を待つ通常経路（残りリクエスト、タイムアウト 1 s）を使い分ける。`CALIBRATE_IMU` は受理 ACK の後に `CALIB_RESULT` が非同期で来る 2 段応答として扱う。
 - **購読系**: ロボットからの `EVT_*` は通知ストリーム→フレームパーサ→ディスパッチャでデコードされ、`tokio::sync::broadcast` のイベントバスへ発行される。`watch_*` command が broadcast → `Channel` の橋渡しを行い、`app-shell` が起動時に全チャネルを一度だけ購読して zustand store へ配る。
 - **ロボット向け購読**（`SUBSCRIBE` フレーム送出）は UI ストリームとは別系統とし、`robot_subscribe`/`robot_unsubscribe` command で制御する。
 
@@ -67,7 +67,7 @@ lib.rs ─→ commands.rs ─→ robot/ ─→ protocol/
 ## 実装方針
 
 - **プロトコル**: `spec/basic_design/robot_link_protocol.md` が正本。フレーム符号化・メッセージ定義は `src-tauri/src/protocol/` に集約し、上位からは型付き API で隠蔽する。
-- **ページ分割**: 機能要求ごとにページを分ける（FR-01→`/connect`、FR-02→`/rc`、FR-03→`/position`、FR-04→`/odometry`、FR-05→`/logs`）。ホーム `/` は接続状態サマリとナビゲーション。
+- **ページ分割**: 機能要求ごとにページを分ける（FR-01→`/connect`、FR-02→`/rc`、FR-03→`/position`、FR-04→`/odometry`、FR-05→`/logs`、FR-08→`/test`）。ホーム `/` は接続状態・動作状態サマリとナビゲーションに加え、FR-07 の開始前準備パネル（キャリブレーション・位置設定・動作開始/停止）を持つ。動作状態は app-shell のバッジでも常時表示する。
 - **エラーポリシー**: command は `Result<T, AppError>` で返し、UI はエラーをステータス表示とログビュー（`app` ソース）へ記録する。パニックは起こさない。
 - **クランプ**: 指令値は UI 入力時と `Session` 送信直前で二重にクランプする（NFR-02）。
 - **命名**: Rust は snake_case、TS は camelCase（IPC 型は serde で変換）。フロントのファイル名は kebab-case。

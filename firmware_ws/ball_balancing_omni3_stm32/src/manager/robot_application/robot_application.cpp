@@ -1,5 +1,6 @@
 #include "manager/robot_application/robot_application.hpp"
 
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include <zephyr/irq.h>
@@ -38,8 +39,12 @@ int status_cmd_cb(const struct shell* sh, size_t argc, char** argv) {
   ARG_UNUSED(argc);
   ARG_UNUSED(argv);
   const telemetry_snapshot s = robot_application::snapshot();
-  shell_print(sh, "uptime_ms=%lu mode=%u imu_ok=%d enable=%d estop_enable=%d",
+  shell_print(sh,
+              "uptime_ms=%lu op_state=%u calib_state=%u mode=%u imu_ok=%d "
+              "enable=%d estop_enable=%d",
               static_cast<unsigned long>(timebase::millis()),
+              static_cast<unsigned>(operation_manager::state()),
+              static_cast<unsigned>(operation_manager::calib()),
               static_cast<unsigned>(s.ctrl.mode), static_cast<int>(s.imu_ok),
               static_cast<int>(s.ctrl.enable), static_cast<int>(s.enable));
   shell_print(
@@ -101,11 +106,50 @@ int link_cmd_cb(const struct shell* sh, size_t argc, char** argv) {
   return 0;
 }
 
+int start_cmd_cb(const struct shell* sh, size_t argc, char** argv) {
+  ARG_UNUSED(argc);
+  ARG_UNUSED(argv);
+  const telemetry_snapshot s = robot_application::snapshot();
+  const bool qualified = s.est.updated_qualification_time >=
+                         get_params().estimator.bias_qualification_time;
+  const float tilt = sqrtf(s.est.euler[0] * s.est.euler[0] +
+                           s.est.euler[1] * s.est.euler[1]);
+  const operation_manager::start_cond c{s.imu_ok, estop_input::requested(),
+                                        qualified, tilt};
+  const uint8_t r = operation_manager::request_start(c);
+  shell_print(sh, "start result=%u op_state=%u", static_cast<unsigned>(r),
+              static_cast<unsigned>(operation_manager::state()));
+  return (r == 0) ? 0 : -EPERM;
+}
+
+int stop_cmd_cb(const struct shell* sh, size_t argc, char** argv) {
+  ARG_UNUSED(argc);
+  ARG_UNUSED(argv);
+  operation_manager::request_stop();
+  shell_print(sh, "op_state=%u",
+              static_cast<unsigned>(operation_manager::state()));
+  return 0;
+}
+
+int calib_cmd_cb(const struct shell* sh, size_t argc, char** argv) {
+  ARG_UNUSED(argc);
+  ARG_UNUSED(argv);
+  const uint8_t r = operation_manager::request_calib(0);
+  shell_print(sh, "calib result=%u calib_state=%u", static_cast<unsigned>(r),
+              static_cast<unsigned>(operation_manager::calib()));
+  return (r == 0) ? 0 : -EPERM;
+}
+
 // NOLINTBEGIN: Zephyr の SHELL_* マクロ内部の初期化子・分岐に由来する警告
 SHELL_STATIC_SUBCMD_SET_CREATE(
     SUB_BB, SHELL_CMD(status, NULL, "show controller status", status_cmd_cb),
     SHELL_CMD(telem, NULL, "telemetry CSV stream on/off", telem_cmd_cb),
     SHELL_CMD(link, NULL, "robot link stats", link_cmd_cb),
+    SHELL_CMD(start, NULL, "start operation (standby -> operating)",
+              start_cmd_cb),
+    SHELL_CMD(stop, NULL, "stop operation (-> standby)", stop_cmd_cb),
+    SHELL_CMD(calib, NULL, "calibrate IMU gyro bias (standby only)",
+              calib_cmd_cb),
     SHELL_SUBCMD_SET_END);
 SHELL_CMD_REGISTER(bb, &SUB_BB, "ball balancing robot commands", NULL);
 // NOLINTEND
@@ -160,6 +204,7 @@ bool robot_application::init(const config& cfg) {
   command_profile::init({p_});
   odometry::init();
   position_controller::init({p_});
+  operation_manager::init({p_});
   link_session::init({p_});
   k_sem_give(&link_init_sem);
 
@@ -193,31 +238,65 @@ void robot_application::outer_task_cb() {
 
   enable_ = !estop_input::requested() && imu_ok_;
 
-  // 指令選択: UART リンクが一度でも確立していれば link_session の
-  // モード/指令を優先し、未接続なら従来の command_profile を使う（FR-09）。
-  const link_session::command_output lc = link_session::command();
-  vec3 cmd{};
-  bool cmd_enable = true;
-  if (!lc.link_active) {
-    const command_profile::output cp =
-        command_profile::update(static_cast<float>(timebase::millis()) * 1e-3F);
-    cmd = cp.command;
-    cmd_enable = cp.enable;
-  } else if (lc.mode == link_mode::VELOCITY) {
-    cmd = lc.velocity_cmd;
-  } else if (lc.mode == link_mode::POSITION) {
-    cmd = position_controller::update(pose.x, pose.y, dt).command;
+  const uint32_t now_ms = timebase::millis();
+  const bool qualified = est_out_.updated_qualification_time >=
+                         p_->estimator.bias_qualification_time;
+  const float tilt = sqrtf(est_out_.euler[0] * est_out_.euler[0] +
+                           est_out_.euler[1] * est_out_.euler[1]);
+
+  // 動作状態管理（FR-12/FR-13）。キャリブレーションの推定器リセットと
+  // 完了報告をここで処理する。
+  if (operation_manager::take_bias_reset_req()) {
+    state_estimator::reset_bias();
   }
-  // STANDBY は零指令のまま。
-  ctrl_out_ = balance_controller::step(est_out_, cmd, enable_ && cmd_enable,
-                                       wheel_rate_);
+  const int8_t cr =
+      operation_manager::calib_update(now_ms, qualified, imu_ok_);
+  if (cr >= 0) {
+    link_session::notify_calib_result(static_cast<uint8_t>(cr),
+                                      operation_manager::calib_seq(),
+                                      est_out_.gyro_bias_z);
+  }
+
+  const bool operating = operation_manager::drives_motors();
+  if (operating && !prev_operating_) {
+    balance_controller::reset();  // STANDBY → OPERATING で内部状態を持込まない
+  }
+  prev_operating_ = operating;
+
+  if (operating) {
+    // 指令選択: UART リンクが一度でも確立していれば link_session の
+    // モード/指令を優先し、未接続なら従来の command_profile を使う（FR-09）。
+    const link_session::command_output lc = link_session::command();
+    vec3 cmd{};
+    bool cmd_enable = true;
+    if (!lc.link_active) {
+      const command_profile::output cp = command_profile::update(
+          static_cast<float>(timebase::millis()) * 1e-3F);
+      cmd = cp.command;
+      cmd_enable = cp.enable;
+    } else if (lc.mode == link_mode::VELOCITY) {
+      cmd = lc.velocity_cmd;
+    } else if (lc.mode == link_mode::POSITION) {
+      cmd = position_controller::update(pose.x, pose.y, dt).command;
+    }
+    // STANDBY は零指令のまま。
+    ctrl_out_ = balance_controller::step(est_out_, cmd, enable_ && cmd_enable,
+                                         wheel_rate_);
+    // OPERATING 中の mode 0 到達は終端 fault（FR-12）。
+    if (ctrl_out_.mode == 0) {
+      operation_manager::notify_controller_terminal();
+    }
+  } else {
+    // STANDBY/FAULT は制御器を回さずモータ無駆動（mode=0, enable=false）。
+    ctrl_out_ = balance_controller::output{};
+  }
 
   // リンク向け状態メールボックス更新＋イベント生成（FR-11）。
   const link_session::robot_state rs{enable_,
                                      estop_input::requested(),
                                      imu_ok_,
-                                     est_out_.updated_qualification_time >=
-                                         p_->estimator.bias_qualification_time,
+                                     qualified,
+                                     tilt,
                                      raw.x,
                                      raw.y,
                                      est_out_.euler[2],
@@ -228,7 +307,7 @@ void robot_application::outer_task_cb() {
                                      est_out_.velocity_world2[1],
                                      est_out_.gyro_body[2]};
   link_session::publish_state(rs);
-  link_session::generate_events(timebase::millis());
+  link_session::generate_events(now_ms);
 
   ++outer_index_;
 }

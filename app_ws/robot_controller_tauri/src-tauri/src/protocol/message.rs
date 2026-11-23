@@ -10,14 +10,21 @@ pub mod msg_type {
     pub const STOP: u8 = 0x12;
     pub const SET_CONTROL_MODE: u8 = 0x13;
     pub const RESET_ODOMETRY: u8 = 0x14;
+    pub const START_OPERATION: u8 = 0x15;
+    pub const STOP_OPERATION: u8 = 0x16;
+    pub const SET_POSE: u8 = 0x17;
+    pub const CALIBRATE_IMU: u8 = 0x18;
     pub const SUBSCRIBE: u8 = 0x20;
     pub const UNSUBSCRIBE: u8 = 0x21;
     pub const GET_STATUS: u8 = 0x30;
+    pub const TEST_ECHO: u8 = 0x31;
 
     // 応答（ロボット→アプリ）
     pub const ACK: u8 = 0x80;
     pub const PONG: u8 = 0x81;
     pub const STATUS: u8 = 0x82;
+    pub const CALIB_RESULT: u8 = 0x83;
+    pub const TEST_ECHO_RESP: u8 = 0x84;
 
     // イベント（ロボット→アプリ、購読送出）
     pub const EVT_POSE: u8 = 0x90;
@@ -43,6 +50,23 @@ pub mod ack_result {
     pub const UNSUPPORTED: u8 = 4;
 }
 
+// STATUS/EVT_STATUS の op_state 値。
+#[allow(dead_code)]
+pub mod op_state {
+    pub const STANDBY: u8 = 0;
+    pub const OPERATING: u8 = 1;
+    pub const FAULT: u8 = 2;
+}
+
+// STATUS/EVT_STATUS の calib_state 値。
+#[allow(dead_code)]
+pub mod calib_state {
+    pub const NONE: u8 = 0;
+    pub const RUNNING: u8 = 1;
+    pub const DONE: u8 = 2;
+    pub const FAILED: u8 = 3;
+}
+
 #[derive(Debug, Clone)]
 pub enum Request {
     Ping,
@@ -51,9 +75,14 @@ pub enum Request {
     Stop,
     SetControlMode { mode: u8 },
     ResetOdometry,
+    StartOperation,
+    StopOperation,
+    SetPose { x: f32, y: f32, yaw: f32 },
+    CalibrateImu,
     Subscribe { event_type: u8, rate_hz: u8 },
     Unsubscribe { event_type: u8 },
     GetStatus,
+    TestEcho { data: Vec<u8> },
 }
 
 impl Request {
@@ -79,6 +108,15 @@ impl Request {
                 msg_type::SET_CONTROL_MODE
             }
             Request::ResetOdometry => msg_type::RESET_ODOMETRY,
+            Request::StartOperation => msg_type::START_OPERATION,
+            Request::StopOperation => msg_type::STOP_OPERATION,
+            Request::SetPose { x, y, yaw } => {
+                push_f32(&mut p, *x);
+                push_f32(&mut p, *y);
+                push_f32(&mut p, *yaw);
+                msg_type::SET_POSE
+            }
+            Request::CalibrateImu => msg_type::CALIBRATE_IMU,
             Request::Subscribe { event_type, rate_hz } => {
                 p.push(*event_type);
                 p.push(*rate_hz);
@@ -89,6 +127,10 @@ impl Request {
                 msg_type::UNSUBSCRIBE
             }
             Request::GetStatus => msg_type::GET_STATUS,
+            Request::TestEcho { data } => {
+                p.extend_from_slice(data);
+                msg_type::TEST_ECHO
+            }
         };
         Frame::new(t, seq, p)
     }
@@ -99,7 +141,10 @@ impl Request {
 pub enum Response {
     Ack { req_type: u8, seq: u8, result: u8 },
     Pong { seq: u8, proto_ver: u8, robot_caps: u8 },
-    Status { seq: u8, mode: u8, enable: u8, estop: u8, imu_ok: u8, uptime_ms: u32 },
+    Status { seq: u8, op_state: u8, mode: u8, enable: u8, estop: u8, imu_ok: u8,
+             calib_state: u8, uptime_ms: u32 },
+    CalibResult { seq: u8, result: u8, gyro_bias_z: f32 },
+    TestEchoResp { seq: u8, data: Vec<u8> },
 }
 
 impl Response {
@@ -116,13 +161,24 @@ impl Response {
                 proto_ver: p[1],
                 robot_caps: p[2],
             }),
-            msg_type::STATUS if p.len() == 9 => Some(Response::Status {
+            msg_type::STATUS if p.len() == 11 => Some(Response::Status {
                 seq: p[0],
-                mode: p[1],
-                enable: p[2],
-                estop: p[3],
-                imu_ok: p[4],
-                uptime_ms: u32::from_le_bytes(p[5..9].try_into().ok()?),
+                op_state: p[1],
+                mode: p[2],
+                enable: p[3],
+                estop: p[4],
+                imu_ok: p[5],
+                calib_state: p[6],
+                uptime_ms: u32::from_le_bytes(p[7..11].try_into().ok()?),
+            }),
+            msg_type::CALIB_RESULT if p.len() == 6 => Some(Response::CalibResult {
+                seq: p[0],
+                result: p[1],
+                gyro_bias_z: f32::from_le_bytes(p[2..6].try_into().ok()?),
+            }),
+            msg_type::TEST_ECHO_RESP if !p.is_empty() => Some(Response::TestEchoResp {
+                seq: p[0],
+                data: p[1..].to_vec(),
             }),
             _ => None,
         }
@@ -146,10 +202,12 @@ pub enum RobotEvent {
         text: String,
     },
     Status {
+        op_state: u8,
         mode: u8,
         enable: u8,
         estop: u8,
         imu_ok: u8,
+        calib_state: u8,
     },
 }
 
@@ -179,11 +237,13 @@ impl RobotEvent {
                 level: p[0],
                 text: String::from_utf8_lossy(&p[1..]).into_owned(),
             }),
-            msg_type::EVT_STATUS if p.len() == 4 => Some(RobotEvent::Status {
-                mode: p[0],
-                enable: p[1],
-                estop: p[2],
-                imu_ok: p[3],
+            msg_type::EVT_STATUS if p.len() == 6 => Some(RobotEvent::Status {
+                op_state: p[0],
+                mode: p[1],
+                enable: p[2],
+                estop: p[3],
+                imu_ok: p[4],
+                calib_state: p[5],
             }),
             _ => None,
         }

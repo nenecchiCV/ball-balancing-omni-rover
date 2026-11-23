@@ -21,6 +21,10 @@ class uart_echo_test {
   static bool start_cb(int argc, char** argv);
   static void update_cb();
   static void stop_cb();
+
+  // USART1 を他コンポーネント（link_test）から返還し、バイトエコーの
+  // 割込コールバックと受信を再有効化する。
+  static void resume();
 };
 
 }  // namespace bb

@@ -8,13 +8,16 @@
 namespace link_protocol {
   // メッセージ種別（namespace 定数群）
   namespace req { PING=0x01, SET_VELOCITY=0x10, SET_POSE_TARGET=0x11, STOP=0x12,
-                  SET_CONTROL_MODE=0x13, RESET_ODOMETRY=0x14, SUBSCRIBE=0x20,
-                  UNSUBSCRIBE=0x21, GET_STATUS=0x30 }
-  namespace resp { ACK=0x80, PONG=0x81, STATUS=0x82 }
+                  SET_CONTROL_MODE=0x13, RESET_ODOMETRY=0x14,
+                  START_OPERATION=0x15, STOP_OPERATION=0x16, SET_POSE=0x17,
+                  CALIBRATE_IMU=0x18, SUBSCRIBE=0x20, UNSUBSCRIBE=0x21,
+                  GET_STATUS=0x30, TEST_ECHO=0x31 }
+  namespace resp { ACK=0x80, PONG=0x81, STATUS=0x82, CALIB_RESULT=0x83,
+                   TEST_ECHO_RESP=0x84 }
   namespace evt { POSE=0x90, LOG=0x91, STATUS=0x92 }
   namespace ack_result { OK=0, INVALID_PARAM=1, REJECTED_STATE=2, NOT_READY=3, UNSUPPORTED=4 }
-  constexpr uint8_t PROTO_VER = 1;
-  constexpr uint8_t ROBOT_CAPS = 0x07;       // 位置制御・オドメトリ・ログ全対応
+  constexpr uint8_t PROTO_VER = 2;
+  constexpr uint8_t ROBOT_CAPS = 0x17;       // bit0-2 既存機能 + bit4 運転管理対応
   constexpr uint8_t MAX_PAYLOAD = 64;         // EVT_LOG 本文 ≤ 60B
 
   struct request {           // デコード済み受信フレーム

@@ -7,12 +7,16 @@ import { useEffect, useState } from "react";
 import { OdometryMap } from "@/features/odometry/odometry-map";
 import { robotSetPoseTarget, robotSubscribe, robotUnsubscribe } from "@/lib/ipc";
 import { EVT_POSE, MAX_SPEED, POSE_SUBSCRIBE_HZ } from "@/lib/limits";
+import { OP_STATE } from "@/lib/types";
 import { useConnected } from "@/stores/connection";
 import { useLogStore } from "@/stores/logs";
 import { useTelemetryStore } from "@/stores/telemetry";
 
 export function PositionPage() {
   const connected = useConnected();
+  const operating = useTelemetryStore(
+    (s) => s.status?.opState === OP_STATE.operating,
+  );
   const pushLog = useLogStore((s) => s.push);
   const pose = useTelemetryStore((s) => s.pose);
   const [x, setX] = useState("0.0");
@@ -82,10 +86,19 @@ export function PositionPage() {
               onChange={(e) => setSpeed(e.target.value)}
             />
           </label>
-          <button className="btn" onClick={sendTarget} disabled={!connected}>
+          <button
+            className="btn"
+            onClick={sendTarget}
+            disabled={!connected || !operating}
+          >
             目標送信
           </button>
         </div>
+        {connected && !operating && (
+          <p className="muted mt-2">
+            動作中ではないため目標位置は送信できません。ホームで動作開始してください。
+          </p>
+        )}
         <p className="muted mt-2">
           ワールド座標（起動点原点）。速度上限は {MAX_SPEED} m/s まで。
           {remaining !== null && ` 残距離: ${remaining.toFixed(2)} m`}

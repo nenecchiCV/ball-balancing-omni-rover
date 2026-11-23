@@ -43,9 +43,10 @@
 | balance_controller | `balance_controller` | static | LQI 外側タスク + モード/安全判定（FR-03, FR-05） |
 | wheel_servo | `wheel_servo` | static | 1 kHz 推進サーボ + duty 反転（FR-04） |
 | command_profile | `command_profile` | static | サイクル指令生成（FR-07） |
-| link_session | `link_session` | static | ロボットリンクのフレーム振分け・モード/指令スロット・購読・ウォッチドッグ・イベント生成・リンクスレッドポンプ（FR-09, FR-11） |
+| link_session | `link_session` | static | ロボットリンクのフレーム振分け・モード/指令スロット・購読・ウォッチドッグ・イベント生成とバッチ送出・リンクスレッドポンプ（FR-09, FR-11, FR-14） |
 | odometry | `odometry` | static | ワールド速度の積分による位置推定・原点オフセット管理（FR-10, FR-11） |
 | position_controller | `position_controller` | static | 位置外ループ（目標位置→ワールド速度指令生成、FR-10） |
+| operation_manager | `operation_manager` | static | 動作状態（待機/動作中/終端）の遷移管理・開始受理判定・制御器リセット指示・キャリブレーション状態（FR-12, FR-13） |
 
 ## manager（機能管理）
 
@@ -73,3 +74,4 @@
 | encoder_test | `encoder_test` | static | エンコーダ方向・カウント表示（手回し/モータ駆動） |
 | omni_drive_test | `omni_drive_test` | static | [vx,vy,yaw]→輪速指令のオムニ駆動（テスト固有 FF+P サーボ） |
 | motor_deadzone_test | `motor_deadzone_test` | static | デューティ三角掃引によるモータ不感帯同定 |
+| link_test | `link_test` | static | リンクプロトコル応答テスト（`PING`/`GET_STATUS`/`TEST_ECHO` 受理、`uart_echo_test` と USART1 排他利用） |

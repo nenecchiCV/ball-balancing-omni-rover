@@ -8,7 +8,7 @@ use tokio::sync::broadcast;
 
 use crate::ble::nus::DiscoveredDevice;
 use crate::error::AppError;
-use crate::protocol::message::{ack_result, control_mode, Request, Response};
+use crate::protocol::message::{ack_result, control_mode, msg_type, Request, Response};
 use crate::robot::log::LogMessage;
 use crate::robot::session::LinkState;
 use crate::robot::telemetry::{PoseTelemetry, StatusTelemetry};
@@ -24,12 +24,31 @@ pub struct PongInfo {
 #[derive(Debug, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct RobotStatusInfo {
+    pub op_state: u8,
     pub mode: u8,
     pub enable: u8,
     pub estop: u8,
     pub imu_ok: u8,
+    pub calib_state: u8,
     pub uptime_ms: u32,
 }
+
+#[derive(Debug, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct CalibResultInfo {
+    pub result: u8,
+    pub gyro_bias_z: f32,
+}
+
+#[derive(Debug, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct TestEchoInfo {
+    /// エコーバックされたペイロード（バイト配列）。
+    pub data: Vec<u8>,
+}
+
+/// CALIB_RESULT 待機上限。firmware `link.calib_timeout_ms`(5000) より長め。
+const CALIB_TIMEOUT_MS: u32 = 6_000;
 
 #[tauri::command]
 #[specta::specta]
@@ -136,19 +155,93 @@ pub async fn robot_reset_odometry(state: State<'_, AppState>) -> Result<(), AppE
 pub async fn robot_get_status(state: State<'_, AppState>) -> Result<RobotStatusInfo, AppError> {
     match state.session.request(&Request::GetStatus).await? {
         Response::Status {
+            op_state,
             mode,
             enable,
             estop,
             imu_ok,
+            calib_state,
             uptime_ms,
             ..
         } => Ok(RobotStatusInfo {
+            op_state,
             mode,
             enable,
             estop,
             imu_ok,
+            calib_state,
             uptime_ms,
         }),
+        _ => Err(AppError::BadResponse),
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn robot_start_operation(state: State<'_, AppState>) -> Result<(), AppError> {
+    ack_to_result(state.session.request(&Request::StartOperation).await?)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn robot_stop_operation(state: State<'_, AppState>) -> Result<(), AppError> {
+    ack_to_result(state.session.request(&Request::StopOperation).await?)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn robot_set_pose(
+    state: State<'_, AppState>,
+    x: f32,
+    y: f32,
+    yaw: f32,
+) -> Result<(), AppError> {
+    ack_to_result(
+        state
+            .session
+            .request(&Request::SetPose { x, y, yaw })
+            .await?,
+    )
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn robot_calibrate_imu(state: State<'_, AppState>) -> Result<CalibResultInfo, AppError> {
+    match state
+        .session
+        .request_data(&Request::CalibrateImu, msg_type::CALIB_RESULT, CALIB_TIMEOUT_MS)
+        .await?
+    {
+        Response::CalibResult {
+            result,
+            gyro_bias_z,
+            ..
+        } => Ok(CalibResultInfo {
+            result,
+            gyro_bias_z,
+        }),
+        _ => Err(AppError::BadResponse),
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn robot_test_echo(
+    state: State<'_, AppState>,
+    data: Vec<u8>,
+) -> Result<TestEchoInfo, AppError> {
+    if data.is_empty() || data.len() > 63 {
+        return Err(AppError::InvalidParam(format!(
+            "data は 1-63 バイト: {} バイト",
+            data.len()
+        )));
+    }
+    match state
+        .session
+        .request_data(&Request::TestEcho { data }, msg_type::TEST_ECHO_RESP, 1_000)
+        .await?
+    {
+        Response::TestEchoResp { data, .. } => Ok(TestEchoInfo { data }),
         _ => Err(AppError::BadResponse),
     }
 }

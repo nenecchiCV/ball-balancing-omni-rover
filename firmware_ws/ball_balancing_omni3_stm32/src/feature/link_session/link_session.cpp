@@ -7,6 +7,7 @@
 #include <zephyr/irq.h>
 
 #include "feature/odometry/odometry.hpp"
+#include "feature/operation_manager/operation_manager.hpp"
 #include "feature/position_controller/position_controller.hpp"
 #include "peripheral/link_uart/link_uart.hpp"
 
@@ -24,15 +25,18 @@ void link_session::init(const config& cfg) {
   p_ = cfg.params;
   (void)link_uart::init({DEVICE_DT_GET(DT_ALIAS(link_uart))});
 
-  k_msgq_init(&tx_msgq_, tx_msgq_buf_, sizeof(tx_item), 8);
+  k_sem_init(&evt_sem_, 0, 1);
+  next_flush_ms_ = k_uptime_get_32() + p_->link.event_batch_ms;
   k_poll_event_init(&poll_events_[0], K_POLL_TYPE_SEM_AVAILABLE,
                     K_POLL_MODE_NOTIFY_ONLY, link_uart::rx_sem());
-  k_poll_event_init(&poll_events_[1], K_POLL_TYPE_MSGQ_DATA_AVAILABLE,
-                    K_POLL_MODE_NOTIFY_ONLY, &tx_msgq_);
+  k_poll_event_init(&poll_events_[1], K_POLL_TYPE_SEM_AVAILABLE,
+                    K_POLL_MODE_NOTIFY_ONLY, &evt_sem_);
 }
 
 void link_session::run_once() {
-  (void)k_poll(poll_events_, 2, K_FOREVER);
+  // バッチ期限をタイムアウトとする。期限到達時は両イベント NOT_READY の
+  // まま起床し、rx 排水をスキップしてフラッシュ判定のみ行う。
+  (void)k_poll(poll_events_, 2, K_MSEC(p_->link.event_batch_ms));
 
   if (poll_events_[0].state == K_POLL_STATE_SEM_AVAILABLE) {
     // Zephyr k_poll_event のイベント種別に応じた共用体メンバ参照。
@@ -62,13 +66,14 @@ void link_session::run_once() {
     poll_events_[0].state = K_POLL_STATE_NOT_READY;
   }
 
-  if (poll_events_[1].state == K_POLL_STATE_MSGQ_DATA_AVAILABLE) {
-    tx_item it{};
-    while (k_msgq_get(&tx_msgq_, &it, K_NO_WAIT) == 0) {
-      (void)link_uart::write(it.data, it.len);
-    }
+  if (poll_events_[1].state == K_POLL_STATE_SEM_AVAILABLE) {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
+    (void)k_sem_take(poll_events_[1].sem, K_NO_WAIT);
     poll_events_[1].state = K_POLL_STATE_NOT_READY;
   }
+
+  // バッチ期限到達 or 早期起床（閾値超過）でフラッシュ判定。
+  flush_batch(k_uptime_get_32());
 }
 
 void link_session::publish_state(const robot_state& s) {
@@ -111,7 +116,10 @@ void link_session::generate_events(uint32_t now_ms) {
   const uint8_t mode = mode_;
   irq_unlock(key);
 
-  // EVT_POSE: 購読中はレート分周で送出。
+  const uint8_t op_state = operation_manager::state();
+  const uint8_t calib = operation_manager::calib();
+
+  // EVT_POSE: 購読中はレート分周で送出（バッチバッファへ投入）。
   if (subs.pose_rate_hz > 0) {
     const uint32_t div =
         (OUTER_RATE_HZ + subs.pose_rate_hz - 1) / subs.pose_rate_hz;
@@ -125,21 +133,24 @@ void link_session::generate_events(uint32_t now_ms) {
       link_protocol::write_f32(&pl[16], s.vx);
       link_protocol::write_f32(&pl[20], s.vy);
       link_protocol::write_f32(&pl[24], s.yaw_rate);
-      queue_frame(link_protocol::evt::POSE, pl, sizeof(pl));
+      queue_slot(pose_slot_, pose_dirty_, link_protocol::evt::POSE, pl,
+                 sizeof(pl));
     }
   }
 
-  // EVT_STATUS: 変化検出 + 100 ms ハートビート。
+  // EVT_STATUS: 変化検出 + 100 ms ハートビート（バッチバッファへ投入）。
   if (subs.status) {
-    const uint8_t cur[4] = {mode, static_cast<uint8_t>(s.enable ? 1 : 0),
+    const uint8_t cur[6] = {op_state, mode,
+                            static_cast<uint8_t>(s.enable ? 1 : 0),
                             static_cast<uint8_t>(s.estop ? 1 : 0),
-                            static_cast<uint8_t>(s.imu_ok ? 1 : 0)};
+                            static_cast<uint8_t>(s.imu_ok ? 1 : 0), calib};
     const bool changed = memcmp(cur, prev_status_, sizeof(cur)) != 0;
     const bool heartbeat = (now_ms - last_status_tx_ms_) >= 100;
     if (changed || heartbeat) {
       memcpy(prev_status_, cur, sizeof(cur));
       last_status_tx_ms_ = now_ms;
-      queue_frame(link_protocol::evt::STATUS, cur, sizeof(cur));
+      queue_slot(status_slot_, status_dirty_, link_protocol::evt::STATUS, cur,
+                 sizeof(cur));
     }
   }
 
@@ -161,13 +172,22 @@ void link_session::generate_events(uint32_t now_ms) {
   }
 }
 
+void link_session::notify_calib_result(uint8_t result, uint8_t seq,
+                                       float gyro_bias_z) {
+  uint8_t pl[6];
+  pl[0] = seq;
+  pl[1] = result;
+  link_protocol::write_f32(&pl[2], gyro_bias_z);
+  send_frame(link_protocol::resp::CALIB_RESULT, 0, pl, sizeof(pl));
+}
+
 void link_session::log(uint8_t level, const char* text) {
   const size_t tlen = strlen(text);
   const uint8_t n = (tlen > 60) ? 60 : static_cast<uint8_t>(tlen);
   uint8_t pl[1 + 60];
   pl[0] = level;
   memcpy(&pl[1], text, n);
-  queue_frame(link_protocol::evt::LOG, pl, static_cast<uint8_t>(n + 1));
+  queue_log_frame(pl, static_cast<uint8_t>(n + 1));
 }
 
 link_session::stats link_session::get_stats() {
@@ -195,6 +215,9 @@ void link_session::dispatch(const link_protocol::request& req) {
   const uint8_t mode = mode_;
   irq_unlock(key);
 
+  const uint8_t op_state = operation_manager::state();
+  const bool operating = (op_state == operation_manager::op_state::OPERATING);
+
   switch (req.type) {
     case link_protocol::req::PING: {
       const uint8_t r[3] = {req.seq, link_protocol::PROTO_VER,
@@ -207,7 +230,7 @@ void link_session::dispatch(const link_protocol::request& req) {
         send_ack(req.type, req.seq, link_protocol::ack_result::INVALID_PARAM);
         break;
       }
-      if (mode != link_mode::VELOCITY) {
+      if (!operating || mode != link_mode::VELOCITY) {
         send_ack(req.type, req.seq, link_protocol::ack_result::REJECTED_STATE);
         break;
       }
@@ -226,6 +249,10 @@ void link_session::dispatch(const link_protocol::request& req) {
         send_ack(req.type, req.seq, link_protocol::ack_result::INVALID_PARAM);
         break;
       }
+      if (!operating) {
+        send_ack(req.type, req.seq, link_protocol::ack_result::REJECTED_STATE);
+        break;
+      }
       if (!s.imu_ok || !s.qualified) {
         send_ack(req.type, req.seq, link_protocol::ack_result::NOT_READY);
         break;
@@ -240,6 +267,10 @@ void link_session::dispatch(const link_protocol::request& req) {
       break;
     }
     case link_protocol::req::STOP: {
+      if (!operating) {
+        send_ack(req.type, req.seq, link_protocol::ack_result::REJECTED_STATE);
+        break;
+      }
       key = irq_lock();
       vel_cmd_ = vec3{};
       const uint8_t m = mode_;
@@ -255,6 +286,10 @@ void link_session::dispatch(const link_protocol::request& req) {
     case link_protocol::req::SET_CONTROL_MODE: {
       if (n != 1 || pl[0] > link_mode::POSITION) {
         send_ack(req.type, req.seq, link_protocol::ack_result::INVALID_PARAM);
+        break;
+      }
+      if (!operating) {
+        send_ack(req.type, req.seq, link_protocol::ack_result::REJECTED_STATE);
         break;
       }
       if (pl[0] == link_mode::POSITION && (!s.imu_ok || !s.qualified)) {
@@ -279,6 +314,45 @@ void link_session::dispatch(const link_protocol::request& req) {
       odometry::reset_origin(s.raw_x, s.raw_y, s.raw_yaw);
       irq_unlock(key);
       send_ack(req.type, req.seq, link_protocol::ack_result::OK);
+      break;
+    }
+    case link_protocol::req::START_OPERATION: {
+      const operation_manager::start_cond c{s.imu_ok, s.estop, s.qualified,
+                                            s.tilt};
+      send_ack(req.type, req.seq, operation_manager::request_start(c));
+      break;
+    }
+    case link_protocol::req::STOP_OPERATION: {
+      operation_manager::request_stop();
+      key = irq_lock();
+      mode_ = link_mode::STANDBY;
+      vel_cmd_ = vec3{};
+      irq_unlock(key);
+      position_controller::clear_target();
+      send_ack(req.type, req.seq, link_protocol::ack_result::OK);
+      break;
+    }
+    case link_protocol::req::SET_POSE: {
+      if (n != 12) {
+        send_ack(req.type, req.seq, link_protocol::ack_result::INVALID_PARAM);
+        break;
+      }
+      if (op_state != operation_manager::op_state::STANDBY) {
+        send_ack(req.type, req.seq, link_protocol::ack_result::REJECTED_STATE);
+        break;
+      }
+      key = irq_lock();
+      odometry::set_pose(link_protocol::read_f32(&pl[0]),
+                         link_protocol::read_f32(&pl[4]),
+                         link_protocol::read_f32(&pl[8]), s.raw_x, s.raw_y,
+                         s.raw_yaw);
+      irq_unlock(key);
+      position_controller::clear_target();
+      send_ack(req.type, req.seq, link_protocol::ack_result::OK);
+      break;
+    }
+    case link_protocol::req::CALIBRATE_IMU: {
+      send_ack(req.type, req.seq, operation_manager::request_calib(req.seq));
       break;
     }
     case link_protocol::req::SUBSCRIBE: {
@@ -327,14 +401,24 @@ void link_session::dispatch(const link_protocol::request& req) {
       break;
     }
     case link_protocol::req::GET_STATUS: {
-      uint8_t r[9];
+      uint8_t r[11];
       r[0] = req.seq;
-      r[1] = mode;
-      r[2] = s.enable ? 1 : 0;
-      r[3] = s.estop ? 1 : 0;
-      r[4] = s.imu_ok ? 1 : 0;
-      link_protocol::write_u32(&r[5], now);
+      r[1] = op_state;
+      r[2] = mode;
+      r[3] = s.enable ? 1 : 0;
+      r[4] = s.estop ? 1 : 0;
+      r[5] = s.imu_ok ? 1 : 0;
+      r[6] = operation_manager::calib();
+      link_protocol::write_u32(&r[7], now);
       send_frame(link_protocol::resp::STATUS, 0, r, sizeof(r));
+      break;
+    }
+    case link_protocol::req::TEST_ECHO: {
+      uint8_t r[1 + link_protocol::MAX_PAYLOAD];
+      r[0] = req.seq;
+      memcpy(&r[1], pl, n);
+      send_frame(link_protocol::resp::TEST_ECHO_RESP, 0, r,
+                 static_cast<uint8_t>(n + 1));
       break;
     }
     default:
@@ -347,7 +431,12 @@ void link_session::send_frame(uint8_t type, uint8_t seq, const uint8_t* payload,
                               uint8_t len) {
   uint8_t buf[link_protocol::MAX_FRAME];
   const uint32_t n = link_protocol::encode(type, seq, payload, len, buf);
+  // link_uart::write は内部で排他を持たないため、リンクスレッドの応答と
+  // 制御スレッドの CALIB_RESULT の競合・TX ISR との整合を irq_lock で
+  // 保護する（コピーは最大 70B と短い）。
+  const unsigned int key = irq_lock();
   (void)link_uart::write(buf, n);
+  irq_unlock(key);
 }
 
 void link_session::send_ack(uint8_t req_type, uint8_t seq, uint8_t result) {
@@ -355,15 +444,76 @@ void link_session::send_ack(uint8_t req_type, uint8_t seq, uint8_t result) {
   send_frame(link_protocol::resp::ACK, 0, pl, sizeof(pl));
 }
 
-void link_session::queue_frame(uint8_t type, const uint8_t* payload,
-                               uint8_t len) {
-  tx_item it{};
-  it.len = static_cast<uint8_t>(
-      link_protocol::encode(type, 0, payload, len, it.data));
-  if (k_msgq_put(&tx_msgq_, &it, K_NO_WAIT) != 0) {
-    const unsigned int key = irq_lock();
-    ++stats_.tx_drops;
+void link_session::queue_slot(evt_slot& slot, bool& dirty, uint8_t type,
+                              const uint8_t* payload, uint8_t len) {
+  const unsigned int key = irq_lock();
+  const uint32_t n = link_protocol::encode(type, 0, payload, len, slot.data);
+  slot.len = static_cast<uint8_t>(n);
+  dirty = true;
+  pending_bytes_ += n;
+  const bool early = pending_bytes_ >= FLUSH_THRESHOLD;
+  irq_unlock(key);
+  if (early) {
+    k_sem_give(&evt_sem_);
+  }
+}
+
+void link_session::queue_log_frame(const uint8_t* payload, uint8_t len) {
+  const unsigned int key = irq_lock();
+  bool early = false;
+  if (log_count_ < LOG_FIFO_DEPTH) {
+    evt_slot& slot = log_fifo_[(log_head_ + log_count_) % LOG_FIFO_DEPTH];
+    const uint32_t n = link_protocol::encode(link_protocol::evt::LOG, 0,
+                                             payload, len, slot.data);
+    slot.len = static_cast<uint8_t>(n);
+    ++log_count_;
+    pending_bytes_ += n;
+    early = pending_bytes_ >= FLUSH_THRESHOLD;
+  } else {
+    ++stats_.tx_drops;  // FIFO 満杯は新規ドロップして計数
+  }
+  irq_unlock(key);
+  if (early) {
+    k_sem_give(&evt_sem_);
+  }
+}
+
+void link_session::flush_batch(uint32_t now_ms) {
+  uint8_t buf[BATCH_BUF_SIZE];
+  uint32_t n = 0;
+
+  const unsigned int key = irq_lock();
+  const bool due = (now_ms >= next_flush_ms_);
+  if (pending_bytes_ == 0 || (!due && pending_bytes_ < FLUSH_THRESHOLD)) {
+    // 送出対象なし、または期限未到来。
+    if (due) {
+      next_flush_ms_ = now_ms + p_->link.event_batch_ms;
+    }
     irq_unlock(key);
+    return;
+  }
+  if (pose_dirty_) {
+    memcpy(&buf[n], pose_slot_.data, pose_slot_.len);
+    n += pose_slot_.len;
+    pose_dirty_ = false;
+  }
+  if (status_dirty_) {
+    memcpy(&buf[n], status_slot_.data, status_slot_.len);
+    n += status_slot_.len;
+    status_dirty_ = false;
+  }
+  while (log_count_ > 0 && n + log_fifo_[log_head_].len <= sizeof(buf)) {
+    memcpy(&buf[n], log_fifo_[log_head_].data, log_fifo_[log_head_].len);
+    n += log_fifo_[log_head_].len;
+    log_head_ = (log_head_ + 1) % LOG_FIFO_DEPTH;
+    --log_count_;
+  }
+  pending_bytes_ = 0;
+  next_flush_ms_ = now_ms + p_->link.event_batch_ms;
+  irq_unlock(key);
+
+  if (n > 0) {
+    (void)link_uart::write(buf, n);
   }
 }
 

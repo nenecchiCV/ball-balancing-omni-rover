@@ -8,6 +8,7 @@
 #include "encoder_test/encoder_test.hpp"
 #include "estop_test/estop_test.hpp"
 #include "imu_attitude_test/imu_attitude_test.hpp"
+#include "link_test/link_test.hpp"
 #include "motor_deadzone_test/motor_deadzone_test.hpp"
 #include "omni_drive_test/omni_drive_test.hpp"
 #include "peripheral/control_tick/control_tick.hpp"
@@ -44,6 +45,8 @@ const test_runner::test_entry TESTS[] = {
     {"echo", "echo — USART1 バイトエコー（無線変換疎通用）",
      &uart_echo_test::start_cb, &uart_echo_test::update_cb,
      &uart_echo_test::stop_cb, 1000U},
+    {"link", "link — リンクプロトコル応答（PING/STATUS/TEST_ECHO）",
+     &link_test::start_cb, &link_test::update_cb, &link_test::stop_cb, 10U},
 };
 
 const test_runner::test_entry* find_entry(const char* name) {

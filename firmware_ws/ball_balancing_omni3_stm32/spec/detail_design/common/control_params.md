@@ -19,6 +19,13 @@ struct param_set {
     struct torque_lqi { ... };    // state_gain 等
     struct controller { ... };    // ctrl.* 定数
     struct command { ... };       // cmd.* 全定数
+    struct position { ... };      // 位置制御定数（kp, ki, output_max, hold_gain_scale）
+    struct link {                 // リンク・動作管理定数
+        uint32_t watchdog_ms;      // SET_VELOCITY 失効（500 ms）
+        uint32_t idle_ms;          // UART アイドル失効（1000 ms）
+        uint32_t event_batch_ms;   // イベントバッチ周期（既定 100 ms, FR-14）
+        uint32_t calib_timeout_ms; // CALIBRATE_IMU 完了期限（既定 5000 ms, FR-13）
+    };
 };
 ```
 

@@ -15,9 +15,10 @@ constexpr uint8_t HEADER_LEN = 4;
 constexpr uint8_t CRC_LEN = 2;
 constexpr uint8_t MAX_PAYLOAD = 64;  // EVT_LOG 本文を 60B までに抑えるため
 constexpr uint8_t MAX_FRAME = HEADER_LEN + MAX_PAYLOAD + CRC_LEN;
-constexpr uint8_t PROTO_VER = 1;
-// PONG 能力ビット: bit0 位置制御 / bit1 オドメトリ / bit2 ログ。
-constexpr uint8_t ROBOT_CAPS = 0x07;
+constexpr uint8_t PROTO_VER = 2;
+// PONG 能力ビット: bit0 位置制御 / bit1 オドメトリ / bit2 ログ /
+// bit3 テストビルド / bit4 運転管理（START/STOP_OPERATION, CALIB, SET_POSE）。
+constexpr uint8_t ROBOT_CAPS = 0x17;
 
 // リクエスト種別（ホスト → ロボット）。
 namespace req {
@@ -27,9 +28,14 @@ constexpr uint8_t SET_POSE_TARGET = 0x11;
 constexpr uint8_t STOP = 0x12;
 constexpr uint8_t SET_CONTROL_MODE = 0x13;
 constexpr uint8_t RESET_ODOMETRY = 0x14;
+constexpr uint8_t START_OPERATION = 0x15;
+constexpr uint8_t STOP_OPERATION = 0x16;
+constexpr uint8_t SET_POSE = 0x17;
+constexpr uint8_t CALIBRATE_IMU = 0x18;
 constexpr uint8_t SUBSCRIBE = 0x20;
 constexpr uint8_t UNSUBSCRIBE = 0x21;
 constexpr uint8_t GET_STATUS = 0x30;
+constexpr uint8_t TEST_ECHO = 0x31;
 }  // namespace req
 
 // レスポンス種別（ロボット → ホスト、seq はリクエストのエコー）。
@@ -37,6 +43,8 @@ namespace resp {
 constexpr uint8_t ACK = 0x80;
 constexpr uint8_t PONG = 0x81;
 constexpr uint8_t STATUS = 0x82;
+constexpr uint8_t CALIB_RESULT = 0x83;
+constexpr uint8_t TEST_ECHO_RESP = 0x84;
 }  // namespace resp
 
 // イベント種別（ロボット → ホスト、seq = 0）。

@@ -53,6 +53,7 @@ target_sources(app PRIVATE
   src/feature/wheel_speed_meter/wheel_speed_meter.cpp
   src/feature/odometry/odometry.cpp
   src/feature/position_controller/position_controller.cpp
+  src/feature/operation_manager/operation_manager.cpp
   src/feature/link_session/link_session.cpp
 
   src/manager/robot_application/robot_application.cpp

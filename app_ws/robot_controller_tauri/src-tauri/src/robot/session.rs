@@ -16,7 +16,7 @@ use tokio::time::timeout;
 use crate::ble::nus::{self, DiscoveredDevice, NusLink, DEFAULT_NAME_FILTER};
 use crate::error::AppError;
 use crate::protocol::frame::{Frame, FrameDecoder};
-use crate::protocol::message::{Request, Response, RobotEvent};
+use crate::protocol::message::{ack_result, Request, Response, RobotEvent};
 use crate::robot::log::{LogMessage, LogSource};
 use crate::robot::telemetry::{PoseTelemetry, StatusTelemetry};
 use futures::StreamExt;
@@ -24,7 +24,7 @@ use futures::StreamExt;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(1);
 const CONNECT_SCAN_TIMEOUT: Duration = Duration::from_secs(5);
 const MONITOR_INTERVAL: Duration = Duration::from_millis(500);
-const PROTO_VER: u8 = 1;
+const PROTO_VER: u8 = 2;
 
 // 送信直前クランプ（NFR-02 の 2 段階目）。`control_params.controller` と同期。
 const MAX_SPEED: f32 = 0.4;
@@ -47,7 +47,24 @@ struct EventBus {
     log: broadcast::Sender<LogMessage>,
 }
 
-type PendingMap = Arc<StdMutex<HashMap<u8, oneshot::Sender<Frame>>>>;
+/// ACK 後にデータ応答（STATUS/CALIB_RESULT 等）を待つか、ACK のみで完了するか。
+enum PendingEntry {
+    /// 最初に届いた応答で完了する。
+    OneShot(oneshot::Sender<Frame>),
+    /// ACK(OK) では待機継続し、データ応答（または NACK）で完了する。
+    /// 期待 TYPE の検査は `request_data` が行う。
+    AckThen(oneshot::Sender<Frame>),
+}
+
+impl PendingEntry {
+    fn into_tx(self) -> oneshot::Sender<Frame> {
+        match self {
+            PendingEntry::OneShot(tx) | PendingEntry::AckThen(tx) => tx,
+        }
+    }
+}
+
+type PendingMap = Arc<StdMutex<HashMap<u8, PendingEntry>>>;
 
 struct Inner {
     link: Option<Arc<NusLink>>,
@@ -161,10 +178,23 @@ impl Session {
             let mut stream = stream;
             while let Some(bytes) = stream.next().await {
                 for frame in dec.push(&bytes) {
-                    if Response::decode(&frame).is_some() {
-                        let tx = pending.lock().unwrap().remove(&frame.seq);
-                        if let Some(tx) = tx {
-                            let _ = tx.send(frame);
+                    if let Some(resp) = Response::decode(&frame) {
+                        // 応答相関はペイロードの seq エコーで行う（ヘッダ SEQ は応答では 0）。
+                        let seq = resp_seq(&resp);
+                        let mut map = pending.lock().unwrap();
+                        let completes = match map.get(&seq) {
+                            Some(PendingEntry::AckThen(_)) => match &resp {
+                                // ACK(OK) は継続待機。NACK/データ応答/不整合は完了。
+                                Response::Ack { result, .. } => *result != ack_result::OK,
+                                _ => true,
+                            },
+                            Some(PendingEntry::OneShot(_)) => true,
+                            None => false,
+                        };
+                        if completes {
+                            if let Some(entry) = map.remove(&seq) {
+                                let _ = entry.into_tx().send(frame);
+                            }
                         }
                     } else if let Some(ev) = RobotEvent::decode(&frame) {
                         if let Some(client) = weak.upgrade() {
@@ -255,7 +285,11 @@ impl Session {
             }
             let seq = inner.seq;
             let (tx, rx) = oneshot::channel();
-            inner.pending.lock().unwrap().insert(seq, tx);
+            inner
+                .pending
+                .lock()
+                .unwrap()
+                .insert(seq, PendingEntry::OneShot(tx));
             (link, seq, rx)
         };
 
@@ -270,6 +304,57 @@ impl Session {
                 let resp = Response::decode(&resp_frame).ok_or(AppError::BadResponse)?;
                 self.note_subscription(req, &resp).await;
                 Ok(resp)
+            }
+            Ok(Err(_)) => Err(AppError::NotConnected),
+            Err(_) => {
+                self.drop_pending(seq).await;
+                Err(AppError::Timeout)
+            }
+        }
+    }
+
+    /// ACK(OK) 後に `expect_type` のデータ応答を待つ 2 段リクエスト（CALIBRATE_IMU 等）。
+    /// `timeout_ms` は ACK+データ応答全体の待機上限。
+    pub async fn request_data(
+        &self,
+        req: &Request,
+        expect_type: u8,
+        timeout_ms: u32,
+    ) -> Result<Response, AppError> {
+        let (link, seq, rx) = {
+            let mut inner = self.inner.lock().await;
+            let link = inner.link.clone().ok_or(AppError::NotConnected)?;
+            inner.seq = inner.seq.wrapping_add(1);
+            if inner.seq == 0 {
+                inner.seq = 1;
+            }
+            let seq = inner.seq;
+            let (tx, rx) = oneshot::channel();
+            inner
+                .pending
+                .lock()
+                .unwrap()
+                .insert(seq, PendingEntry::AckThen(tx));
+            (link, seq, rx)
+        };
+
+        let frame = clamped(req).encode(seq);
+        if let Err(e) = link.send(&frame.encode()).await {
+            self.drop_pending(seq).await;
+            return Err(AppError::Send(e.to_string()));
+        }
+
+        match timeout(Duration::from_millis(timeout_ms.into()), rx).await {
+            Ok(Ok(resp_frame)) => {
+                let resp = Response::decode(&resp_frame).ok_or(AppError::BadResponse)?;
+                match &resp {
+                    // NACK または ACK 以外の応答で終了した場合を仕分ける。
+                    Response::Ack { req_type, result, .. } => Err(AppError::Rejected(format!(
+                        "ACK 拒否: req=0x{req_type:02X} result={result}"
+                    ))),
+                    _ if resp_frame.msg_type == expect_type => Ok(resp),
+                    _ => Err(AppError::BadResponse),
+                }
             }
             Ok(Err(_)) => Err(AppError::NotConnected),
             Err(_) => {
@@ -355,6 +440,17 @@ impl Session {
         }
         let _ = self.bus.link.send(LinkState::Disconnected);
         self.app_log(2, "BLE リンク断絶");
+    }
+}
+
+/// `Response` ペイロードの seq エコーを取り出す（応答相関キー）。
+fn resp_seq(resp: &Response) -> u8 {
+    match resp {
+        Response::Ack { seq, .. }
+        | Response::Pong { seq, .. }
+        | Response::Status { seq, .. }
+        | Response::CalibResult { seq, .. }
+        | Response::TestEchoResp { seq, .. } => *seq,
     }
 }
 

@@ -15,7 +15,8 @@ struct output {
 ## 公開関数
 
 - `static void init(const config&)` — パラメータ参照を保持し、全内部状態をリセットする。
-- `static output step(const state_estimator::output& est, const vec3& command, bool enable, const vec3& wheel_rate)` — 外側 1 ステップを実行する。速度積分・ヨーバイアスラッチ等の入出力引数は内部状態として保持する。
+- `static void reset()` — 全内部状態（モードラッチ・積分・フィルタ・ランプ時計・ヨーバイアスラッチ等）を初期状態へ戻す。`START_OPERATION` 受理時（`STANDBY`→`OPERATING` 遷移）に外側タスクから呼び、待機前の残留状態を持ち込まない（FR-12）。パラメータ参照は保持する。
+- `static output step(const state_estimator::output& est, const vec3& command, bool enable, const vec3& wheel_rate)` — 外側 1 ステップを実行する。速度積分・ヨーバイアスラッチ等の入出力引数は内部状態として保持する。`STANDBY` 中は呼出し側が `step` 自体を実行しない（呼べば `!enable` で mode 0 ラッチが立つため）。
 
 ## 内部構成
 
