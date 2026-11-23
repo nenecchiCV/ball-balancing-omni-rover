@@ -85,7 +85,7 @@ export function HomePage() {
     if (!(r & READY_MASK.tiltOk)) {
       const deg =
         status?.tilt != null ? `現在 ${((status.tilt * 180) / Math.PI).toFixed(0)}°` : "";
-      missing.push(`傾斜 35° 未満（${deg}）`);
+      missing.push(`傾斜 10° 未満（${deg}）`);
     }
     return missing.length ? `（未充足: ${missing.join("・")}）` : "";
   };
@@ -155,7 +155,7 @@ export function HomePage() {
                   <td>
                     {status.tilt == null
                       ? "—"
-                      : `${((status.tilt * 180) / Math.PI).toFixed(1)}°（動作開始は 35° 未満）`}
+                      : `${((status.tilt * 180) / Math.PI).toFixed(1)}°（動作開始は 10° 未満）`}
                   </td>
                 </tr>
               </tbody>

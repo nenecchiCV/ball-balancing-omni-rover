@@ -44,7 +44,7 @@
 | `0x12` | `STOP` | なし | `0x80 ACK` | 現在モードを維持したまま運動指令をゼロ化する（位置制御中は目標を現在位置に置き換える）。`STOP_OPERATION` とは異なり動作中状態は維持する |
 | `0x13` | `SET_CONTROL_MODE` | `mode u8`（1 B） | `0x80 ACK` | `0`=指令なし（その場保持）、`1`=速度指令、`2`=位置制御。指令系リクエスト受理の前提モードを指定する。動作中のみ受理 |
 | `0x14` | `RESET_ODOMETRY` | なし | `0x80 ACK` | ワールド原点を現在位置へ再設定し、(x, y, yaw) をゼロ化する。受理時に位置目標を解除する |
-| `0x15` | `START_OPERATION` | なし | `0x80 ACK` | 待機 → 動作中へ遷移する。受理条件: `imu_ok`・E-Stop 解除・非 `fault`・バイアス資格成立・姿勢が `fallen_tilt` 未満。不成立時は `NOT_READY`/`REJECTED_STATE` |
+| `0x15` | `START_OPERATION` | なし | `0x80 ACK` | 待機 → 動作中へ遷移する。受理条件: `imu_ok`・E-Stop 解除・非 `fault`・バイアス資格成立・姿勢が `start_tilt` 未満（既定 10 deg）。不成立時は `NOT_READY`/`REJECTED_STATE` |
 | `0x16` | `STOP_OPERATION` | なし | `0x80 ACK` | 動作中 → 待機へ遷移し、モータ駆動を即時遮断する。常時受理 |
 | `0x17` | `SET_POSE` | `x f32, y f32, yaw f32`（12 B） | `0x80 ACK` | 現在のオドメトリ姿勢・位置を指定値へ設定する（所定位置へのセッティング）。待機中のみ受理、受理時に位置目標を解除する |
 | `0x18` | `CALIBRATE_IMU` | なし | `0x80 ACK` + `0x83 CALIB_RESULT` | ジャイロバイアスの再学習を開始する。待機中のみ受理。受理時に ACK を返し、完了・失敗時に `CALIB_RESULT` を即時送出する |
@@ -73,7 +73,7 @@
 | `0x91` | `EVT_LOG` | `level u8, text utf8[LEN-1]` | ログメッセージ。`level`: `0`=DEBUG、`1`=INFO、`2`=WARN、`3`=ERROR |
 | `0x92` | `EVT_STATUS` | `op_state u8, mode u8, enable u8, estop u8, imu_ok u8, calib_state u8, ready_mask u8, tilt f32`（11 B。旧ファームは拡張部なしの 6 B） | 状態変化時の送出。購読時は変化検出（先頭 7 B）+ 10 Hz 上限のハートビートで送出する。`ready_mask`/`tilt` 以外のフィールド定義は `STATUS` と同じ |
 
-`ready_mask` は `START_OPERATION` 受理条件の充足を bit=1 で示すビットマスク: `0x01`=IMU 正常、`0x02`=E-Stop 解除、`0x04`=推定器 qualification 完了（0.5 秒静止）、`0x08`=傾斜が転倒角未満。`tilt` は推定姿勢の傾斜角 [rad]（`sqrt(roll² + pitch²)`）。`START_OPERATION` が `NOT_READY` で拒否された場合、これらで未充足条件を特定できる。 |
+`ready_mask` は `START_OPERATION` 受理条件の充足を bit=1 で示すビットマスク: `0x01`=IMU 正常、`0x02`=E-Stop 解除、`0x04`=推定器 qualification 完了（0.5 秒静止）、`0x08`=傾斜が `start_tilt`（開始許容角）未満。`tilt` は推定姿勢の傾斜角 [rad]（`sqrt(roll² + pitch²)`）。`START_OPERATION` が `NOT_READY` で拒否された場合、これらで未充足条件を特定できる。 |
 
 ## 調整対象パラメータ（`SET_PARAM`/`GET_PARAMS` の key）
 
@@ -123,7 +123,7 @@
 - BLE 切断または UART アイドル 1 s 超過で指令をゼロとする（リンク断絶のフェイルセーフ）。動作中はその場保持を継続し、待機へは遷移しない（転倒防止）。
 - `SET_POSE_TARGET` の `speed_limit` はロボット側 `max_speed` でクランプする。
 - 位置制御モードは自己位置推定が健全（`imu_ok` かつ推定 qualification 成立）なときのみ `result=0` を返す。
-- `START_OPERATION` は `imu_ok`・E-Stop 解除・非 `fault`・バイアス資格成立・姿勢が `fallen_tilt` 未満のときのみ `result=0` を返す。
+- `START_OPERATION` は `imu_ok`・E-Stop 解除・非 `fault`・バイアス資格成立・姿勢が `start_tilt`（既定 10 deg）未満のときのみ `result=0` を返す。
 - 動作中の E-Stop・転倒（`fallen_tilt` 超過）・IMU 異常は終端（`op_state=2`）へ遷移し、全タスクのトルク出力をゼロに固定する。復帰はリセットのみ。待機中のこれらの事象は `START_OPERATION` の拒否条件となる。
 - `TUNE_DEADZONE` 実行中の E-Stop は掃引を即時中断し（デューティをゼロ化し `TUNE_RESULT` 失敗で報告）、終端へは遷移しない。掃引中は平衡制御を行わず、車体を人が保持して車輪を無負荷とすることが前提条件。
 - `SAVE_PARAMS` のフラッシュ消去・書込みは待機中に限って実行し、モータ駆動中のストールを避ける。
