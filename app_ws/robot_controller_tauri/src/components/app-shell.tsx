@@ -28,6 +28,7 @@ import {
 import { useTelemetryStore } from "@/stores/telemetry";
 
 const NAV = [
+  { href: "/", label: "Home" },
   { href: "/connect", label: "Connect" },
   { href: "/rc", label: "RC" },
   { href: "/position", label: "Position" },
