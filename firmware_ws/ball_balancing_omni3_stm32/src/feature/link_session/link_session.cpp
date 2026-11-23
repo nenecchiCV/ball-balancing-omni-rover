@@ -568,8 +568,8 @@ uint8_t link_session::start_ready_mask(const robot_state& s) {
       (s.imu_ok ? link_protocol::ready_mask::IMU_OK : 0) |
       (!s.estop ? link_protocol::ready_mask::ESTOP_FREE : 0) |
       (s.qualified ? link_protocol::ready_mask::QUALIFIED : 0) |
-      (s.tilt < p_->controller.fallen_tilt ? link_protocol::ready_mask::TILT_OK
-                                           : 0));
+      (s.tilt < p_->controller.start_tilt ? link_protocol::ready_mask::TILT_OK
+                                          : 0));
 }
 
 void link_session::send_ack(uint8_t req_type, uint8_t seq, uint8_t result) {

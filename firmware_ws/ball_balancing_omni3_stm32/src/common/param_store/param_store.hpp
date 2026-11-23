@@ -18,7 +18,7 @@ class param_store {
   //   magic u32 | schema_ver u16 | seq u32 | param_set | crc32 u32
   // crc32 は magic 先頭から param_set 末尾までの区間に掛ける。
   static constexpr uint32_t BLOB_MAGIC = 0x42425041U;  // "BBPA"
-  static constexpr uint16_t BLOB_SCHEMA_VER = 2;
+  static constexpr uint16_t BLOB_SCHEMA_VER = 3;
   static constexpr uint32_t BLOB_HEADER = 4 + 2 + 4;
   // STM32 のフラッシュ書込みは 8 B（double word）単位必須のため、
   // 末尾パディングで総サイズを 8 の倍数に揃える（パディングは未使用）。

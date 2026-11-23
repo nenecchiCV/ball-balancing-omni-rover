@@ -230,6 +230,10 @@ struct param_set {
     float recovery_tilt = 0.0872664626F;        // 5 deg
     float recovery_exit_tilt = 0.03490658504F;  // 2 deg
     float fallen_tilt = 0.6108652382F;          // 35 deg
+    // START_OPERATION 受理の傾斜上限。Simulink の傾斜起動シナリオ
+    // （roll10: initialEulerWorld 10 deg、recovery 右起こしで ~0.4 s
+    // で復帰）と配置公差 <10 deg の実績に合わせる。
+    float start_tilt = 0.1745329252F;  // 10 deg
     float recovery_gain_scale = 3.0F;
     float recovery_authority_clear_rate = 1.5F;
     float tilt_priority_start = 0.05235987756F;  // 3 deg

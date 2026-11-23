@@ -44,7 +44,7 @@ uint8_t operation_manager::request_start(const start_cond& c) {
   if (state_ != op_state::STANDBY) {
     result = link_protocol::ack_result::REJECTED_STATE;
   } else if (!c.imu_ok || c.estop || !c.qualified ||
-             c.tilt >= p_->controller.fallen_tilt) {
+             c.tilt >= p_->controller.start_tilt) {
     result = link_protocol::ack_result::NOT_READY;
   } else {
     state_ = op_state::OPERATING;

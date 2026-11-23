@@ -70,7 +70,7 @@ class link_session {  // static class
 
 `STATUS.mode`・`EVT_STATUS.mode` は `SET_CONTROL_MODE` と同じ定義（リンク側制御モード）。`balance_controller` の mode（0/1/2 倒立状態機械）とは別物で、EVT_STATUS にはリンクモードを載せる。
 
-`STATUS`/`EVT_STATUS` の拡張部は `ready_mask u8` + `tilt f32`（EVT_STATUS は計 11 B、STATUS は計 16 B）。`ready_mask` は `START_OPERATION` 受理条件の充足ビット（`link_protocol::ready_mask`: `0x01`=IMU 正常、`0x02`=E-Stop 解除、`0x04`=qualification 完了、`0x08`=傾斜が `controller.fallen_tilt` 未満）で、`NOT_READY` 拒否時の未充足条件をホスト側で特定できるようにする。`tilt` は推定姿勢の傾斜角 [rad]。`EVT_STATUS` の変化検出は tilt の連続変化で送出が頻発しないよう先頭 7 B（ready_mask まで）のみを比較し、拡張部はハートビート周期で更新される。
+`STATUS`/`EVT_STATUS` の拡張部は `ready_mask u8` + `tilt f32`（EVT_STATUS は計 11 B、STATUS は計 16 B）。`ready_mask` は `START_OPERATION` 受理条件の充足ビット（`link_protocol::ready_mask`: `0x01`=IMU 正常、`0x02`=E-Stop 解除、`0x04`=qualification 完了、`0x08`=傾斜が `controller.start_tilt` 未満）で、`NOT_READY` 拒否時の未充足条件をホスト側で特定できるようにする。`tilt` は推定姿勢の傾斜角 [rad]。`EVT_STATUS` の変化検出は tilt の連続変化で送出が頻発しないよう先頭 7 B（ready_mask まで）のみを比較し、拡張部はハートビート周期で更新される。
 
 ## イベントバッチ送出（FR-14）
 

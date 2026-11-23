@@ -47,7 +47,7 @@ void start_checks_conditions() {
   c.qualified = false;
   CHECK_TRUE(operation_manager::request_start(c) == ack::NOT_READY);
   c = ready_cond();
-  c.tilt = get_params().controller.fallen_tilt;  // 閾値以上は不可
+  c.tilt = get_params().controller.start_tilt;  // 閾値以上は不可
   CHECK_TRUE(operation_manager::request_start(c) == ack::NOT_READY);
   // 全て拒否されても STANDBY のまま。
   CHECK_TRUE(operation_manager::state() == om::op_state::STANDBY);
