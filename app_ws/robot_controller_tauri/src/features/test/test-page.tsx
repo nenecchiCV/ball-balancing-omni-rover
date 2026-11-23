@@ -4,6 +4,7 @@
 
 import { useState } from "react";
 
+import { formatError } from "@/lib/error";
 import { robotGetStatus, robotPing, robotTestEcho } from "@/lib/ipc";
 import { useConnected } from "@/stores/connection";
 import { useLogStore } from "@/stores/logs";
@@ -44,8 +45,8 @@ export function TestPage() {
           .padStart(2, "0")} [${caps}]`,
       );
     } catch (e) {
-      note(`PING 失敗: ${String(e)}`);
-      pushLog(3, `PING 失敗: ${String(e)}`);
+      note(`PING 失敗: ${formatError(e)}`);
+      pushLog(3, `PING 失敗: ${formatError(e)}`);
     }
   };
 
@@ -60,8 +61,8 @@ export function TestPage() {
         } uptime=${s.uptimeMs} ms`,
       );
     } catch (e) {
-      note(`GET_STATUS 失敗: ${String(e)}`);
-      pushLog(3, `GET_STATUS 失敗: ${String(e)}`);
+      note(`GET_STATUS 失敗: ${formatError(e)}`);
+      pushLog(3, `GET_STATUS 失敗: ${formatError(e)}`);
     }
   };
 
@@ -80,8 +81,8 @@ export function TestPage() {
         `ECHO (${rtt} ms): ${match ? "一致" : "不一致"} "${toText(r.data)}"`,
       );
     } catch (e) {
-      note(`TEST_ECHO 失敗: ${String(e)}`);
-      pushLog(3, `TEST_ECHO 失敗: ${String(e)}`);
+      note(`TEST_ECHO 失敗: ${formatError(e)}`);
+      pushLog(3, `TEST_ECHO 失敗: ${formatError(e)}`);
     }
   };
 

@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { formatError } from "@/lib/error";
 import { robotSubscribe, robotUnsubscribe } from "@/lib/ipc";
 import { EVT_LOG, LOG_LEVEL_NAMES } from "@/lib/limits";
 import { useConnected } from "@/stores/connection";
@@ -23,7 +24,7 @@ export function LogsPage() {
   // ロボットの EVT_LOG ストリームを滞在中のみ購読する。
   useEffect(() => {
     if (!connected) return;
-    robotSubscribe(EVT_LOG, 0).catch((e) => push(3, `LOG 購読失敗: ${String(e)}`));
+    robotSubscribe(EVT_LOG, 0).catch((e) => push(3, `LOG 購読失敗: ${formatError(e)}`));
     return () => {
       robotUnsubscribe(EVT_LOG).catch(() => {});
     };

@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { formatError } from "@/lib/error";
 import {
   robotCalibrateImu,
   robotGetParams,
@@ -55,7 +56,7 @@ export function TuningPage() {
       )?.value;
       useParamsStore.getState().setLimits(ms ?? 0.4, theory ?? null);
     } catch (e) {
-      setNote(`パラメータ取得失敗: ${String(e)}`);
+      setNote(`パラメータ取得失敗: ${formatError(e)}`);
     }
   }, []);
 
@@ -78,7 +79,7 @@ export function TuningPage() {
       setDirty((d) => new Set(d).add(key));
       setNote(`${paramName(key)} = ${v}（RAM 反映、未保存）`);
     } catch (e) {
-      setNote(`${paramName(key)} 設定拒否: ${String(e)}`);
+      setNote(`${paramName(key)} 設定拒否: ${formatError(e)}`);
     }
   };
 
@@ -89,7 +90,7 @@ export function TuningPage() {
       setNote("フラッシュへ保存しました");
       pushLog(1, "パラメータをフラッシュへ保存");
     } catch (e) {
-      setNote(`保存失敗: ${String(e)}`);
+      setNote(`保存失敗: ${formatError(e)}`);
     }
   };
 
@@ -106,7 +107,7 @@ export function TuningPage() {
       await reload();
       setNote("既定値へ復元しました");
     } catch (e) {
-      setNote(`復元失敗: ${String(e)}`);
+      setNote(`復元失敗: ${formatError(e)}`);
     }
   };
 
@@ -139,8 +140,8 @@ export function TuningPage() {
       );
       pushLog(r.result === 0 ? 1 : 2, `不感帯掃引 result=${r.result}`);
     } catch (e) {
-      setNote(`掃引失敗: ${String(e)}`);
-      pushLog(3, `不感帯掃引失敗: ${String(e)}`);
+      setNote(`掃引失敗: ${formatError(e)}`);
+      pushLog(3, `不感帯掃引失敗: ${formatError(e)}`);
     } finally {
       setBusy(false);
     }
@@ -156,7 +157,7 @@ export function TuningPage() {
       await reload();
       setNote("推奨 deadzone_comp を適用しました（保存は「保存」ボタン）");
     } catch (e) {
-      setNote(`推奨値適用失敗: ${String(e)}`);
+      setNote(`推奨値適用失敗: ${formatError(e)}`);
     }
   };
 
@@ -178,7 +179,7 @@ export function TuningPage() {
       );
       pushLog(r.result === 0 ? 1 : 3, `IMU キャリブ result=${r.result}`);
     } catch (e) {
-      setNote(`キャリブレーション失敗: ${String(e)}`);
+      setNote(`キャリブレーション失敗: ${formatError(e)}`);
     }
   };
 

@@ -9,6 +9,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 
 import { ConfirmDialog } from "@/components/confirm-dialog";
 
+import { formatError } from "@/lib/error";
 import {
   robotGetParams,
   robotStop,
@@ -106,7 +107,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     try {
       await robotStop();
     } catch (e) {
-      pushLog(3, `STOP 送信失敗: ${String(e)}`);
+      pushLog(3, `STOP 送信失敗: ${formatError(e)}`);
     } finally {
       stopping.current = false;
     }

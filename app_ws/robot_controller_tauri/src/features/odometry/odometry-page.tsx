@@ -6,6 +6,7 @@
 import { useEffect } from "react";
 
 import { OdometryMap } from "@/features/odometry/odometry-map";
+import { formatError } from "@/lib/error";
 import {
   robotResetOdometry,
   robotSubscribe,
@@ -27,7 +28,7 @@ export function OdometryPage() {
   useEffect(() => {
     if (!connected) return;
     robotSubscribe(EVT_POSE, POSE_SUBSCRIBE_HZ).catch((e) =>
-      pushLog(3, `POSE 購読失敗: ${String(e)}`),
+      pushLog(3, `POSE 購読失敗: ${formatError(e)}`),
     );
     return () => {
       robotUnsubscribe(EVT_POSE).catch(() => {});
@@ -43,7 +44,7 @@ export function OdometryPage() {
       clearTrail();
       pushLog(1, "オドメトリ原点を再設定");
     } catch (e) {
-      pushLog(3, `原点リセット失敗: ${String(e)}`);
+      pushLog(3, `原点リセット失敗: ${formatError(e)}`);
     }
   };
 

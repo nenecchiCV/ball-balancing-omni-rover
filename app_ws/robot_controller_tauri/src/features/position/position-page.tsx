@@ -5,6 +5,7 @@
 import { useEffect, useState } from "react";
 
 import { OdometryMap } from "@/features/odometry/odometry-map";
+import { formatError } from "@/lib/error";
 import { robotSetPoseTarget, robotSubscribe, robotUnsubscribe } from "@/lib/ipc";
 import { EVT_POSE, POSE_SUBSCRIBE_HZ } from "@/lib/limits";
 import { OP_STATE } from "@/lib/types";
@@ -30,7 +31,7 @@ export function PositionPage() {
   useEffect(() => {
     if (!connected) return;
     robotSubscribe(EVT_POSE, POSE_SUBSCRIBE_HZ).catch((e) =>
-      pushLog(3, `POSE 購読失敗: ${String(e)}`),
+      pushLog(3, `POSE 購読失敗: ${formatError(e)}`),
     );
     return () => {
       robotUnsubscribe(EVT_POSE).catch(() => {});
@@ -50,7 +51,7 @@ export function PositionPage() {
       setTarget([tx, ty]);
       pushLog(1, `位置目標送信: (${tx.toFixed(2)}, ${ty.toFixed(2)}) v≤${sp.toFixed(2)}`);
     } catch (e) {
-      pushLog(3, `位置目標拒否: ${String(e)}`);
+      pushLog(3, `位置目標拒否: ${formatError(e)}`);
     }
   };
 

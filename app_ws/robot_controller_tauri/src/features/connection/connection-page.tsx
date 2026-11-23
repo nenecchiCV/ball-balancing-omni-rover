@@ -4,6 +4,7 @@
 
 import { useState } from "react";
 
+import { formatError } from "@/lib/error";
 import {
   bleConnect,
   bleDisconnect,
@@ -30,8 +31,8 @@ export function ConnectionPage() {
     try {
       setDevices(await bleScan(5000));
     } catch (e) {
-      setError(String(e));
-      pushLog(3, `スキャン失敗: ${String(e)}`);
+      setError(formatError(e));
+      pushLog(3, `スキャン失敗: ${formatError(e)}`);
     } finally {
       setBusy(false);
     }
@@ -46,8 +47,8 @@ export function ConnectionPage() {
       // EVT_STATUS は常時購読（ホームのステータス表示用、1 Hz で軽量）
       robotSubscribe(EVT_STATUS, 1).catch(() => {});
     } catch (e) {
-      setError(String(e));
-      pushLog(3, `接続失敗: ${String(e)}`);
+      setError(formatError(e));
+      pushLog(3, `接続失敗: ${formatError(e)}`);
     } finally {
       setBusy(false);
     }
@@ -64,7 +65,7 @@ export function ConnectionPage() {
           <button
             className="btn-secondary"
             onClick={() =>
-              bleDisconnect().catch((e) => pushLog(3, String(e)))
+              bleDisconnect().catch((e) => pushLog(3, formatError(e)))
             }
             disabled={!connected}
           >

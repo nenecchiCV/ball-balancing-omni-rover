@@ -5,6 +5,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { formatError } from "@/lib/error";
 import {
   robotCalibrateImu,
   robotSetPose,
@@ -43,7 +44,7 @@ export function HomePage() {
       pushLog(ok ? 1 : 3, `IMU キャリブレーション${ok ? "完了" : "失敗"}`);
     } catch (e) {
       setCalibNote(null);
-      pushLog(3, `キャリブレーション失敗: ${String(e)}`);
+      pushLog(3, `キャリブレーション失敗: ${formatError(e)}`);
     }
   };
 
@@ -57,7 +58,7 @@ export function HomePage() {
       await robotSetPose(x, y, yaw);
       pushLog(1, `初期位置設定: (${x.toFixed(2)}, ${y.toFixed(2)}, ${yaw.toFixed(2)})`);
     } catch (e) {
-      pushLog(3, `位置設定拒否: ${String(e)}`);
+      pushLog(3, `位置設定拒否: ${formatError(e)}`);
     }
   };
 
@@ -67,7 +68,7 @@ export function HomePage() {
       await robotStartOperation();
       pushLog(1, "動作開始を受理");
     } catch (e) {
-      pushLog(3, `動作開始拒否: ${String(e)}`);
+      pushLog(3, `動作開始拒否: ${formatError(e)}`);
     }
   };
 
@@ -82,7 +83,7 @@ export function HomePage() {
       await robotStopOperation();
       pushLog(1, "動作停止を受理");
     } catch (e) {
-      pushLog(3, `動作停止失敗: ${String(e)}`);
+      pushLog(3, `動作停止失敗: ${formatError(e)}`);
     }
   };
 

@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Joystick } from "@/features/rc/joystick";
+import { formatError } from "@/lib/error";
 import { robotSetMode, robotSetVelocity } from "@/lib/ipc";
 import { MAX_YAW_RATE, RC_SEND_HZ } from "@/lib/limits";
 import { CONTROL_MODE, OP_STATE } from "@/lib/types";
@@ -32,7 +33,7 @@ export function RcPage() {
       if (!active.current) return;
       const c = cmd.current;
       robotSetVelocity(c.vx, c.vy, c.yawRate).catch((e) =>
-        pushLog(3, `速度指令失敗: ${String(e)}`),
+        pushLog(3, `速度指令失敗: ${formatError(e)}`),
       );
       setSent({ ...c });
     }, 1000 / RC_SEND_HZ);
@@ -65,7 +66,7 @@ export function RcPage() {
       setModeSet(true);
       pushLog(1, "速度指令モードへ移行");
     } catch (e) {
-      pushLog(3, `モード移行失敗: ${String(e)}`);
+      pushLog(3, `モード移行失敗: ${formatError(e)}`);
     }
   };
 
