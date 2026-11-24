@@ -43,6 +43,16 @@ imu t=<ms> acc=[x y z] gyr=[x y z] euler_deg=[roll pitch yaw] valid=<0|1>
   `lsm6dso::config::accel_axis_map` / `gyro_axis_map`（またはハーネス配線）を
   修正する。角速度は機体軸まわりの右ねじ正転で正になることを
   各軸について確認する（`test imu` の `gyr` 出力）。
+- 期待符号（機体軸 +X=P0方向、+Y=左側、右ねじ正転が正）:
+
+  | 操作 | acc（比力） | euler | gyr |
+  |---|---|---|---|
+  | 水平静置 | ≈ [0, 0, +9.8] | roll/pitch ≈ 0 | ≈ 0 |
+  | +X 側（前方）を下げる | acc_x < 0 | pitch > 0 | — |
+  | +Y 側（左側）を下げる | acc_y < 0 | roll < 0 | — |
+  | 俯瞰で左回転（CCW） | — | yaw 増加 | gyr_z > 0 |
+
+  acc は比力なので下げた側の軸成分は負が正しい値（重力方向とは逆符号）。
 
 ## 対応コンポーネント
 

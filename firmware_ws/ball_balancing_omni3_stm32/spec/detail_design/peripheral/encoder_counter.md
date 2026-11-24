@@ -11,7 +11,7 @@ struct config { TIM_TypeDef* timer; };
 ## 公開関数
 
 - `void init(const config&)` — 対象タイマのレジスタアドレスを保持し、現在の `CNT` を基準値として取り込む。
-- `int32_t delta()` — 前回呼び出しからのカウント差分を返す。ARR=65535 の自由周回（`counts_per_revolution=2^n`）のため `int16_t` キャスト差分でラップアラウンドを吸収し、累積 `count_` へ加算する。
+- `int32_t delta()` — 前回呼び出しからのカウント差分を返す。`int16_t` キャスト差分でラップアラウンドを吸収し、累積 `count_` へ加算する。本方式が成り立つにはタイマの折返し境界（ARR+1）が 2^16 の倍数であることが必須で、devicetree の `st,counts-per-revolution = <65536>` により実現する（16bit タイマは ARR=0xFFFF の自由周回、32bit TIM2 は ARR=0xFFFF0000）。それ以外の値では折返し点で差分が誤った大きな値に跳ぶ。
 - `int64_t count()` — 累積カウント。
 
 ## 内部状態

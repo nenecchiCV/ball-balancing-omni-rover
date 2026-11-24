@@ -7,7 +7,8 @@
 int main() {
   // 実機で確認した IMU 実装向き（hardware_config.md 参照）:
   // 加速度・角速度ともセンサ軸は機体軸と一致（単位写像）。
-  // 旧 diag(-1,-1,-1) では正位置で tilt=180° となり誤りと判明。
+  // 加速度は比力出力（下げた側の軸成分は負、静置で +Z≈+1 g が正しい値）、
+  // 角速度はデータシート規約どおり機体軸まわり右ねじ正転で正。
   const bb::robot_application::config cfg = {&bb::get_params(),
                                            bb::mat_identity3(),
                                            bb::mat_identity3()};
