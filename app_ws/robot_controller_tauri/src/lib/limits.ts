@@ -14,5 +14,11 @@ export const EVT_LOG = 0x91;
 export const EVT_STATUS = 0x92;
 export const EVT_SENSORS = 0x93;
 
+// エンコーダ生カウント → 車輪角度の換算（firmware control_params.hpp と同期）。
+// enc は x4 デコード済みタイマカウントの累積値（起動時 0 起点・符号付き・ラップなし）。
+export const ENC_COUNTS_PER_REV = 341.2; // モデルカウント / 出力軸 1 回転
+export const ENC_QUADRATURE = 4.0; // 生カウント / モデルカウント
+export const ENC_DEG_PER_COUNT = 360 / (ENC_QUADRATURE * ENC_COUNTS_PER_REV);
+
 // LOG レベル表示名。
 export const LOG_LEVEL_NAMES = ["DEBUG", "INFO", "WARN", "ERROR"] as const;

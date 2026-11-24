@@ -13,7 +13,11 @@ import {
   robotTestEcho,
   robotUnsubscribe,
 } from "@/lib/ipc";
-import { EVT_SENSORS, SENSORS_SUBSCRIBE_HZ } from "@/lib/limits";
+import {
+  ENC_DEG_PER_COUNT,
+  EVT_SENSORS,
+  SENSORS_SUBSCRIBE_HZ,
+} from "@/lib/limits";
 import { useConnected } from "@/stores/connection";
 import { useLogStore } from "@/stores/logs";
 import { useSensorsStore } from "@/stores/sensors";
@@ -186,23 +190,30 @@ export function TestPage() {
               <thead>
                 <tr>
                   <th>wheel</th>
-                  <th>enc count</th>
-                  <th>rate [count/s]</th>
+                  <th>angle [deg]</th>
+                  <th>rate [deg/s]</th>
+                  <th>count</th>
                 </tr>
               </thead>
               <tbody>
                 {sensors.enc.map((c, i) => (
                   <tr key={i}>
                     <td>{i}</td>
+                    <td className="font-mono">
+                      {(c * ENC_DEG_PER_COUNT).toFixed(1)}
+                    </td>
+                    <td className="font-mono">
+                      {(encRate[i] * ENC_DEG_PER_COUNT).toFixed(0)}
+                    </td>
                     <td className="font-mono">{c}</td>
-                    <td className="font-mono">{encRate[i].toFixed(0)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
             <p className="muted">
               t_ms={sensors.tMs} ・ 受信 {sensorsCount} フレーム ・
-              accel/gyro は機体軸写像後・推定処理前の読出し値
+              accel/gyro は機体軸写像後・推定処理前の読出し値 ・
+              angle は起動時 0° 起点の符号付き累積角（±360° 超も可）
             </p>
           </>
         )}

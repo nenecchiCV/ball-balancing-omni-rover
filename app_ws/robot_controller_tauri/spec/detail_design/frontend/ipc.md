@@ -74,6 +74,9 @@ export const MAX_YAW_RATE = 0.8;   // rad/s
 export const RC_SEND_HZ = 20;
 export const EVT_POSE = 0x90;      // SUBSCRIBE 用の event_type
 export const EVT_SENSORS = 0x93;   // 同上（IMU/エンコーダ生値）
+export const ENC_COUNTS_PER_REV = 341.2;  // enc カウント→角度換算（fw control_params と同期）
+export const ENC_QUADRATURE = 4.0;
+export const ENC_DEG_PER_COUNT = 360 / (ENC_QUADRATURE * ENC_COUNTS_PER_REV);
 ```
 
 ## 備考
