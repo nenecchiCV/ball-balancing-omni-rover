@@ -94,6 +94,41 @@ duty = (resistance*current + ...
     p.motor.backEmfConstant*filteredSpeed)/p.driver.supplyVoltage;
 duty = min(max(duty, -p.driver.maxDutyCycle), p.driver.maxDutyCycle);
 
+% FR-16 drive-deadzone compensation (firmware parity): every nonzero
+% duty is lifted by the identified per-wheel deadzone comp so the
+% delivered torque crosses the drivetrain stiction band
+% (wheel_servo.cpp).  The comp is chosen by the duty SIGN -- positive
+% rotation uses deadzoneCompPos, negative deadzoneCompNeg -- and the
+% clamp is re-applied afterwards.  Inside the enable gate only, and
+% skipped in mode 0 (terminal: no drive), matching the firmware where
+% !enable forces duty = 0 before this stage.  An online residual-
+% deadzone adaptation PoC lives in ballbotDeadzoneAdaptStep.m but is
+% intentionally NOT wired in: the always-on estimator ratcheted comp
+% on ordinary reversals and destabilised even nominal runs (36 deg
+% tip in hold) -- see ballbotRev1Parameters.
+compPos = zeros(3, 1);
+compNeg = zeros(3, 1);
+if isfield(p, "drive") && isfield(p.drive, "deadzoneCompPos")
+    compPos = p.drive.deadzoneCompPos(:);
+    compNeg = p.drive.deadzoneCompNeg(:);
+end
+if enable && mode ~= 0 && isfield(p, "drive") && ...
+        isfield(p.drive, "deadzoneCompEnabled") && ...
+        p.drive.deadzoneCompEnabled
+    for i = 1:3
+        if duty(i) > 0
+            comp = compPos(i);
+        elseif duty(i) < 0
+            comp = compNeg(i);
+        else
+            comp = 0;
+        end
+        duty(i) = sign(duty(i))*(abs(duty(i)) + comp);
+    end
+    duty = min(max(duty, -p.driver.maxDutyCycle), ...
+        p.driver.maxDutyCycle);
+end
+
 output = [duty; filteredSpeed];
 end
 

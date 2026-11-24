@@ -44,6 +44,7 @@ s.recovery_wheel_torque_limit = p.controller.recoveryWheelTorqueLimit;
 s.estimator = jsafe(p.estimator);
 s.controller = jsafe(p.controller);
 s.command = jsafe(p.command);
+s.drive = jsafe(p.drive);
 j = jsonencode(s);
 fid = fopen( ...
     'C:/Users/cafdr/Documents/GitHub/ball-balancing-omni-rover/firmware_ws/ballbot_params_dump.json', ...

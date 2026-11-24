@@ -712,6 +712,39 @@ p.motor.outputCoulombTorque = (1 - p.motor.viscousShare)* ...
 p.motor.outputBreakawayTorque = 1.2*p.motor.outputCoulombTorque;
 p.motor.outputShaftFrictionEnabled = true;
 
+% FR-16 drivetrain deadzone (per wheel, per rotation direction, duty
+% units): identified on the real machine by the firmware TUNE_DEADZONE
+% triangular duty sweep with the wheels unloaded (chassis held), so it
+% captures the geartrain/bearing stiction band, not the ball contact.
+% Consumed twice: the rev2 inner wheel servo lifts every nonzero duty
+% by the matching comp (firmware parity, wheel_servo.cpp), and the
+% plant-side MDD3A gate drive clips the incoming duty by the plant
+% vectors below -- the same input-deadzone-plus-additive-inverse
+% structure the firmware assumes.  deadzonePlant* defaults to the
+% identified comp values (perfect identification); scale or skew them
+% in the deadzone-variation robustness study.  This replaces an
+% earlier attempt that mapped the deadzone onto the shaft Coulomb
+% friction: a smooth tanh law leaves a friction-free channel around
+% zero speed where the discontinuous comp kick excites a wheel
+% limit cycle, while the duty clip reproduces the measured
+% input-output behaviour exactly.
+p.drive.deadzoneCompEnabled = true;
+p.drive.deadzoneCompPos = [0.1793, 0.1309, 0.1726];
+p.drive.deadzoneCompNeg = [0.1512, 0.1266, 0.1960];
+p.drive.deadzonePlantPos = p.drive.deadzoneCompPos;
+p.drive.deadzonePlantNeg = p.drive.deadzoneCompNeg;
+% Online residual-deadzone adaptation: an event-driven PoC lives in
+% ballbotDeadzoneAdaptStep.m but is intentionally unwired from the
+% servo -- no p.drive flag gates it, so a stale workspace parameter
+% set can never re-activate it.  Sim evaluation: it rescues the
+% fatal under-compensated cases (plant >= ~1.25x comp) but onset
+% measurements are dominated by command slew and ball back-drive
+% during balance, so the always-on estimator ratchets comp
+% asymmetrically and destabilises even nominal runs (36 deg tip in
+% hold).  The validated robust design is instead: identified comp +
+% safety margin (over-compensation is tolerable to ~2x) + periodic
+% TUNE_DEADZONE re-identification.
+
 % Diagnostic: feed plant truth (roverPose/ballPose) through TruthGate
 % instead of the estimator output, to separate estimator error from
 % plant/controller physics in divergence analysis.  truthChannels

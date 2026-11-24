@@ -109,13 +109,16 @@ LQIゲインは `ballbotRobustTorqueGains` が設計します。実測トルク�
 | `ballbotSpeedPiDutyStep.m` | `Controller/WheelDrive` | 輪速PIからPWM dutyを生成（トルクモード無効時のフォールバック） |
 | `ballbotTorqueDutyStep.m` | `Controller/WheelDrive` | 輪トルク→duty変換（逆起電力補償・飽和） |
 | `ballbotLqiControllerUpdateRev2.m` | `rev2: Controller/BalanceController/LqiController` | 外側 200 Hz タスク: 推進項を除く姿勢トルク＋輪速目標＋モード/コンテキストを出力（12要素） |
-| `ballbotWheelServoDutyStep.m` | `rev2: Controller/WheelDrive/SpeedPiDuty` | 内側 1 kHz タスク: ZOH 姿勢トルク＋推進輪速サーボ＋DCモータ式 duty 反転 |
+| `ballbotWheelServoDutyStep.m` | `rev2: Controller/WheelDrive/SpeedPiDuty` | 内側 1 kHz タスク: ZOH 姿勢トルク＋推進輪速サーボ＋DCモータ式 duty 反転＋FR-16 不感帯補償（`p.drive.deadzoneCompPos/Neg`、ファーム `wheel_servo.cpp` 同等） |
 | `ballbotMdd3aVoltageController.m` | 輪速PI関数から呼出し | 輪速PIからMDD3A電圧と積分器更新を生成 |
-| `ballbotMdd3aGateDrive.m` | `WheelDrive` | duty指令をMDD3AのPWM/方向ロジック信号へ変換 |
+| `ballbotMdd3aGateDrive.m` | `WheelAssembly*/GateDrive`（車輪番号引数を augment が再刻印） | duty指令をMDD3AのPWM/方向ロジック信号へ変換＋駆動系不感帯のデューティ域クリップ（`p.drive.deadzonePlantPos/Neg`、掃引同定値に既定一致） |
+| `ballbotDeadzoneAdaptStep.m` | 未接続（実運用パスから除去済み、PoC 保存） | 残留不感帯のオンライン適応 PoC（反転立上りを受動ミニ掃引として comp を更新）。名目的動作でも comp がラチェットして転倒するためサーボ配線は撤去 — 評価結果は FR-16 仕様を参照 |
 | `ballbotPoseFromJoint.m` | `Logging` | 位置・クォータニオンからxyz/RPY真値を生成 |
 | `ballbotEulerToQuaternion.m` | 補助 | オイラー角からクォータニオン変換 |
 | `scratch_cycle.m` | 検証用エントリポイント | サイクルシミュレーション実行と `cycle_result_<tag>.mat` 保存 |
-| `ballbotBenchmark.m` | 検証用エントリポイント | シナリオ（hold/stepX/yaw/cycle/bias/moveYaw）を実行し G-01〜G-11 指標を採点・要約行を出力 |
+| `ballbotBenchmark.m` | 検証用エントリポイント | シナリオ（hold/stepX/yaw/cycle/bias/moveYaw）を実行し G-01〜G-11 指標を採点・要約行を出力（第5引数でモデル選択可、rev2 対応済み） |
+| `deadzoneAcceptance.m` | 検証用エントリポイント | rev2 不感帯受入マトリクス（nodz / dz_comp / dz_nocomp × hold/stepX/yaw/cycle）— `deadzone_acceptance_results.mat` へ逐次保存 |
+| `deadzoneSweep.m` | 検証用エントリポイント | comp 固定・プラント不感帯変動のロバストスイープ（スケール・単輪・方向偏り）— `deadzone_sweep_results.mat` へ逐次保存。不足補償 +25% で転倒・過補償 2 倍は性能劣化のみという結果を取得済み |
 | `scratch_ksweep.m` | 検証用エントリポイント | 接触剛性掃引（hold/cycle/v040/roll10 を各剛性点で実行）— 剛性ロバスト性の受入マトリクス |
 
 推定器の内部状態は14要素で、末尾にヨー軸ジャイロバイアス推定値と低運動継続時間を保持します。制御器へ渡す`estimate`は13要素（モデル内のestimateバスは固定14幅で末尾は未使用パッド）で、4～6番目をバイアス補正後の機体角速度とします。バイアス推定値、学習許可、継続時間は診断信号として扱います。起動時はバイアス収束までヨートルクだけを抑止し、明示的なヨー指令は抑止をバイパスします。

@@ -71,5 +71,80 @@ classdef ballbotParametersTest < matlab.unittest.TestCase
                 sin(p.wheel.contactLatitude)*ones(1, 3), ...
                 AbsTol=1.0e-12);
         end
+
+        function testDriveDeadzoneMatchesFirmware(testCase)
+            p = ballbotRev1Parameters;
+
+            % FR-16 identified values mirrored from
+            % control_params.hpp param_set::drive.
+            testCase.verifyEqual(p.drive.deadzoneCompPos, ...
+                [0.1793, 0.1309, 0.1726], AbsTol=1.0e-12);
+            testCase.verifyEqual(p.drive.deadzoneCompNeg, ...
+                [0.1512, 0.1266, 0.1960], AbsTol=1.0e-12);
+            testCase.verifyTrue(p.drive.deadzoneCompEnabled);
+            % Plant vectors default to the identified comp values
+            % (perfect identification baseline for the robustness
+            % sweep).
+            testCase.verifyEqual(p.drive.deadzonePlantPos, ...
+                p.drive.deadzoneCompPos, AbsTol=1.0e-12);
+            testCase.verifyEqual(p.drive.deadzonePlantNeg, ...
+                p.drive.deadzoneCompNeg, AbsTol=1.0e-12);
+        end
+
+        function testGateDriveDeadzoneClip(testCase)
+            p = ballbotRev1Parameters;
+            logicHigh = p.driver.logicHighVoltage;
+
+            % Wheel 2, positive: below the plant deadzone the winding
+            % sees nothing; above it the duty is reduced by dz.
+            out = ballbotMdd3aGateDrive(0.05, p, 2);
+            testCase.verifyEqual(out(1), 0, AbsTol=1.0e-12);
+            out = ballbotMdd3aGateDrive(0.20, p, 2);
+            testCase.verifyEqual(out(1), ...
+                (0.20 - p.drive.deadzonePlantPos(2))*logicHigh, ...
+                AbsTol=1.0e-12);
+            % Negative duty uses the Neg vector and asserts REV.
+            out = ballbotMdd3aGateDrive(-0.20, p, 2);
+            testCase.verifyEqual(out(1), ...
+                (0.20 - p.drive.deadzonePlantNeg(2))*logicHigh, ...
+                AbsTol=1.0e-12);
+            testCase.verifyEqual(out(2), logicHigh, AbsTol=1.0e-12);
+            % Comp cancellation: servo lifts |duty| by comp, the clip
+            % removes the plant dz -- command restored when matched.
+            out = ballbotMdd3aGateDrive(0.05 + ...
+                p.drive.deadzoneCompPos(2), p, 2);
+            testCase.verifyEqual(out(1), 0.05*logicHigh, ...
+                AbsTol=1.0e-12);
+        end
+
+        function testWheelServoDeadzoneComp(testCase)
+            p = ballbotRev1Parameters;
+            ctx = zeros(8, 1);
+            ctx(7) = 0;   % settleWitness
+            ctx(8) = 1;   % enable
+            z3 = zeros(3, 1);
+
+            % Zero torque command -> zero duty, comp must NOT create
+            % a nonzero duty (firmware: comp inside enable gate only
+            % when duty ~= 0).
+            out = ballbotWheelServoDutyStep(ctx, z3, z3, 1, p);
+            testCase.verifyEqual(out(1:3), z3, AbsTol=1.0e-12);
+
+            % Positive attitude torque -> duty lifted by compPos.
+            ctx(1:3) = [0.1; 0; 0];
+            outC = ballbotWheelServoDutyStep(ctx, z3, z3, 1, p);
+            pNoComp = p;
+            pNoComp.drive.deadzoneCompEnabled = false;
+            outN = ballbotWheelServoDutyStep(ctx, z3, z3, 1, pNoComp);
+            testCase.verifyEqual(outC(1), ...
+                outN(1) + p.drive.deadzoneCompPos(1), AbsTol=1.0e-9);
+
+            % Negative torque -> negative duty lifted by compNeg.
+            ctx(1:3) = [-0.1; 0; 0];
+            outC = ballbotWheelServoDutyStep(ctx, z3, z3, 1, p);
+            outN = ballbotWheelServoDutyStep(ctx, z3, z3, 1, pNoComp);
+            testCase.verifyEqual(outC(1), ...
+                outN(1) - p.drive.deadzoneCompNeg(1), AbsTol=1.0e-9);
+        end
     end
 end

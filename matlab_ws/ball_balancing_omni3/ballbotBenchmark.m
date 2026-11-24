@@ -1,4 +1,4 @@
-function result = ballbotBenchmark(scenario, tag, ov, sampleTime)
+function result = ballbotBenchmark(scenario, tag, ov, sampleTime, modelName)
 %BALLBOTBENCHMARK Run a benchmark scenario on the rev1 model and score
 %   the G-01..G-11 specification metrics.
 %   result = ballbotBenchmark(scenario, tag, ov)
@@ -11,6 +11,9 @@ function result = ballbotBenchmark(scenario, tag, ov, sampleTime)
 %               ballbotRev1Parameters BEFORE the scenario preset and ov
 %               so every Ts-derived quantity is rebuilt consistently
 %               (default [] = 5 ms / 200 Hz)
+%     modelName: optional model override; default is the rev1 model.
+%               The rev2 multi-rate model logs the same signal set, so
+%               every metric below applies unchanged.
 %
 %   The returned struct carries every measured metric plus a pass flag
 %   per applicable spec item; metrics whose signals are unavailable are
@@ -33,8 +36,10 @@ if nargin < 1, scenario = 'hold'; end
 if nargin < 2, tag = scenario; end
 if nargin < 3, ov = {}; end
 if nargin < 4, sampleTime = []; end
-
-model = 'ball_balancing_omni3_multibody_lqi_rev1';
+if nargin < 5 || isempty(modelName)
+    modelName = 'ball_balancing_omni3_multibody_lqi_rev1';
+end
+model = modelName;
 ballbotRev1SimConfig(model);
 % Overrides prefixed 'design.' are chassis-design knobs consumed BEFORE
 % the geometry/gain derivations (contactLatitude, ball.radius, ...);
@@ -128,6 +133,16 @@ in = in.setModelParameter('StopTime', num2str(stopTime));
 in = in.setVariable('ballbotParams', p);
 clear functions
 out = sim(in);
+% The scenario/override mutations in p (command profile, deadzone
+% experiment flags, ...) must not leak into a later interactive Run:
+% the model InitFcn reuses any fresh-stamped ballbotParams it finds in
+% the base workspace -- and the interpreted MATLAB Fcn blocks resolve
+% ballbotParams from that same base workspace, so the pre-sim assignin
+% above is what actually delivers p to the model (setVariable does
+% not).  Restamp the leftover AFTER the run so a direct Run sees it as
+% stale and regenerates clean defaults.
+p.parameterSource = "ballbotRev1Parameters-benchmark";
+assignin('base', 'ballbotParams', p);
 assignin('base', 'dbgOut', out);
 
 result = struct('scenario', scenario, 'tag', tag, ...
