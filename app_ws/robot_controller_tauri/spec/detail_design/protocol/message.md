@@ -14,7 +14,8 @@ pub mod msg_type { /* PING=0x01, SET_VELOCITY=0x10, SET_POSE_TARGET=0x11, STOP=0
                       GET_STATUS=0x30, TEST_ECHO=0x31, GET_PARAMS=0x32,
                       ACK=0x80, PONG=0x81, STATUS=0x82, CALIB_RESULT=0x83,
                       TEST_ECHO_RESP=0x84, PARAMS=0x85, TUNE_RESULT=0x86,
-                      EVT_POSE=0x90, EVT_LOG=0x91, EVT_STATUS=0x92 */ }
+                      EVT_POSE=0x90, EVT_LOG=0x91, EVT_STATUS=0x92,
+                      EVT_SENSORS=0x93 */ }
 
 pub mod op_state { /* STANDBY=0, OPERATING=1, FAULT=2, TUNING=3 */ }
 
@@ -56,6 +57,7 @@ pub enum RobotEvent {
     Pose { t_ms: u32, x: f32, y: f32, yaw: f32, vx: f32, vy: f32, yaw_rate: f32 },
     Log { level: u8, text: String },
     Status { op_state: u8, mode: u8, enable: u8, estop: u8, imu_ok: u8, calib_state: u8 },
+    Sensors { t_ms: u32, accel: [f32; 3], gyro: [f32; 3], enc: [i32; 3] },
 }
 ```
 

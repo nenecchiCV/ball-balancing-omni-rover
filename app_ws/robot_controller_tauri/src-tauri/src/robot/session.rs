@@ -18,7 +18,7 @@ use crate::error::AppError;
 use crate::protocol::frame::{Frame, FrameDecoder};
 use crate::protocol::message::{ack_result, Request, Response, RobotEvent};
 use crate::robot::log::{LogMessage, LogSource};
-use crate::robot::telemetry::{PoseTelemetry, StatusTelemetry};
+use crate::robot::telemetry::{PoseTelemetry, SensorTelemetry, StatusTelemetry};
 use futures::StreamExt;
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(1);
@@ -44,6 +44,7 @@ pub enum LinkState {
 struct EventBus {
     link: broadcast::Sender<LinkState>,
     telemetry: broadcast::Sender<PoseTelemetry>,
+    sensors: broadcast::Sender<SensorTelemetry>,
     status: broadcast::Sender<StatusTelemetry>,
     log: broadcast::Sender<LogMessage>,
 }
@@ -100,6 +101,7 @@ impl Session {
             bus: EventBus {
                 link: broadcast::channel(16).0,
                 telemetry: broadcast::channel(64).0,
+                sensors: broadcast::channel(64).0,
                 status: broadcast::channel(16).0,
                 log: broadcast::channel(256).0,
             },
@@ -148,6 +150,9 @@ impl Session {
     }
     pub fn subscribe_telemetry(&self) -> broadcast::Receiver<PoseTelemetry> {
         self.bus.telemetry.subscribe()
+    }
+    pub fn subscribe_sensors(&self) -> broadcast::Receiver<SensorTelemetry> {
+        self.bus.sensors.subscribe()
     }
     pub fn subscribe_status(&self) -> broadcast::Receiver<StatusTelemetry> {
         self.bus.status.subscribe()
@@ -446,6 +451,9 @@ impl Session {
     fn publish_robot_event(&self, ev: &RobotEvent) {
         if let Some(p) = Option::<PoseTelemetry>::from(ev) {
             let _ = self.bus.telemetry.send(p);
+        }
+        if let Some(sv) = Option::<SensorTelemetry>::from(ev) {
+            let _ = self.bus.sensors.send(sv);
         }
         if let Some(s) = Option::<StatusTelemetry>::from(ev) {
             let _ = self.bus.status.send(s);

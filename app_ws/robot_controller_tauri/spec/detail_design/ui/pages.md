@@ -4,7 +4,7 @@
 
 ## 共通部品
 
-- `app-shell`（`components/app-shell.tsx`）— 左ナビ（Connect / RC / Position / Odometry / Logs / Test / Tuning）、右上に接続バッジ＋動作状態バッジ（`OP_STATE` 対応の STANDBY/OPERATING/FAULT/TUNING）、ヘッダー右端に緊急停止ボタンを配置する。起動時に `watchLinkState`/`watchTelemetry`/`watchStatus`/`watchLog` を一度だけ張り、受信値を各 store へ配る。緊急停止は `robotStopOperation()` を送る（`STOP_OPERATION`：モータ即遮断→待機。故障状態からの待機復帰も兼ね、ロボット側は常時受理する。運動指令ゼロのみの `STOP` とは別機能）。
+- `app-shell`（`components/app-shell.tsx`）— 左ナビ（Connect / RC / Position / Odometry / Logs / Test / Tuning）、右上に接続バッジ＋動作状態バッジ（`OP_STATE` 対応の STANDBY/OPERATING/FAULT/TUNING）、ヘッダー右端に緊急停止ボタンを配置する。起動時に `watchLinkState`/`watchTelemetry`/`watchSensors`/`watchStatus`/`watchLog` を一度だけ張り、受信値を各 store へ配る。緊急停止は `robotStopOperation()` を送る（`STOP_OPERATION`：モータ即遮断→待機。故障状態からの待機復帰も兼ね、ロボット側は常時受理する。運動指令ゼロのみの `STOP` とは別機能）。
 - `joystick`（`features/rc/joystick.tsx`）— `pointerdown/move/up` で動く円形スティック。中心からの正規化オフセット `(x, y) ∈ [-1, 1]` を `onChange` で返し、解放で `(0, 0)` を返す。`label` と軸の向き（`axes: "xy" | "x"`）を props で指定する。
 - `odometry-map`（`features/odometry/odometry-map.tsx`）— canvas 描画。props: `pose: PoseTelemetry | null`、`trail: [x, y][]`、`target?: [x, y] | null`。原点中心・+X 右・+Y 上のワールド座標を画面座標へ写像し、グリッド・ロボット三角マーカ・軌跡線・目標点を描く。`pose` の位置系フィールドは `null` 許容で、欠落時はマーカを描かない。
 
@@ -16,7 +16,7 @@
 - `position-page`（`/position`）— x, y, speed_limit の数値入力と「目標送信」ボタン（`robotSetPoseTarget`）。滞在中 `EVT_POSE` を購読し、telemetry store の `pose` を `odometry-map` へ渡して目標点・残距離を表示する（FR-03）。`opState` ガードは rc-page と同様。
 - `odometry-page`（`/odometry`）— `EVT_POSE` 購読（`robotSubscribe(0x90, 20)`）。telemetry store の `pose`/`trail` を `odometry-map` へ渡し、数値表示と `robotResetOdometry`（確認ダイアログ付き、成功時 `clearTrail`）を提供する（FR-04）。
 - `logs-page`（`/logs`）— `robotSubscribe(0x91, 0)` でロボットの `EVT_LOG` を購読する。表示は logs store の `entries`（robot/app ソース混在）で、レベルフィルタ・一時停止・クリアを提供する（FR-05）。
-- `test-page`（`/test`）— テストコマンド送受信画面（FR-08）。`robotPing`（PongInfo 表示）、`robotGetStatus`（RobotStatusInfo 全項目表示）、`robotTestEcho`（任意バイト列またはテキスト入力→エコー内容と rttMs 表示）の実行ボタンと結果リストを持つ。本番ファームとテストファーム（`robotCaps` bit3）の両方で使い、`robotCaps` も併せて表示する。テストファーム使用時は「STM32 側で `test link` を起動してから実行」のガイドを併記する（FR-10）。
+- `test-page`（`/test`）— テストコマンド送受信画面（FR-08, FR-11）。`robotPing`（PongInfo 表示）、`robotGetStatus`（RobotStatusInfo 全項目表示）、`robotTestEcho`（任意バイト列またはテキスト入力→エコー内容と rttMs 表示）の実行ボタンと結果リストを持つ。加えて**センサ生値カード**を持ち、滞在中 `robotSubscribe(EVT_SENSORS, 10)` で IMU 加速度・ジャイロ・エンコーダ生カウント（sensors store の `latest`、10 Hz）を表示し、離脱時に `robotUnsubscribe` する。本番ファームとテストファーム（`robotCaps` bit3）の両方で使い、`robotCaps` も併せて表示する。テストファーム使用時は「STM32 側で `test link` を起動してから実行」のガイドを併記する（FR-10）。
 - `tuning-page`（`/tuning`）— パラメータ調整画面（FR-09, FR-10）。`robotGetParams` で調整対象パラメータを key 昇順・名称付きで一覧表示し、各行を `robotSetParam` で編集・即時反映する（RAM のみ、未保存注記あり）。「保存」=`robotSaveParams`（待機中のみ）、「既定値に戻す」=`robotResetParams`（確認ダイアログ付き）。不感帯掃引は「車体を手で保持し 3 輪を無負荷にして実行（掃引中モータ回転）」のガイド + 確認のうえ `robotTuneDeadzone` を実行し、`TuneResultInfo` の立上り・維持・推奨値を車輪ごとに表示する。方向は正転/逆転/両方向（順次 2 回掃引）のセレクトで指定し、「推奨値を適用」で方向に対応する `deadzone_comp_pos`/`deadzone_comp_neg` へ `SET_PARAM` する。IMU 特性は現在値表示 + `robotCalibrateImu` 実行 + 保存を提供する。`opState!==standby` 時は各操作を disabled とする。
 
 ## 内部状態

@@ -62,6 +62,7 @@ namespace evt {
 constexpr uint8_t POSE = 0x90;
 constexpr uint8_t LOG = 0x91;
 constexpr uint8_t STATUS = 0x92;
+constexpr uint8_t SENSORS = 0x93;
 }  // namespace evt
 
 // ACK result コード。

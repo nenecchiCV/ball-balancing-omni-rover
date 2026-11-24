@@ -142,6 +142,26 @@ void link_session::generate_events(uint32_t now_ms) {
     }
   }
 
+  // EVT_SENSORS: 購読中はレート分周で送出（バッチバッファへ投入、FR-18）。
+  // t_ms u32 | accel f32x3 | gyro f32x3 | enc_count i32x3 = 40 B。
+  if (subs.sensors_rate_hz > 0) {
+    const uint32_t div =
+        (OUTER_RATE_HZ + subs.sensors_rate_hz - 1) / subs.sensors_rate_hz;
+    if (++sensors_div_count_ >= div) {
+      sensors_div_count_ = 0;
+      uint8_t pl[40];
+      link_protocol::write_u32(&pl[0], now_ms);
+      for (int i = 0; i < 3; ++i) {
+        link_protocol::write_f32(&pl[4 + i * 4], s.imu_accel[i]);
+        link_protocol::write_f32(&pl[16 + i * 4], s.imu_gyro[i]);
+        link_protocol::write_u32(&pl[28 + i * 4],
+                                 static_cast<uint32_t>(s.enc_count[i]));
+      }
+      queue_slot(sensors_slot_, sensors_dirty_, link_protocol::evt::SENSORS,
+                 pl, sizeof(pl));
+    }
+  }
+
   // EVT_STATUS: 変化検出 + 100 ms ハートビート（バッチバッファへ投入）。
   // 先頭 6 B は従来互換で、7 B 以降は START 受理条件の可視化拡張
   // （ready_mask u8 + tilt f32）。tilt は連続変化するため変化検出は
@@ -496,6 +516,14 @@ void link_session::dispatch(const link_protocol::request& req) {
         } else {
           result = link_protocol::ack_result::INVALID_PARAM;
         }
+      } else if (et == link_protocol::evt::SENSORS) {
+        if (rate >= 1 && rate <= 50) {
+          subs_.sensors_rate_hz = rate;
+        } else if (rate == 0) {
+          subs_.sensors_rate_hz = 0;  // イベントのみ（周期送出なし）
+        } else {
+          result = link_protocol::ack_result::INVALID_PARAM;
+        }
       } else if (et == link_protocol::evt::LOG) {
         subs_.log = true;
       } else if (et == link_protocol::evt::STATUS) {
@@ -515,6 +543,8 @@ void link_session::dispatch(const link_protocol::request& req) {
       key = irq_lock();
       if (pl[0] == link_protocol::evt::POSE) {
         subs_.pose_rate_hz = 0;
+      } else if (pl[0] == link_protocol::evt::SENSORS) {
+        subs_.sensors_rate_hz = 0;
       } else if (pl[0] == link_protocol::evt::LOG) {
         subs_.log = false;
       } else if (pl[0] == link_protocol::evt::STATUS) {
@@ -632,6 +662,11 @@ void link_session::flush_batch(uint32_t now_ms) {
     memcpy(&buf[n], pose_slot_.data, pose_slot_.len);
     n += pose_slot_.len;
     pose_dirty_ = false;
+  }
+  if (sensors_dirty_) {
+    memcpy(&buf[n], sensors_slot_.data, sensors_slot_.len);
+    n += sensors_slot_.len;
+    sensors_dirty_ = false;
   }
   if (status_dirty_) {
     memcpy(&buf[n], status_slot_.data, status_slot_.len);

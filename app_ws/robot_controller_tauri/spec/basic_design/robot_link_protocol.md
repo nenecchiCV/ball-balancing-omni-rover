@@ -2,8 +2,8 @@
 
 `robot_controller_tauri`（セントラル）と `ball_balancing_omni3_stm32`（プロトコル終端）の間のアプリケーションプロトコルを定義する。転送は `uart_wireless_converter_esp32` の BLE NUS 透過バイトストリーム上で行い、変換器は内容を解釈しない。
 
-- ステータス: rev A は両端実装済み（`link_protocol`/`link_uart`/`link_session`/`odometry`/`position_controller`）。rev B（動作状態管理・キャリブレーション・初期位置設定・`TEST_ECHO`・イベントバッチ送出）は両端実装済み。rev C（可変長フレーム・パラメータ不揮発保存・調整系コマンド）は要求確定済み・実装は未着手。ファーム側要求は FR-09〜FR-17 にトレースする。
-- プロトコルバージョン: `3`（rev A = `1`、rev B = `2`）
+- ステータス: rev A は両端実装済み（`link_protocol`/`link_uart`/`link_session`/`odometry`/`position_controller`）。rev B（動作状態管理・キャリブレーション・初期位置設定・`TEST_ECHO`・イベントバッチ送出）は両端実装済み。rev C（可変長フレーム・パラメータ不揮発保存・調整系コマンド）は両端実装済み。rev D（`CALIBRATE_IMU` への姿勢オフセット較正統合・`CALIB_RESULT` 拡張・`imu.att_offset_*` パラメータ）は要求確定済み・実装は未着手。rev E（`EVT_SENSORS` センサ生データ送出）は両端実装済み。ファーム側要求は FR-09〜FR-18 にトレースする。
+- プロトコルバージョン: `5`（rev A = `1`、rev B = `2`、rev C = `3`、rev D = `4`）。`EVT_SENSORS` は追加型イベントであり後方互換のため、PONG で報告する実装基準バージョンは rev D 完了時に `5` へ揃える（現行ファーム・実装は rev C 基準の `3`）
 
 ## 設計方針
 
@@ -47,12 +47,12 @@
 | `0x15` | `START_OPERATION` | なし | `0x80 ACK` | 待機 → 動作中へ遷移する。受理条件: `imu_ok`・E-Stop 解除・非 `fault`・バイアス資格成立・姿勢が `start_tilt` 未満（既定 10 deg）。不成立時は `NOT_READY`/`REJECTED_STATE`。受理時に推定器の動的状態をリセットし、最後の `SET_POSE`/`RESET_ODOMETRY` 宣言位置へオドメトリを再適用する（待機中の推定ドリフトを動作へ持ち込まない） |
 | `0x16` | `STOP_OPERATION` | なし | `0x80 ACK` | 動作中 → 待機へ遷移し、モータ駆動を即時遮断する。常時受理し、故障（`op_state=2`）からも待機へ復帰する（故障リセット）。調整中は掃引を中断して待機へ戻る |
 | `0x17` | `SET_POSE` | `x f32, y f32, yaw f32`（12 B） | `0x80 ACK` | 現在のオドメトリ姿勢・位置を指定値へ設定する（所定位置へのセッティング）。待機中のみ受理、受理時に位置目標を解除し、**推定器もリセットする**（「初期位置にセットした」宣言として、静止状態から姿勢を再シード。学習済み IMU バイアスは保持） |
-| `0x18` | `CALIBRATE_IMU` | なし | `0x80 ACK` + `0x83 CALIB_RESULT` | ジャイロバイアスの再学習を開始する。待機中のみ受理。受理時に ACK を返し、完了・失敗時に `CALIB_RESULT` を即時送出する |
+| `0x18` | `CALIBRATE_IMU` | なし | `0x80 ACK` + `0x83 CALIB_RESULT` | ジャイロバイアスと姿勢（傾き）オフセットの再学習を開始する。待機中のみ受理。受理時に ACK を返し、完了・失敗時に `CALIB_RESULT` を即時送出する。実行前に機体を運用床の上へ基準姿勢（傾き 0 としたい姿勢）で静置しておく。完了時点の比力方向を新しい `imu.att_offset_*` として捕捉し、以後その姿勢が推定傾斜 0 となる |
 | `0x19` | `SET_PARAM` | `key u8, value f32`（5 B） | `0x80 ACK` | 調整対象パラメータ 1 件を RAM 上の動作値へ設定する（範囲外は `INVALID_PARAM`）。フラッシュへは保存せず、再起動で保存値に戻る。チューニング中も受理する |
 | `0x1A` | `SAVE_PARAMS` | なし | `0x80 ACK` | RAM 上の動作パラメータをフラッシュ（`storage_partition`）へ確定保存する。待機中のみ受理 |
 | `0x1B` | `RESET_PARAMS` | なし | `0x80 ACK` | 動作パラメータを出荷既定値へ戻し、フラッシュも消去する。待機中のみ受理 |
 | `0x1C` | `TUNE_DEADZONE` | `dir i8, max_duty f32, ramp_s f32`（9 B、省略可） | `0x80 ACK` + `0x86 TUNE_RESULT` | モータ不感帯の三角掃引同定を開始する。待機中のみ受理。`dir` は ±1 の符号（省略時 +1）、`max_duty` は掃引上限（0.01–0.8、省略時 0.25）、`ramp_s` は片道掃引秒（1–120、省略時 15）。受理時に ACK を返し、完了・中断時に `TUNE_RESULT` を即時送出する |
-| `0x20` | `SUBSCRIBE` | `event_type u8, rate_hz u8`（2 B） | `0x80 ACK` | イベント購読開始。`rate_hz` は `EVT_POSE` に適用（1–50、`0` はイベント発生時のみの意味で `EVT_LOG`/`EVT_STATUS` 向け） |
+| `0x20` | `SUBSCRIBE` | `event_type u8, rate_hz u8`（2 B） | `0x80 ACK` | イベント購読開始。`rate_hz` は `EVT_POSE`・`EVT_SENSORS` に適用（1–50、`0` はイベント発生時のみの意味で `EVT_LOG`/`EVT_STATUS` 向け） |
 | `0x21` | `UNSUBSCRIBE` | `event_type u8`（1 B） | `0x80 ACK` | イベント購読停止 |
 | `0x30` | `GET_STATUS` | なし | `0x82 STATUS` | ロボット状態の単発取得 |
 | `0x31` | `TEST_ECHO` | 任意（0–250 B） | `0x84 TEST_ECHO_RESP` | リンク疎通・往復検証用のペイロードエコー。本番ファームとテストファーム（`link_test`）の双方で実装する |
@@ -65,13 +65,14 @@
 | `0x80` | `ACK` | `req_type u8, seq u8, result u8`（3 B） | リクエスト受理結果。`result`: `0`=OK、`1`=INVALID_PARAM、`2`=REJECTED_STATE（モード・動作状態の不整合等）、`3`=NOT_READY（推定・制御の準備未完）、`4`=UNSUPPORTED |
 | `0x81` | `PONG` | `seq u8, proto_ver u8, robot_caps u8`（3 B） | `PING` 応答。`robot_caps` ビット: bit0=位置制御対応、bit1=オドメトリ送出対応、bit2=ログ送出対応、bit3=テストビルド、bit4=運転管理対応（`START_OPERATION`/`STOP_OPERATION`/`CALIBRATE_IMU`/`SET_POSE`） |
 | `0x82` | `STATUS` | `seq u8, op_state u8, mode u8, enable u8, estop u8, imu_ok u8, calib_state u8, uptime_ms u32, ready_mask u8, tilt f32`（16 B。旧ファームは拡張部なしの 11 B） | `GET_STATUS` 応答。`op_state`: `0`=待機、`1`=動作中、`2`=終端（fault）、`3`=調整中（`TUNE_DEADZONE` 掃引実行中）。`mode` は `SET_CONTROL_MODE` と同じ定義。`calib_state`: `0`=未実施、`1`=実施中、`2`=完了、`3`=失敗 |
-| `0x83` | `CALIB_RESULT` | `seq u8, result u8, gyro_bias_z f32`（6 B） | `CALIBRATE_IMU` の完了報告（単発応答として即時送出）。`result`: `0`=成功（静止資格成立）、`1`=失敗（静止未検出・タイムアウト）、`2`=失敗（IMU 異常） |
+| `0x83` | `CALIB_RESULT` | `seq u8, result u8, gyro_bias_z f32, att_offset_roll f32, att_offset_pitch f32`（14 B。旧ファームは 6 B） | `CALIBRATE_IMU` の完了報告（単発応答として即時送出）。`result`: `0`=成功（静止資格成立）、`1`=失敗（静止未検出・タイムアウト）、`2`=失敗（IMU 異常）。`att_offset_*` は完了後に有効な姿勢オフセット [rad]（成功時は捕捉値、失敗時は従来値）。旧ファーム（6 B）では未送信 |
 | `0x84` | `TEST_ECHO_RESP` | `seq u8, data u8[LEN-1]` | `TEST_ECHO` ペイロードのエコー |
 | `0x85` | `PARAMS` | `seq u8, total u8, count u8, [key u8, value f32]×count` | `GET_PARAMS` 応答。`total` は調整対象 key の全件数、`count` は本フレーム内の件数。収集件数が `total` に達するまで `start_key` を進めて再要求する |
 | `0x86` | `TUNE_RESULT` | `seq u8, result u8, dz_start f32[3], dz_keep f32[3], recommended f32[3]`（38 B） | `TUNE_DEADZONE` の完了報告（単発応答として即時送出）。`result`: `0`=成功、`1`=中断（E-Stop・タイムアウト）、`2`=失敗（車輪未回転）。`dz_start` は上り掃引の立上りデューティ、`dz_keep` は下り掃引の維持限界、`recommended` は推奨 `deadzone_comp`（車輪ごと） |
 | `0x90` | `EVT_POSE` | `t_ms u32, x f32, y f32, yaw f32, vx f32, vy f32, yaw_rate f32`（28 B） | 自己位置推定結果。`SUBSCRIBE` で指定したレートで送出 |
 | `0x91` | `EVT_LOG` | `level u8, text utf8[LEN-1]` | ログメッセージ。`level`: `0`=DEBUG、`1`=INFO、`2`=WARN、`3`=ERROR |
 | `0x92` | `EVT_STATUS` | `op_state u8, mode u8, enable u8, estop u8, imu_ok u8, calib_state u8, ready_mask u8, tilt f32`（11 B。旧ファームは拡張部なしの 6 B） | 状態変化時の送出。購読時は変化検出（先頭 7 B）+ 10 Hz 上限のハートビートで送出する。`ready_mask`/`tilt` 以外のフィールド定義は `STATUS` と同じ |
+| `0x93` | `EVT_SENSORS` | `t_ms u32, accel f32[3], gyro f32[3], enc_count i32[3]`（40 B） | IMU・エンコーダのセンサ生値。`accel` は比力 [m/s²]、`gyro` は角速度 [rad/s] で、いずれも機体軸写像後・推定処理前の読出し値そのまま。`enc_count` は車輪ごとのエンコーダ累積生カウント（x4 デコード前のタイマカウント積算値、ラップ自然許容）。`SUBSCRIBE` の `rate_hz`（1–50 Hz）で送出 |
 
 `ready_mask` は `START_OPERATION` 受理条件の充足を bit=1 で示すビットマスク: `0x01`=IMU 正常、`0x02`=E-Stop 解除、`0x04`=推定器 qualification 完了（0.5 秒静止）、`0x08`=傾斜が `start_tilt`（開始許容角）未満。`tilt` は推定姿勢の傾斜角 [rad]（`sqrt(roll² + pitch²)`）。`START_OPERATION` が `NOT_READY` で拒否された場合、これらで未充足条件を特定できる。 |
 
@@ -92,6 +93,8 @@
 | `0x50` | `imu.gyro_bias_z` | -0.2–0.2 | ジャイロ z バイアス（`CALIBRATE_IMU` で学習・永続化） |
 | `0x51` | `imu.ekf_bias_x` | -0.2–0.2 | EKF 推定 x 軸ジャイロバイアス |
 | `0x52` | `imu.ekf_bias_y` | -0.2–0.2 | EKF 推定 y 軸ジャイロバイアス |
+| `0x53` | `imu.att_offset_roll` | -0.5–0.5 | 姿勢オフセットの roll 成分 [rad]（`CALIBRATE_IMU` で捕捉・永続化）。推定姿勢へ適用される補正座標系の基準角 |
+| `0x54` | `imu.att_offset_pitch` | -0.5–0.5 | 同上 pitch 成分 [rad] |
 | `0x60` | `controller.max_speed` | 0.05–0x61 値 | 指令速度上限 [m/s]。初期値 0.4（シミュレーション検証値）。運動指令・位置目標の速度上限はこの値にクランプされる |
 | `0x61` | `controller.theoretical_max_speed` | — | 無滑り理論速度上限 [m/s] の**読み取り専用**派生値（`wheel_radius × motor.speed_command_limit ÷ sin(contact_latitude)` ≈ 0.81）。`0x60` の設定可能上限として参照する |
 
@@ -103,7 +106,7 @@
 
 - **単発応答**（`ACK`・`PONG`・`STATUS`・`CALIB_RESULT`・`TEST_ECHO_RESP`）は受信処理後、即時に送出する。
 - **購読イベント**（`EVT_*`）はスループット向上のためロボット側送出バッファで集約し、既定 100 ms 周期（`link.event_batch_ms`、実効帯域に応じて調整可能）でまとめて送出する。1 回のフラッシュ内のフレーム列はそのままストリームへ連結されるため、アプリ側は従来どおり連続ストリームとして復号する。
-- 同一窓内に複数発生したイベントは `EVT_POSE`・`EVT_STATUS` を最新値のみ、`EVT_LOG` を発生順に保持して送出する。窓内の `EVT_POSE` 実効レートは `min(rate_hz, 1000/event_batch_ms)` となる。
+- 同一窓内に複数発生したイベントは `EVT_POSE`・`EVT_SENSORS`・`EVT_STATUS` を最新値のみ、`EVT_LOG` を発生順に保持して送出する。窓内の `EVT_POSE`・`EVT_SENSORS` 実効レートは `min(rate_hz, 1000/event_batch_ms)` となる。
 - 滞留量が BLE 通知 1 回分相当のしきい値へ達した場合は周期を待たず早期フラッシュしてよい。バッファ容量超過は破棄してロボット側で計数する。
 
 ## シーケンス規則
@@ -143,10 +146,11 @@
 | パラメータ不揮発保存 | FR-15 | `storage_partition` への動作パラメータ保存・復元・出荷復帰 |
 | 駆動不感帯補償 | FR-16 | `wheel_servo` 出力への車輪ごとの不感帯補償 |
 | 調整・同定インターフェース | FR-17 | `GET_PARAMS`/`SET_PARAM`/`TUNE_DEADZONE` と掃引同定セッション |
+| センサ生データ送出 | FR-18 | `EVT_SENSORS` 周期送出（IMU 比力・角速度、エンコーダ生カウント） |
 
 ## 未確定事項
 
-- `EVT_TELEMETRY`（詳細テレメトリ: euler、輪速、トルク等、デバッグ CSV 相当）の追加は実機帯域確認後に検討する。バッチ送出の導入により帯域見通しは改善したが、`EVT_POSE` に統合するか別 TYPE とするかは未確定。
+- `EVT_TELEMETRY`（詳細テレメトリ: euler、輪速、トルク等、デバッグ CSV 相当）の追加は実機帯域確認後に検討する。バッチ送出の導入により帯域見通しは改善したが、`EVT_POSE` に統合するか別 TYPE とするかは未確定。生センサ値（IMU 比力・角速度、エンコーダ生カウント）は rev E の `EVT_SENSORS` で送出済み。
 - `SET_POSE_TARGET` に目標 yaw を含めるかはロボット側位置制御の設計確定時に見直す。
 - `fault`（`op_state=2`）からの遠隔復帰は `STOP_OPERATION` で待機へ戻す方式を採用した（故障リセット）。故障要因が物理的に解消されている前提は操作者責任とし、再開始可否は `START_OPERATION` の受理判定で担保する。
 - 大きなペイロード（ファームウェア更新等）は本プロトコルの範囲外とし、必要時に別 TYPE で拡張する。

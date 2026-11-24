@@ -1,6 +1,6 @@
 # link_session
 
-ロボットリンクプロトコルのセッション管理（FR-09, FR-11, FR-14）。受信フレームの振分け・制御モード/指令スロット・イベント購読・安全ウォッチドッグ・イベントバッチ生成を担い、リンクスレッドのポンプ本体 `run_once` も提供する。`link_uart`（peripheral）・`link_protocol`（common）・`operation_manager`/`odometry`/`position_controller`（feature）に依存する（いずれもリンクスレッド→feature 方向のみで循環しない）。
+ロボットリンクプロトコルのセッション管理（FR-09, FR-11, FR-14, FR-18）。受信フレームの振分け・制御モード/指令スロット・イベント購読・安全ウォッチドッグ・イベントバッチ生成を担い、リンクスレッドのポンプ本体 `run_once` も提供する。`link_uart`（peripheral）・`link_protocol`（common）・`operation_manager`/`odometry`/`position_controller`（feature）に依存する（いずれもリンクスレッド→feature 方向のみで循環しない）。
 
 ## スレッドモデル
 
@@ -20,6 +20,9 @@ class link_session {  // static class
     float x, y, yaw;               // イベント用オフセット済 pose
     float vx, vy, yaw_rate;
     uint8_t ctrl_mode;             // balance_controller 出力 mode
+    vec3 imu_accel;                // EVT_SENSORS 用: 比力 [m/s²]（推定処理前の生値）
+    vec3 imu_gyro;                 // EVT_SENSORS 用: 角速度 [rad/s]（同上）
+    int32_t enc_count[3];          // EVT_SENSORS 用: エンコーダ累積生カウント
   };
   struct command_output {     // 制御スレッドへの指令スロット読出
     uint8_t mode;             // 0=standby, 1=velocity, 2=position
@@ -35,7 +38,7 @@ class link_session {  // static class
 - `static void run_once()` — `k_poll` をバッチ期限付きタイムアウトで待ち、受信排水→フレーム振分け→バッチフラッシュ判定を行うポンプ 1 周分（リンクスレッドの無限ループから呼ぶ）。
 - `static void publish_state(const robot_state& s)` — メールボックス整合コピー（`irq_lock`）。
 - `static command_output command()` — 指令スロット整合コピー。速度指令ウォッチドッグ（最終 `SET_VELOCITY` から `link.watchdog_ms`=500ms）と UART アイドル（`link.idle_ms`=1000ms）をここで評価し、失効時はゼロ指令を返す。アイドル超過時は購読もリセットする。
-- `static void generate_events(uint32_t now_ms)` — 購読中の `EVT_POSE` を指定レートで分周エンコード、`EVT_STATUS` を変化検出 + 10 Hz ハートビートでエンコードし、**バッチバッファへ投入**する（即時送出しない）。
+- `static void generate_events(uint32_t now_ms)` — 購読中の `EVT_POSE`・`EVT_SENSORS` を指定レートで分周エンコード、`EVT_STATUS` を変化検出 + 10 Hz ハートビートでエンコードし、**バッチバッファへ投入**する（即時送出しない）。`EVT_SENSORS` は `t_ms, accel f32[3], gyro f32[3], enc_count i32[3]`（40 B）で、メールボックスの `imu_*`/`enc_count` をそのまま載せる（FR-18）。
 - `static void log(uint8_t level, const char* text)` — `EVT_LOG` をエンコードしてバッチバッファのログ FIFO へ投入（どちらのスレッドからも呼べる）。
 - `static void notify_calib_result(uint8_t result, uint8_t seq, float gyro_bias_z)` — `CALIB_RESULT(seq, result, bias)` をエンコードして `link_uart::write` で**即時送出**する（バッチ経由しない単発応答）。外側タスクが `operation_manager::calib_update` の完了検出時に呼ぶ。
 - `static void notify_tune_result(const tune_deadzone::result& r, uint8_t seq)` — `TUNE_RESULT(seq, code, dz_start[3], dz_keep[3], recommended[3])` を**即時送出**する。外側タスクが `tune_deadzone::is_done` 検出時に呼ぶ。
@@ -62,7 +65,7 @@ class link_session {  // static class
 | `RESET_PARAMS` | `op_state==STANDBY` のみ受理。`param_store::init_defaults` + `flash_store` 両スロット消去 | `ACK` — 同上 |
 | `TUNE_DEADZONE` | `operation_manager::request_tune(req.seq)` 受理時に `tune_deadzone::request_start(dir, max_duty, ramp_s)`（引数省略時は既定値） | `ACK(result)`（完了報告は別途 `TUNE_RESULT`） |
 | `GET_PARAMS` | `param_store::key_at` で `start_key` 以降を昇順列挙し 1 フレーム分（最大 30 件）を `PARAMS(seq, total, count, [key, value]*)` で返す | `PARAMS` — `start_key` が範囲外でも空 `PARAMS` を返す |
-| `SUBSCRIBE` | `event_type ∈ {0x90,0x91,0x92}` かつ `EVT_POSE` の `rate_hz ∈ 1..50`（他は 0 でも可）で購読テーブル更新 | `ACK` |
+| `SUBSCRIBE` | `event_type ∈ {0x90,0x91,0x92,0x93}` かつ `EVT_POSE`/`EVT_SENSORS` の `rate_hz ∈ 1..50`（他は 0 でも可）で購読テーブル更新 | `ACK` |
 | `UNSUBSCRIBE` | 購読テーブル削除 | `ACK(OK)` |
 | `GET_STATUS` | — | `STATUS(seq, op_state, mode, enable, estop, imu_ok, calib_state, uptime_ms, ready_mask, tilt)`（16 B。rev 初期は拡張部なしの 11 B） |
 | `TEST_ECHO` | ペイロードをそのまま格納 | `TEST_ECHO_RESP(seq, data[N])` |
@@ -77,7 +80,7 @@ class link_session {  // static class
 購読イベントは即時送出せずバッチバッファに集約し、`link.event_batch_ms`（既定 100 ms）周期でフラッシュする。
 
 - **バッチバッファ構成**（`irq_lock` 保護）:
-  - `pose_slot_`/`status_slot_`: 各イベントの最新値スロット（エンコード済みフレーム + dirty フラグ）。同周期内の複数発生は最新 1 件に畳み込む。
+  - `pose_slot_`/`sensors_slot_`/`status_slot_`: 各イベントの最新値スロット（エンコード済みフレーム + dirty フラグ）。同周期内の複数発生は最新 1 件に畳み込む。
   - `log_fifo_`: `EVT_LOG` のエンコード済みフレーム FIFO（深さ 4 程度）。満杯時は新規ドロップして `tx_drops` 計数。
 - **フラッシュ条件**（リンクスレッドで評価）: `now >= next_flush_ms_` かつバッファ非空、または滞留バイト数が `flush_threshold_`（目安 192 B）以上。フラッシュはスロット・FIFO の内容を 1 回の `link_uart::write` で連結送出し、`next_flush_ms_ = now + event_batch_ms` を更新する。
 - **早期起床**: 滞留が `flush_threshold_` に達した時点で `evt_sem_` を give し、リンクスレッドを期限前に起こす。`run_once` の `k_poll` タイムアウトは `next_flush_ms_` までの残り時間。
@@ -88,10 +91,10 @@ class link_session {  // static class
 
 - `decoder_`（`frame_decoder`）、`rx_scratch[256]`（リング排水用）。
 - `mode_`・`vel_cmd_`・`last_vel_ms_`・`last_rx_ms_`（指令スロット、`irq_lock` 保護）。
-- `subs_{pose_rate_hz, log, status}`（購読テーブル、`irq_lock` 保護）。
+- `subs_{pose_rate_hz, sensors_rate_hz, log, status}`（購読テーブル、`irq_lock` 保護）。
 - `state_box_`（`robot_state` メールボックス）。
-- `pose_slot_`/`status_slot_`/`log_fifo_`（バッチバッファ）、`next_flush_ms_`、`flush_threshold_`、`evt_sem_`。
-- `pose_div_count_`、`prev_status_`、`last_status_tx_ms_`。
+- `pose_slot_`/`sensors_slot_`/`status_slot_`/`log_fifo_`（バッチバッファ）、`next_flush_ms_`、`flush_threshold_`、`evt_sem_`。
+- `pose_div_count_`、`sensors_div_count_`、`prev_status_`、`last_status_tx_ms_`。
 - カウンタ `stats_`。
 
 ## 備考

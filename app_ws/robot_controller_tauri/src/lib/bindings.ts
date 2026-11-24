@@ -45,6 +45,7 @@ export const commands = {
 	/**  現在値を即時送った後、以後の変化をストリームする。 */
 	watchLinkState: (channel: Channel<LinkState>, options?: InvokeOptions) => __TAURI_INVOKE<null>("watch_link_state", { channel }, options),
 	watchTelemetry: (channel: Channel<PoseTelemetry>, options?: InvokeOptions) => __TAURI_INVOKE<null>("watch_telemetry", { channel }, options),
+	watchSensors: (channel: Channel<SensorTelemetry>, options?: InvokeOptions) => __TAURI_INVOKE<null>("watch_sensors", { channel }, options),
 	watchStatus: (channel: Channel<StatusTelemetry_Deserialize>, options?: InvokeOptions) => __TAURI_INVOKE<null>("watch_status", { channel }, options),
 	watchLog: (channel: Channel<LogMessage>, options?: InvokeOptions) => __TAURI_INVOKE<null>("watch_log", { channel }, options),
 };
@@ -138,6 +139,17 @@ export type RobotStatusInfo_Serialize = {
 	startReady: number | null,
 	/**  推定姿勢の傾斜角 [rad]。旧ファームは None。 */
 	tilt: number | null,
+};
+
+/**  EVT_SENSORS（センサ生値、購読レート級）。 */
+export type SensorTelemetry = {
+	tMs: number,
+	/**  IMU 比力 [m/s²]（機体軸、推定処理前の生値）。 */
+	accel: [(number | null), (number | null), (number | null)],
+	/**  IMU 角速度 [rad/s]（同上）。 */
+	gyro: [(number | null), (number | null), (number | null)],
+	/**  車輪ごとのエンコーダ累積生カウント。 */
+	enc: [number, number, number],
 };
 
 /**  EVT_STATUS。 */

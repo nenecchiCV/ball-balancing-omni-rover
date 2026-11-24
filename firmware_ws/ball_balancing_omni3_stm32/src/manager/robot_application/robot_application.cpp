@@ -421,7 +421,7 @@ void robot_application::outer_task_cb() {
     ctrl_out_ = balance_controller::output{};
   }
 
-  // リンク向け状態メールボックス更新＋イベント生成（FR-11）。
+  // リンク向け状態メールボックス更新＋イベント生成（FR-11, FR-18）。
   const link_session::robot_state rs{enable_,
                                      estop_input::requested(),
                                      imu_ok_,
@@ -435,7 +435,12 @@ void robot_application::outer_task_cb() {
                                      pose_yaw,
                                      est_out_.velocity_world2[0],
                                      est_out_.velocity_world2[1],
-                                     est_out_.gyro_body[2]};
+                                     est_out_.gyro_body[2],
+                                     imu_sample.specific_force,
+                                     imu_sample.gyro,
+                                     {static_cast<int32_t>(enc_count_[0].count()),
+                                      static_cast<int32_t>(enc_count_[1].count()),
+                                      static_cast<int32_t>(enc_count_[2].count())}};
   link_session::publish_state(rs);
   link_session::generate_events(now_ms);
 

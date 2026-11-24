@@ -40,6 +40,7 @@ UI 向けストリーム。`Channel<T>` 引数を受け、broadcast 受信を `c
 ```rust
 async fn watch_link_state(state, channel: Channel<LinkState>) -> Result<(), AppError>
 async fn watch_telemetry(state, channel: Channel<PoseTelemetry>) -> Result<(), AppError>
+async fn watch_sensors(state, channel: Channel<SensorTelemetry>) -> Result<(), AppError>
 async fn watch_status(state, channel: Channel<StatusTelemetry>) -> Result<(), AppError>
 async fn watch_log(state, channel: Channel<LogMessage>) -> Result<(), AppError>
 ```

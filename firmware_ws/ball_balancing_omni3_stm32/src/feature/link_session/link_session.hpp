@@ -45,6 +45,11 @@ class link_session {
     float raw_x, raw_y, raw_yaw;  // RESET_ODOMETRY / SET_POSE / STOP 用の生値
     float x, y, yaw;              // イベント用オフセット済 pose
     float vx, vy, yaw_rate;
+    // EVT_SENSORS 用のセンサ生値（FR-18）。imu_* は推定処理前の
+    // 読出し値そのまま、enc_count は累積生カウントの i32 切詰め。
+    vec3 imu_accel;
+    vec3 imu_gyro;
+    int32_t enc_count[3];
   };
 
   struct command_output {
@@ -87,6 +92,7 @@ class link_session {
   // complete-class 規則を避けるためメンバ初期化子を持たない POD。
   struct subscriptions {
     uint8_t pose_rate_hz;
+    uint8_t sensors_rate_hz;
     bool log;
     bool status;
   };
@@ -134,8 +140,10 @@ class link_session {
   // イベントバッチバッファ（irq_lock 保護、FR-14）。
   // POSE/STATUS は最新値スロット、LOG は FIFO。
   static inline evt_slot pose_slot_{};
+  static inline evt_slot sensors_slot_{};
   static inline evt_slot status_slot_{};
   static inline bool pose_dirty_ = false;
+  static inline bool sensors_dirty_ = false;
   static inline bool status_dirty_ = false;
   static inline evt_slot log_fifo_[LOG_FIFO_DEPTH] = {};
   static inline uint8_t log_head_ = 0;  // 最古要素の index
@@ -148,6 +156,7 @@ class link_session {
 
   // イベント分周・変化検出（制御スレッドのみアクセス）。
   static inline uint32_t pose_div_count_ = 0;
+  static inline uint32_t sensors_div_count_ = 0;
   static inline uint8_t prev_status_[11] = {};
   static inline uint32_t last_status_tx_ms_ = 0;
   static inline uint8_t prev_log_mode_ = 0xFF;

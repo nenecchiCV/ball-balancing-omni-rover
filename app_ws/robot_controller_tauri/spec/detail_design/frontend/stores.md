@@ -40,6 +40,15 @@ interface ParamsStore {
 - 書き込み起点は `app-shell` の接続時 `robotGetParams` および tuning ページのパラメータ取得・`SET_PARAM(0x60)` 反映時。
 - `watch_*` 購読ではなくコマンド応答駆動のため、「`watch_*` が唯一の書き込み起点」の原則の例外とする。
 
+## sensors.ts
+
+```ts
+interface SensorsStore {
+  latest: SensorTelemetry | null;    // 最新 EVT_SENSORS（IMU 生値・エンコーダ生カウント）
+  push(s): void;
+}
+```
+
 ## logs.ts
 
 ```ts

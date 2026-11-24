@@ -34,6 +34,7 @@ fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
         commands::robot_unsubscribe,
         commands::watch_link_state,
         commands::watch_telemetry,
+        commands::watch_sensors,
         commands::watch_status,
         commands::watch_log,
     ])

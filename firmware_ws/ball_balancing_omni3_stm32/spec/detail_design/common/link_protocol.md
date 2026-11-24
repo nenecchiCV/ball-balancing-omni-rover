@@ -16,7 +16,7 @@ namespace link_protocol {
                   GET_STATUS=0x30, TEST_ECHO=0x31, GET_PARAMS=0x32 }
   namespace resp { ACK=0x80, PONG=0x81, STATUS=0x82, CALIB_RESULT=0x83,
                    TEST_ECHO_RESP=0x84, PARAMS=0x85, TUNE_RESULT=0x86 }
-  namespace evt { POSE=0x90, LOG=0x91, STATUS=0x92 }
+  namespace evt { POSE=0x90, LOG=0x91, STATUS=0x92, SENSORS=0x93 }
   namespace ack_result { OK=0, INVALID_PARAM=1, REJECTED_STATE=2, NOT_READY=3, UNSUPPORTED=4 }
   constexpr uint8_t PROTO_VER = 3;
   constexpr uint8_t ROBOT_CAPS = 0x17;       // bit0-2 既存機能 + bit4 運転管理対応

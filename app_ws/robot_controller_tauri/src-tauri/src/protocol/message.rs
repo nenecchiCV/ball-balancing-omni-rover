@@ -37,6 +37,7 @@ pub mod msg_type {
     pub const EVT_POSE: u8 = 0x90;
     pub const EVT_LOG: u8 = 0x91;
     pub const EVT_STATUS: u8 = 0x92;
+    pub const EVT_SENSORS: u8 = 0x93;
 }
 
 // SET_CONTROL_MODE の mode 値。
@@ -282,6 +283,14 @@ pub enum RobotEvent {
         ready: Option<u8>,
         tilt: Option<f32>,
     },
+    /// EVT_SENSORS: IMU 比力 [m/s²]・角速度 [rad/s]（推定処理前の生値）と
+    /// 車輪ごとのエンコーダ累積生カウント。
+    Sensors {
+        t_ms: u32,
+        accel: [f32; 3],
+        gyro: [f32; 3],
+        enc: [i32; 3],
+    },
 }
 
 impl RobotEvent {
@@ -291,6 +300,7 @@ impl RobotEvent {
             RobotEvent::Pose { .. } => "pose",
             RobotEvent::Log { .. } => "log",
             RobotEvent::Status { .. } => "status",
+            RobotEvent::Sensors { .. } => "sensors",
         }
     }
 
@@ -325,6 +335,29 @@ impl RobotEvent {
                     } else {
                         None
                     },
+                })
+            }
+            // {t_ms u32, accel f32x3, gyro f32x3, enc_count i32x3}
+            msg_type::EVT_SENSORS if p.len() == 40 => {
+                let f3 = |o: usize| -> Option<[f32; 3]> {
+                    Some([
+                        f32::from_le_bytes(p[o..o + 4].try_into().ok()?),
+                        f32::from_le_bytes(p[o + 4..o + 8].try_into().ok()?),
+                        f32::from_le_bytes(p[o + 8..o + 12].try_into().ok()?),
+                    ])
+                };
+                let i3 = |o: usize| -> Option<[i32; 3]> {
+                    Some([
+                        i32::from_le_bytes(p[o..o + 4].try_into().ok()?),
+                        i32::from_le_bytes(p[o + 4..o + 8].try_into().ok()?),
+                        i32::from_le_bytes(p[o + 8..o + 12].try_into().ok()?),
+                    ])
+                };
+                Some(RobotEvent::Sensors {
+                    t_ms: u32::from_le_bytes(p[0..4].try_into().ok()?),
+                    accel: f3(4)?,
+                    gyro: f3(16)?,
+                    enc: i3(28)?,
                 })
             }
             _ => None,
@@ -367,6 +400,32 @@ mod tests {
         let f = Frame::new(msg_type::EVT_POSE, 0, p);
         match RobotEvent::decode(&f) {
             Some(RobotEvent::Pose { x, .. }) => assert_eq!(x, 1.5),
+            _ => panic!("decode failed"),
+        }
+    }
+
+    #[test]
+    fn decode_sensors() {
+        let mut p = vec![0u8; 40];
+        p[0..4].copy_from_slice(&1234u32.to_le_bytes());
+        p[4..8].copy_from_slice(&9.81f32.to_le_bytes()); // accel[0]
+        p[16..20].copy_from_slice(&0.5f32.to_le_bytes()); // gyro[0]
+        p[28..32].copy_from_slice(&(-42i32).to_le_bytes()); // enc[0]
+        p[36..40].copy_from_slice(&777i32.to_le_bytes()); // enc[2]
+        let f = Frame::new(msg_type::EVT_SENSORS, 0, p);
+        match RobotEvent::decode(&f) {
+            Some(RobotEvent::Sensors {
+                t_ms,
+                accel,
+                gyro,
+                enc,
+            }) => {
+                assert_eq!(t_ms, 1234);
+                assert_eq!(accel[0], 9.81);
+                assert_eq!(gyro[0], 0.5);
+                assert_eq!(enc[0], -42);
+                assert_eq!(enc[2], 777);
+            }
             _ => panic!("decode failed"),
         }
     }

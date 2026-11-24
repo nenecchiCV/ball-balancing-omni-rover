@@ -15,6 +15,7 @@ import {
   robotStopOperation,
   watchLinkState,
   watchLog,
+  watchSensors,
   watchStatus,
   watchTelemetry,
 } from "@/lib/ipc";
@@ -26,6 +27,7 @@ import {
   PARAM_KEY_THEORY_MAX_SPEED,
   useParamsStore,
 } from "@/stores/params";
+import { useSensorsStore } from "@/stores/sensors";
 import { useTelemetryStore } from "@/stores/telemetry";
 
 const NAV = [
@@ -72,8 +74,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     const { setLinkState } = useConnectionStore.getState();
     const { pushPose, setStatus } = useTelemetryStore.getState();
     const { pushMsg } = useLogStore.getState();
+    const { push: pushSensors } = useSensorsStore.getState();
     watchLinkState(setLinkState);
     watchTelemetry(pushPose);
+    watchSensors(pushSensors);
     watchStatus(setStatus);
     watchLog(pushMsg);
   }, []);

@@ -22,6 +22,7 @@
 | FR-08 | テスト用コマンドの送受信を行う | [functional/FR-08.md](functional/FR-08.md) |
 | FR-09 | 制御パラメータの取得・調整・不揮発保存と不感帯同定を行う | [functional/FR-09.md](functional/FR-09.md) |
 | FR-10 | 各機能の実行に必要な実機操作を画面へ表示する | [functional/FR-10.md](functional/FR-10.md) |
+| FR-11 | IMU・エンコーダの生データをテスト画面で購読表示する | [functional/FR-11.md](functional/FR-11.md) |
 
 ## 非機能要求
 

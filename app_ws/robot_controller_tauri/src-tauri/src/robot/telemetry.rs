@@ -19,6 +19,19 @@ pub struct PoseTelemetry {
     pub yaw_rate: f32,
 }
 
+/// EVT_SENSORS（センサ生値、購読レート級）。
+#[derive(Debug, Clone, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct SensorTelemetry {
+    pub t_ms: u32,
+    /// IMU 比力 [m/s²]（機体軸、推定処理前の生値）。
+    pub accel: [f32; 3],
+    /// IMU 角速度 [rad/s]（同上）。
+    pub gyro: [f32; 3],
+    /// 車輪ごとのエンコーダ累積生カウント。
+    pub enc: [i32; 3],
+}
+
 /// EVT_STATUS。
 #[derive(Debug, Clone, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
@@ -54,6 +67,25 @@ impl From<&RobotEvent> for Option<PoseTelemetry> {
                 vx: *vx,
                 vy: *vy,
                 yaw_rate: *yaw_rate,
+            }),
+            _ => None,
+        }
+    }
+}
+
+impl From<&RobotEvent> for Option<SensorTelemetry> {
+    fn from(ev: &RobotEvent) -> Self {
+        match ev {
+            RobotEvent::Sensors {
+                t_ms,
+                accel,
+                gyro,
+                enc,
+            } => Some(SensorTelemetry {
+                t_ms: *t_ms,
+                accel: *accel,
+                gyro: *gyro,
+                enc: *enc,
             }),
             _ => None,
         }

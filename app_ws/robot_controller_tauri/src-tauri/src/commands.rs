@@ -11,7 +11,7 @@ use crate::error::AppError;
 use crate::protocol::message::{ack_result, control_mode, msg_type, Request, Response};
 use crate::robot::log::LogMessage;
 use crate::robot::session::LinkState;
-use crate::robot::telemetry::{PoseTelemetry, StatusTelemetry};
+use crate::robot::telemetry::{PoseTelemetry, SensorTelemetry, StatusTelemetry};
 use crate::state::AppState;
 
 #[derive(Debug, Serialize, Type)]
@@ -458,6 +458,16 @@ pub async fn watch_telemetry(
     channel: Channel<PoseTelemetry>,
 ) -> Result<(), AppError> {
     spawn_forward(state.session.subscribe_telemetry(), channel);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn watch_sensors(
+    state: State<'_, AppState>,
+    channel: Channel<SensorTelemetry>,
+) -> Result<(), AppError> {
+    spawn_forward(state.session.subscribe_sensors(), channel);
     Ok(())
 }
 

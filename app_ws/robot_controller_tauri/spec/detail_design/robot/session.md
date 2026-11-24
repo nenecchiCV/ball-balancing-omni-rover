@@ -14,7 +14,7 @@ pub struct Session { /* NusLink, dispatcher ハンドル, pending マップ, bro
 ## session.rs — 公開関数
 
 - `Session::new() -> Session`
-- `subscribe_link/telemetry/status/log(&self) -> broadcast::Receiver<T>` — イベントバスの受信端。`watch_*` が購読に使う。
+- `subscribe_link/telemetry/sensors/status/log(&self) -> broadcast::Receiver<T>` — イベントバスの受信端。`watch_*` が購読に使う。
 - `async fn state(&self) -> LinkState`
 - `async fn scan(&self, timeout_ms: u32) -> Result<Vec<DiscoveredDevice>, AppError>` — `ble::nus::scan` に委譲。`LinkState::Scanning` 遷移をバスへ発行する。
 - `async fn connect(self: &Arc<Self>, address: &str) -> Result<(), AppError>` — 接続→特性確保→通知購読後、ディスパッチャタスクを spawn する。
@@ -32,6 +32,8 @@ pub struct PoseTelemetry { pub t_ms: u32, pub x: Option<f32>, pub y: Option<f32>
                            pub vy: Option<f32>, pub yaw_rate: Option<f32> }
 pub struct StatusTelemetry { pub op_state: u8, pub mode: u8, pub enable: u8,
                              pub estop: u8, pub imu_ok: u8, pub calib_state: u8 }
+pub struct SensorTelemetry { pub t_ms: u32, pub accel: [f32; 3],
+                             pub gyro: [f32; 3], pub enc: [i32; 3] }
 ```
 
 `Option<f32>` はロボット側が当該値を未算出の場合（`f32::NAN` 相当）を表し、TS では `number | null` となる。
@@ -51,7 +53,7 @@ pub struct LogMessage { pub level: u8, pub text: String, pub source: LogSource }
 - `pending_: HashMap<u8, PendingEntry>` — SEQ → 応答チャネル。`PendingEntry` は `OneShot`（最初の応答で完了）か `AckThen`（`ACK(OK)` では待機を継続し、データ応答または NACK で完了）を持つ。応答フレームのヘッダ `SEQ` はロボット側が 0 で送るため、相関には `Response::decode` が取り出すペイロードの seq エコーを使う。`expect_type` の検査は `request_data` 側で行い、期待外の応答は `BadResponse` で完了する。
 - `seq_: u8` — リクエストごとにインクリメント（イベント用 `0` と衝突しない範囲は 1–255）。
 - `subscriptions_: HashSet<u8>` — 有効な購読 TYPE。
-- `bus`: `telemetry`/`status`/`log`/`link` の 4 本の broadcast チャネル。
+- `bus`: `telemetry`/`sensors`/`status`/`log`/`link` の 5 本の broadcast チャネル。
 - ディスパッチャタスク: 通知バイト → `FrameDecoder::push` → 応答/イベント decode → pending 完了またはバス発行（`EVT_LOG` は `LogSource::Robot` を付与）。通知ストリーム終端・`is_connected` 監視で `Disconnected` を発行する。
 
 ## バス発行と UI ストリームの対応
@@ -59,6 +61,7 @@ pub struct LogMessage { pub level: u8, pub text: String, pub source: LogSource }
 | ロボット側 TYPE | バス | ペイロード |
 |---|---|---|
 | `EVT_POSE` | `telemetry` | `PoseTelemetry` |
+| `EVT_SENSORS` | `sensors` | `SensorTelemetry` |
 | `EVT_STATUS` | `status` | `StatusTelemetry` |
 | `EVT_LOG` | `log` | `LogMessage` |
 | 接続遷移 | `link` | `LinkState` |

@@ -13,6 +13,7 @@ export type {
   PongInfo,
   PoseTelemetry,
   RobotStatusInfo,
+  SensorTelemetry,
   StatusTelemetry,
   TestEchoInfo,
   TuneResultInfo,

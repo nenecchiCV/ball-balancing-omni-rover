@@ -7,6 +7,7 @@ import type {
   LinkState,
   LogMessage,
   PoseTelemetry,
+  SensorTelemetry,
   StatusTelemetry,
 } from "./types";
 
@@ -55,5 +56,6 @@ const watch = <T>(invoke: (ch: Channel<T>) => Promise<null>) => {
 
 export const watchLinkState = watch<LinkState>(commands.watchLinkState);
 export const watchTelemetry = watch<PoseTelemetry>(commands.watchTelemetry);
+export const watchSensors = watch<SensorTelemetry>(commands.watchSensors);
 export const watchStatus = watch<StatusTelemetry>(commands.watchStatus);
 export const watchLog = watch<LogMessage>(commands.watchLog);

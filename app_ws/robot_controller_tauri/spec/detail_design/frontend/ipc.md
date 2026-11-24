@@ -14,6 +14,7 @@ export const commands = {
   robotSetVelocity(vx, vy, yawRate): Promise<null>,
   watchLinkState(channel: Channel<LinkState>): Promise<null>,
   watchTelemetry(channel: Channel<PoseTelemetry>): Promise<null>,
+  watchSensors(channel: Channel<SensorTelemetry>): Promise<null>,
   watchStatus(channel: Channel<StatusTelemetry>): Promise<null>,
   watchLog(channel: Channel<LogMessage>): Promise<null>,
   // ... 全 command を網羅
@@ -44,6 +45,7 @@ watch 系ヘルパ（`Channel` を生成して `onmessage` にコールバック
 ```ts
 watchLinkState(cb: (s: LinkState) => void): void
 watchTelemetry(cb: (p: PoseTelemetry) => void): void
+watchSensors(cb: (s: SensorTelemetry) => void): void
 watchStatus(cb: (s: StatusTelemetry) => void): void
 watchLog(cb: (l: LogMessage) => void): void
 ```
@@ -56,8 +58,8 @@ bindings 型の re-export + プロトコル定数。
 
 ```ts
 export type { DiscoveredDevice_Serialize as DiscoveredDevice, LinkState, LogMessage,
-              LogSource, PongInfo, PoseTelemetry, RobotStatusInfo, StatusTelemetry,
-              CalibResultInfo, TestEchoInfo, ParamsInfo, ParamEntry,
+              LogSource, PongInfo, PoseTelemetry, RobotStatusInfo, SensorTelemetry,
+              StatusTelemetry, CalibResultInfo, TestEchoInfo, ParamsInfo, ParamEntry,
               TuneResultInfo } from "./bindings";
 export const CONTROL_MODE = { standby: 0, velocity: 1, position: 2 } as const;
 export const OP_STATE = { standby: 0, operating: 1, fault: 2, tuning: 3 } as const;
@@ -71,6 +73,7 @@ export const MAX_SPEED = 0.4;      // m/s
 export const MAX_YAW_RATE = 0.8;   // rad/s
 export const RC_SEND_HZ = 20;
 export const EVT_POSE = 0x90;      // SUBSCRIBE 用の event_type
+export const EVT_SENSORS = 0x93;   // 同上（IMU/エンコーダ生値）
 ```
 
 ## 備考

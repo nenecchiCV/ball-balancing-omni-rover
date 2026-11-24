@@ -1,13 +1,22 @@
 "use client";
 
 // FR-08: テストコマンド送受信。PING / GET_STATUS / TEST_ECHO の往復を検証する。
+// FR-11: EVT_SENSORS 購読で IMU・エンコーダの生データを表示する。
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { formatError } from "@/lib/error";
-import { robotGetStatus, robotPing, robotTestEcho } from "@/lib/ipc";
+import {
+  robotGetStatus,
+  robotPing,
+  robotSubscribe,
+  robotTestEcho,
+  robotUnsubscribe,
+} from "@/lib/ipc";
+import { EVT_SENSORS, SENSORS_SUBSCRIBE_HZ } from "@/lib/limits";
 import { useConnected } from "@/stores/connection";
 import { useLogStore } from "@/stores/logs";
+import { useSensorsStore } from "@/stores/sensors";
 
 const CAPS_NAMES: [number, string][] = [
   [0x01, "位置制御"],
@@ -30,6 +39,24 @@ export function TestPage() {
   const [echoText, setEchoText] = useState("hello");
   const [result, setResult] = useState<string[]>([]);
   const note = (s: string) => setResult((r) => [...r.slice(-19), s]);
+
+  // FR-11: 滞在中は EVT_SENSORS を購読する（受信値はグローバル store 経由）。
+  const [sensorsErr, setSensorsErr] = useState<string | null>(null);
+  const sensors = useSensorsStore((s) => s.latest);
+  const sensorsCount = useSensorsStore((s) => s.count);
+  const encRate = useSensorsStore((s) => s.encRate);
+  useEffect(() => {
+    if (!connected) {
+      setSensorsErr(null);
+      return;
+    }
+    robotSubscribe(EVT_SENSORS, SENSORS_SUBSCRIBE_HZ).catch((e) =>
+      setSensorsErr(formatError(e)),
+    );
+    return () => {
+      robotUnsubscribe(EVT_SENSORS).catch(() => {});
+    };
+  }, [connected]);
 
   const ping = async () => {
     try {
@@ -113,6 +140,72 @@ export function TestPage() {
           <code>test link</code> を起動してから実行すること
           （`caps` のテストビルドビットで識別可能）。
         </p>
+      </div>
+      <div className="card">
+        <h2 className="mb-2 text-base">
+          センサ生データ（EVT_SENSORS, {SENSORS_SUBSCRIBE_HZ} Hz）
+        </h2>
+        {sensorsErr != null && (
+          <p className="muted">
+            購読失敗: {sensorsErr}（EVT_SENSORS 未対応のファームの可能性）
+          </p>
+        )}
+        {sensors == null ? (
+          <p className="muted">{connected ? "受信待ち" : "未接続"}</p>
+        ) : (
+          <>
+            <table className="list mb-2">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>x</th>
+                  <th>y</th>
+                  <th>z</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>accel [m/s²]</td>
+                  {sensors.accel.map((v, i) => (
+                    <td key={i} className="font-mono">
+                      {v?.toFixed(4) ?? "-"}
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td>gyro [rad/s]</td>
+                  {sensors.gyro.map((v, i) => (
+                    <td key={i} className="font-mono">
+                      {v?.toFixed(4) ?? "-"}
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+            <table className="list mb-2">
+              <thead>
+                <tr>
+                  <th>wheel</th>
+                  <th>enc count</th>
+                  <th>rate [count/s]</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sensors.enc.map((c, i) => (
+                  <tr key={i}>
+                    <td>{i}</td>
+                    <td className="font-mono">{c}</td>
+                    <td className="font-mono">{encRate[i].toFixed(0)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="muted">
+              t_ms={sensors.tMs} ・ 受信 {sensorsCount} フレーム ・
+              accel/gyro は機体軸写像後・推定処理前の読出し値
+            </p>
+          </>
+        )}
       </div>
       <div className="card">
         <h2 className="mb-2 text-base">結果</h2>

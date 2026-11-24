@@ -58,7 +58,7 @@ struct telemetry_snapshot {
 
   その後 `balance_controller::step` へ渡す。`OPERATING` 中に `ctrl.mode==0`（mode0 終端ラッチ）に到達したら `operation_manager::notify_controller_terminal()` を呼び `FAULT` へ遷移させる（FR-12）。
 
-最後に `link_session::publish_state`（メールボックス更新。`tilt` は推定姿勢の傾斜角）と `generate_events`（EVT 生成→バッファ投入）を呼ぶ。qualified は `updated_qualification_time >= bias_qualification_time` で評価する。`EST`（推定器）と `odometry` は動作状態に関わらず常に更新する（待機中のキャリブレーション・位置合わせのため）。
+最後に `link_session::publish_state`（メールボックス更新。`tilt` は推定姿勢の傾斜角。`imu_accel`/`imu_gyro` は `lsm6dso::read()` の生値、`enc_count` は各 `encoder_counter::count()` の i32 切詰めを載せる。FR-18）と `generate_events`（EVT 生成→バッファ投入）を呼ぶ。qualified は `updated_qualification_time >= bias_qualification_time` で評価する。`EST`（推定器）と `odometry` は動作状態に関わらず常に更新する（待機中のキャリブレーション・位置合わせのため）。
 
 ## 内部状態
 
