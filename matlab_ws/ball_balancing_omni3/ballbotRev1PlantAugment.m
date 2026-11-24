@@ -156,7 +156,9 @@ for wheelIndex = 1:3
         fcn = add_block( ...
             'simulink/User-Defined Functions/MATLAB Fcn', ...
             [assy '/WheelShaftFricFcn'], ...
-            'MATLABFcn', 'ballbotShaftFrictionTorque(u,ballbotParams)');
+            'MATLABFcn', sprintf( ...
+            'ballbotShaftFrictionTorque(u,ballbotParams,%d)', ...
+            wheelIndex));
         t2p = add_block('nesl_utility/Simulink-PS Converter', ...
             [assy '/WheelShaftFricToPS'], 'Unit', 'N*m');
         src = add_block( ...
@@ -182,6 +184,16 @@ for wheelIndex = 1:3
         set_param(t2p, 'Position', [470 400 500 420]);
         set_param(fcn, 'Position', [380 395 430 435]);
         set_param(vin, 'Position', [290 400 320 420]);
+    end
+    % Unconditional refresh: models augmented before the per-wheel
+    % signature change still carry the 2-argument call -- re-stamp the
+    % wheel index into the MATLAB Fcn expression every run.
+    fricFcn = find_system(assy, 'SearchDepth', 1, ...
+        'Name', 'WheelShaftFricFcn');
+    if ~isempty(fricFcn)
+        set_param(fricFcn{1}, 'MATLABFcn', sprintf( ...
+            'ballbotShaftFrictionTorque(u,ballbotParams,%d)', ...
+            wheelIndex));
     end
     set_param([assy '/DriveMotor'], 'lam', ...
         'ballbotParams.motor.viscousFriction*ballbotParams.motor.viscousShare');
@@ -225,6 +237,21 @@ if ~isempty(mount) && nargin >= 2 && ~isempty(p) && ...
     z = p.fullplant.payload.centerOffset;
     set_param(mount{1}, 'TranslationCartesianOffset', ...
         sprintf('[%.6g %.6g %.6g]', off(1), off(2), z));
+end
+
+% Drivetrain deadzone: stamp the wheel index into each MDD3A
+% gate-drive MATLAB Fcn so every wheel clips against its own
+% identified Pos/Neg deadzone vector (ballbotMdd3aGateDrive).
+% Unconditional so models saved before the 3-argument signature get
+% re-stamped on the next parameter build.
+for wheelIndex = 1:3
+    assy = sprintf('%s/MultibodyPlant/WheelAssembly%d', model, ...
+        wheelIndex);
+    gd = find_system(assy, 'SearchDepth', 1, 'Name', 'GateDrive');
+    if ~isempty(gd)
+        set_param(gd{1}, 'MATLABFcn', sprintf( ...
+            'ballbotMdd3aGateDrive(u,ballbotParams,%d)', wheelIndex));
+    end
 end
 
 % Wheel-rate measurement model: keep the encoder MATLAB Fcn on the

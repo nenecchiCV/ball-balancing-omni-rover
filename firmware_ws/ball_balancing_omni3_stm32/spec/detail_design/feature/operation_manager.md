@@ -31,7 +31,7 @@ class operation_manager {  // static class
 - `static bool drives_motors()` — `state == OPERATING` のとき true。`robot_application` の外側タスクが制御器実行・サーボ出力のゲートに使う。
 - `static uint8_t request_start(const start_cond& c)` — `START_OPERATION` 受理判定（リンクスレッドから呼ぶ）。`ack_result` を返し、`OK` のとき `OPERATING` へ遷移する。条件: `state==STANDBY` かつ `c.imu_ok && !c.estop && c.qualified && c.tilt < start_tilt`。`start_tilt`（既定 10 deg）は Simulink の傾斜起動検証値（roll10 シナリオ）で、終端転倒角 `fallen_tilt`（35 deg）とは別パラメータ。状態不整合は `REJECTED_STATE`、条件未成立は `NOT_READY`。
 - `static uint8_t request_start_shell(const start_cond& c)` — `bb start` 用。`request_start` と同じ判定（受理経路が違うだけ）。
-- `static void request_stop()` — `STOP_OPERATION`/`bb stop`。常時受理し `STANDBY` へ遷移する。
+- `static void request_stop()` — `STOP_OPERATION`/`bb stop`。常時受理し、`OPERATING` → `STANDBY`（動作停止）と `FAULT` → `STANDBY`（故障リセット）へ遷移する。再開始可否は `request_start` の受理判定が担う。
 - `static uint8_t request_calib(uint8_t seq)` — `CALIBRATE_IMU` 受理判定。`STANDBY` 中のみ `OK`（受理時に `seq` を保持し `calib_state::RUNNING` へ。推定器のバイアスリセット指示は `take_bias_reset_req()` で外へ出す）。`OPERATING`/`FAULT` 中は `REJECTED_STATE`。
 - `static int8_t calib_update(uint32_t now_ms, bool qualified, bool imu_ok)` — キャリブレーション進行の完了判定（外側タスクから呼ぶ）。`RUNNING` 中のみ意味を持ち、`qualified` 成立で `0`（成功→`DONE`）、`link.calib_timeout_ms` 超過で `1`（失敗→`FAILED`）、`!imu_ok` で `2`（失敗→`FAILED`）を返す。実施中継続は `-1`。
 - `static uint8_t calib_seq()` — 受理時の `seq`（`CALIB_RESULT` エコー用）。
@@ -54,8 +54,8 @@ class operation_manager {  // static class
 
 ## 備考
 
-- `FAULT` からの遷移は持たない（物理リセット前提、FR-12）。`balance_controller` の `mode0_latch_` は `OPERATING` 中のみ発動し得る構成とし、`STANDBY` 中は制御器 `step` 自体を実行しない（`robot_application` 側のゲート）。
-- `OPERATING` → `STANDBY` 遷移は次の外側タスクから制御器 `step` を止めるだけで即時反映される。トルク遮断にランプは使わない。
-- `TUNING` 中は `drives_motors()` は true を返すが、外側タスクは `tuning()` を優先して `balance_controller::step` ではなく `tune_deadzone::step` を駆動する（平衡制御は行わず掃引のみ。車体は人が保持する前提）。
+- `FAULT` からは `request_stop()`（`STOP_OPERATION`/`bb stop`）で `STANDBY` へ復帰する（FR-12 の故障リセット）。`START_OPERATION` は `FAULT` 中も `REJECTED_STATE` で、リセット後に受理条件を満たした場合のみ再開始できる。`balance_controller` の `mode0_latch_` は `OPERATING` 中のみ発動し得る構成とし、`STANDBY` 中は制御器 `step` 自体を実行しない（`robot_application` 側のゲート）。
+- `OPERATING`/`FAULT` → `STANDBY` 遷移は次の外側タスクから制御器 `step` を止めるだけで即時反映される。トルク遮断にランプは使わない。
+- `TUNING` 中は `drives_motors()` は false を返し、外側タスクは `tuning()` を優先して `balance_controller::step` ではなく `tune_deadzone::step` を駆動する（平衡制御は行わず掃引のみ。車体は人が保持する前提）。
 - `TUNING` 中の E-Stop は `tune_deadzone::abort` で掃引を中断し `STANDBY` へ戻る（終端へは遷移しない、FR-17）。`STOP_OPERATION` も掃引を中断する。
 - `RUNNING` 中の再 `request_calib` は `OK`（再開=バイアス状態の再リセット＋deadline 更新）としてよい。

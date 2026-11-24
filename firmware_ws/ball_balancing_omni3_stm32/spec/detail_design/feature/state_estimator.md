@@ -21,7 +21,7 @@ struct output {
 - `static output step(const imu_sample& imu, const vec3& wheel_rate, float dt)` — `ballbotEstimatorStep` の 1 ステップを実行し、`estimate` と `diagnostics` を返す。`imu_sample` は `common/imu_sample`（device 非依存のデータ構造）のため、本クラスはハードウェア無しでホストテスト可能。
 - `static void reset_bias()` — ジャイロバイアス学習状態（`gyro_bias_z_`・`ekf_bias_xy_`・`qualification_time_`）をリセットする（`CALIBRATE_IMU` 対応）。姿勢・速度など他の推定状態は保持する。外側タスクから呼ぶ（`operation_manager::take_bias_reset_req` 経由）。
 - `static void request_reset()` — 推定リセットを要求する。リンクスレッドから呼び（`SET_POSE` 受理時）、制御スレッドの `step()` 先頭で `reset_req_` を消費して `reset_estimate()` を実行する。
-- `static void reset_estimate()` — 動的推定状態を初期値へ戻す。quaternion を単位に戻し `ekf_init_=false` とすることで次の静止サンプルで姿勢が加速度から再シードされる。速度・輪速・相対位置・`qualification_time_`・補助フィルタも全てリセット。学習済みバイアス（`gyro_bias_z_`・`ekf_bias_xy_`）は保持する。`SET_POSE` で「初期位置にセットした」宣言を受け、起動直後の不安定な配置期間を切り捨てて既知位置から推定を開始する。外側タスクから呼ぶ。
+- `static void reset_estimate(bool keep_qualification = false)` — 動的推定状態を初期値へ戻す。quaternion は yaw 成分のみ残した回転へ置き換え `ekf_init_=false` とすることで、次の静止サンプルでロール/ピッチが加速度から再シードされ yaw はリセット前の値を保持する（yaw は加速度から観測できず、跳ばせるとオドメトリの yaw オフセットと不整合になるため）。速度・輪速・相対位置・補助フィルタも全てリセット。学習済みバイアス（`gyro_bias_z_`・`ekf_bias_xy_`）は保持する。`keep_qualification=true` のとき `qualification_time_` も保持する（`START_OPERATION` 受理時の動作開始リセット用。受理判定で資格成立を確認済みのため再証明待ちを挟まない）。`SET_POSE` 経由（`request_reset`）では既定値で呼ばれ、資格は再証明される。外側タスクから呼ぶ。
 
 ## 内部状態（MATLAB persistent の写像）
 

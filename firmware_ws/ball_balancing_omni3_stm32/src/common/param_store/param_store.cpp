@@ -1,5 +1,6 @@
 #include "common/param_store/param_store.hpp"
 
+#include <etl/algorithm.h>
 #include <math.h>
 #include <string.h>
 
@@ -111,9 +112,8 @@ void param_store::derive() {
   // 現値も新しい理論上限へ合わせる（init_defaults では未登録で無害）。
   if (entry* const e = find(0x60)) {
     e->max = theory_max_speed_;
-    if (params_.controller.max_speed > theory_max_speed_) {
-      params_.controller.max_speed = theory_max_speed_;
-    }
+    params_.controller.max_speed =
+        etl::min(params_.controller.max_speed, theory_max_speed_);
   }
 }
 

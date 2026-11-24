@@ -14,8 +14,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # 制限付きC++: 例外・RTTI・動的確保・実行時 static 初期化ガードなし
 # -include tuple: ETL_NO_STL 時も ETL が std::tuple_size/element の
 # 特殊化を出力するため、libc++ の宣言だけを先行して読み込む。
+# ETL_FORCE_STD_INITIALIZER_LIST: ホストでは STL が存在し tuple が
+# <initializer_list> を引き込むため、ETL 独自定義との二重定義を避けて
+# コンパイラ付属の std::initializer_list を使う。
 add_compile_options(-fno-exceptions -fno-rtti -fno-threadsafe-statics -Wall
-                    -Wextra -DETL_NO_STL -include tuple)
+                    -Wextra -DETL_NO_STL -DETL_FORCE_STD_INITIALIZER_LIST
+                    -include tuple)
 
 get_filename_component(FW_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../.. ABSOLUTE)
 
