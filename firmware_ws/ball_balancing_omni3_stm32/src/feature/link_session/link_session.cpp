@@ -97,8 +97,7 @@ link_session::command_output link_session::command() {
     const bool link_alive = (now - last_rx_ms_) <= p_->link.idle_ms;
     // UART アイドル失効: ゼロ指令＋購読・目標を解除（一度だけ）。
     if (!link_alive && !idle_safe_) {
-      subs_ = {};
-      mode_ = link_mode::STANDBY;
+      clear_link_state_locked();
       idle_safe_ = true;
       clear_target = true;
     }
@@ -162,10 +161,11 @@ void link_session::generate_events(uint32_t now_ms) {
     }
   }
 
-  // EVT_STATUS: 変化検出 + 100 ms ハートビート（バッチバッファへ投入）。
-  // 先頭 6 B は従来互換で、7 B 以降は START 受理条件の可視化拡張
-  // （ready_mask u8 + tilt f32）。tilt は連続変化するため変化検出は
-  // 先頭 7 B のみで行い、拡張部はハートビート周期で更新される。
+  // EVT_STATUS: 変化検出は即時送出、ハートビートは購読レートの周期
+  // （バッチバッファへ投入）。先頭 6 B は従来互換で、7 B 以降は START
+  // 受理条件の可視化拡張（ready_mask u8 + tilt f32）。tilt は連続変化
+  // するため変化検出は先頭 7 B のみで行い、拡張部はハートビート周期で
+  // 更新される。rate_hz=0 の購読では変化検出のみ送出する。
   if (subs.status) {
     const uint8_t ready = start_ready_mask(s);
     uint8_t cur[11] = {op_state, mode,
@@ -174,7 +174,9 @@ void link_session::generate_events(uint32_t now_ms) {
                        static_cast<uint8_t>(s.imu_ok ? 1 : 0), calib, ready};
     link_protocol::write_f32(&cur[7], s.tilt);
     const bool changed = memcmp(cur, prev_status_, 7) != 0;
-    const bool heartbeat = (now_ms - last_status_tx_ms_) >= 100;
+    const bool heartbeat =
+        subs.status_rate_hz > 0 &&
+        (now_ms - last_status_tx_ms_) >= 1000U / subs.status_rate_hz;
     if (changed || heartbeat) {
       memcpy(prev_status_, cur, sizeof(cur));
       last_status_tx_ms_ = now_ms;
@@ -429,9 +431,9 @@ void link_session::dispatch(const link_protocol::request& req) {
         break;
       }
       {
-        static uint32_t save_seq = 0;
         static uint8_t blob[param_store::BLOB_SIZE];
-        param_store::build_blob(++save_seq, blob);
+        const uint32_t save_seq = param_store::next_save_seq();
+        param_store::build_blob(save_seq, blob);
         // 旧 seq のスロットを選んで交互書き（seq % 2）。
         const uint32_t slot = save_seq % flash_store::SLOT_COUNT;
         const bool ok =
@@ -466,8 +468,13 @@ void link_session::dispatch(const link_protocol::request& req) {
       const float max_duty = (n >= 9) ? link_protocol::read_f32(&pl[1]) : 0.25F;
       const float ramp_s = (n >= 9) ? link_protocol::read_f32(&pl[5]) : 15.0F;
       const uint8_t r = operation_manager::request_tune(req.seq);
-      if (r == link_protocol::ack_result::OK) {
-        (void)tune_deadzone::request_start(dir, max_duty, ramp_s);
+      if (r == link_protocol::ack_result::OK &&
+          !tune_deadzone::request_start(dir, max_duty, ramp_s)) {
+        // 開始要求が積めなければ TUNING を抜けて拒否を返す
+        operation_manager::notify_tune_done(1);
+        send_ack(req.type, req.seq,
+                 link_protocol::ack_result::REJECTED_STATE);
+        break;
       }
       send_ack(req.type, req.seq, r);
       break;
@@ -527,7 +534,16 @@ void link_session::dispatch(const link_protocol::request& req) {
       } else if (et == link_protocol::evt::LOG) {
         subs_.log = true;
       } else if (et == link_protocol::evt::STATUS) {
-        subs_.status = true;
+        // rate_hz はハートビート周期を指定する（0 は変化検出のみ）。
+        if (rate >= 1 && rate <= 50) {
+          subs_.status = true;
+          subs_.status_rate_hz = rate;
+        } else if (rate == 0) {
+          subs_.status = true;
+          subs_.status_rate_hz = 0;
+        } else {
+          result = link_protocol::ack_result::INVALID_PARAM;
+        }
       } else {
         result = link_protocol::ack_result::UNSUPPORTED;
       }
@@ -549,6 +565,7 @@ void link_session::dispatch(const link_protocol::request& req) {
         subs_.log = false;
       } else if (pl[0] == link_protocol::evt::STATUS) {
         subs_.status = false;
+        subs_.status_rate_hz = 0;
       }
       irq_unlock(key);
       send_ack(req.type, req.seq, link_protocol::ack_result::OK);

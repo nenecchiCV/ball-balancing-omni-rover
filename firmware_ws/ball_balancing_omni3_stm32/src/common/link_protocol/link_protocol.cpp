@@ -55,9 +55,11 @@ void write_u32(uint8_t* p, uint32_t v) {
 
 void frame_decoder::reset() {
   n_ = 0;
+  pending_ = 0;
 }
 
 void frame_decoder::push(uint8_t byte) {
+  compact();
   if (n_ == sizeof(buf_)) {
     drop_front(1);
   }
@@ -65,6 +67,7 @@ void frame_decoder::push(uint8_t byte) {
 }
 
 bool frame_decoder::poll(request* out) {
+  compact();
   while (true) {
     // SYNC 位置まで先頭を捨てる。
     uint16_t pos = 0;
@@ -102,11 +105,17 @@ bool frame_decoder::poll(request* out) {
     out->type = buf_[2];
     out->seq = buf_[3];
     out->payload_len = static_cast<uint8_t>(len - META_LEN);
-    if (out->payload_len > 0) {
-      memcpy(out->payload, &buf_[4], out->payload_len);
-    }
-    drop_front(total);
+    // DATA 部は buf_ 内参照を返し、消費は次回呼出しの compact() まで遅延する。
+    out->payload = &buf_[4];
+    pending_ = total;
     return true;
+  }
+}
+
+void frame_decoder::compact() {
+  if (pending_ > 0) {
+    drop_front(pending_);
+    pending_ = 0;
   }
 }
 

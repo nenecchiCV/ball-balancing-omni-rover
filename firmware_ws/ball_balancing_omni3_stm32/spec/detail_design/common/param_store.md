@@ -27,6 +27,7 @@ class param_store {  // static class
   static void build_blob(uint32_t seq, uint8_t* out);   // magic/ver/seq/params/crc32 を書く
   static bool parse_blob(const uint8_t* data, uint32_t len, uint32_t* seq);
                                           // CRC/magic/ver 照合し param_set を適用
+  static uint32_t next_save_seq();          // 保存採番カウンタ（単調増加）
   static uint32_t crc32(const uint8_t* data, uint32_t len);
 };
 ```
@@ -37,7 +38,8 @@ class param_store {  // static class
 - `set_key` は key → フィールド変換テーブル（`key/field/min/max/read_only` の固定配列、`key_at()` 昇順）に従い、未定義 key・範囲外・`read_only` エントリを `false` で拒否する。反映は `mutable_params()` への書込みのみで、各 feature は既存の `const param_set*` 経由で参照する（`get_params()` は `param_store::params()` を返す実装に変更し、既存の呼び出し側は無変更で動作値を参照する）。
 - 派生値: `derive()` は `theoretical_max_speed = physical.wheel_radius × motor.speed_command_limit ÷ sin(physical.contact_latitude)` を内部フィールドへ計算し（`init_defaults`・`parse_blob` 適用時に呼ぶ）、key `0x60`（`controller.max_speed`）のエントリ上限をその値へ更新して現値もクランプする。key `0x61` はこの派生値を返す**読み取り専用**エントリ（`field` は `param_set` 外の内部値を指し、blob には含まれない）。
 - `imu` セクションの値は `state_estimator` の学習バイアスと双方向で接続する: 起動時は `params().imu` → `state_estimator::set_bias`、キャリブレーション完了時は `state_estimator::get_bias` → `mutable_params().imu`（`robot_application` が配線）。
-- `parse_blob` は `magic`・`schema_ver`・`crc32` 全て妥当な場合のみ適用し `seq` を返す。不整合は `false` で既定値を維持する。
+- `parse_blob` は `magic`・`schema_ver`・`crc32` 全て妥当な場合のみ適用し `seq` を返す。不整合は `false` で既定値を維持する。適用した seq は保存採番カウンタ `save_seq_` へ反映する。
+- `next_save_seq()` は `bb save` と `SAVE_PARAMS` が共有する唯一の保存採番カウンタをインクリメントして返す。ロードした blob の seq より必ず大きい値を返すため、再起動後の保存も `load_latest` の「seq 最大を採用」で正しく選択される。`init_defaults()`（RESET_PARAMS と同経路）で 0 に戻る。
 - `build_blob`/`parse_blob`/`crc32`/`set_key`/`get_key` はホストテストで検証する。
 
 ## 備考

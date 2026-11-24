@@ -68,5 +68,5 @@ struct telemetry_snapshot {
 ## MATLAB との対応・適応事項
 
 - `main.cpp` 側は `robot_application::init(cfg)` → `run()` を呼ぶだけに留める。
-- E-Stop 検出は `estop_input` で集約し、検出時は外側タスクへ `enable=false` を渡す。mode 0 成立後は内側デューティを 0 に固定する。
+- E-Stop 検出は `estop_input` で集約し、検出時は外側タスクへ `enable=false` を渡す。mode 0 成立後は内側デューティを 0 に固定する。ボタンの割込フラグは `requested()` 呼出しで消費されるワンショット型のため、外側タスクは `estop_latch_` に保持し、非 STANDBY 中は状態報告・掃引中断などの他消費者へも同じ要求を供給する（STANDBY では毎ティック解除）。
 - テレメトリは `diag_task_cb` で CSV 1 行を整形して `debug_uart` に送信する（既定 off、`bb telem on` で有効化）。

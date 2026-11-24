@@ -93,6 +93,7 @@ class link_session {
   struct subscriptions {
     uint8_t pose_rate_hz;
     uint8_t sensors_rate_hz;
+    uint8_t status_rate_hz;
     bool log;
     bool status;
   };

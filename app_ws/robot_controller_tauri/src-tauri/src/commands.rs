@@ -291,7 +291,7 @@ pub async fn robot_get_params(state: State<'_, AppState>) -> Result<ParamsInfo, 
     let mut entries: Vec<ParamEntry> = Vec::new();
     let mut total: u8 = 0;
     let mut start_key: u8 = 0;
-    // 最大 4 ページ（30 件/ページで全 43 キーをカバー）。
+    // 最大 4 ページ（30 件/ページで全 48 キーをカバー）。
     for _ in 0..4 {
         match state
             .session

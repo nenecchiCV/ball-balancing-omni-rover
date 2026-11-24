@@ -102,6 +102,7 @@ class robot_application {
   static inline wheel_servo::output servo_out_{};
   static inline vec3 wheel_rate_{};
   static inline bool enable_ = false;
+  static inline bool estop_latch_ = false;
   static inline bool imu_ok_ = false;
   static inline bool prev_operating_ = false;
   static inline uint32_t outer_index_ = 0;

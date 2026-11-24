@@ -13,7 +13,7 @@ Mb = 0.285
 Ib_scalar = (2.0 / 3.0) * Mb * Rb**2          # thin shell
 Rw = 0.024
 wheel_azimuth = np.deg2rad([0.0, 120.0, 240.0])
-contact_latitude = np.deg2rad(65.0)
+contact_latitude = np.deg2rad(33.0)  # λ33（ballbotParameters.m p.wheel.contactLatitude と同値）
 contact_preload = 5.0e-5
 
 # Motor (FIT0521, output-shaft equivalent) -----------------------------------

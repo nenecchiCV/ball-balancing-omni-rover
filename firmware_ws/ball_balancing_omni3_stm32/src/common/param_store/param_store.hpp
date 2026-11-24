@@ -44,7 +44,12 @@ class param_store {
   static void build_blob(uint32_t seq, uint8_t* out);
   // blob を検証し、妥当なら param_set を動作値へ適用して seq を返す。
   // magic/schema_ver/crc32 不整合・長不足は false で動作値を維持する。
+  // 適用した seq は保存採番カウンタへ反映する（次回保存は必ずより新しい
+  // seq となり、load_latest の「seq 最大を採用」で上書き採用される）。
   static bool parse_blob(const uint8_t* data, uint32_t len, uint32_t* seq);
+  // 保存 blob の seq 採番（単調増加）。bb save / SAVE_PARAMS が共有する
+  // 唯一のカウンタで、parse_blob 適用済み seq より必ず大きい値を返す。
+  static uint32_t next_save_seq();
   static uint32_t crc32(const uint8_t* data, uint32_t len);
 
  private:
@@ -62,6 +67,7 @@ class param_store {
   static inline param_set params_{};
   static inline entry entries_[KEY_COUNT]{};
   static inline float theory_max_speed_ = 0.0F;
+  static inline uint32_t save_seq_ = 0;
 };
 
 }  // namespace bb

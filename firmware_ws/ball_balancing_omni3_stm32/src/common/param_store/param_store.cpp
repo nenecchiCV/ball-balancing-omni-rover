@@ -18,6 +18,7 @@ constexpr uint8_t GAIN_KEY_BASE = 0x30;  // torque_lqi.state_gain[r][c] = 0x30+r
 
 void param_store::init_defaults() {
   params_ = param_set{};
+  save_seq_ = 0;
   derive();
 
   // key → フィールド変換テーブル（key 昇順、調整対象はプロトコル正本に準拠）。
@@ -148,10 +149,17 @@ bool param_store::parse_blob(const uint8_t* data, uint32_t len,
   }
   memcpy(&params_, &data[BLOB_HEADER], sizeof(params_));
   derive();
+  uint32_t loaded_seq = 0;
+  memcpy(&loaded_seq, &data[6], 4);
+  save_seq_ = etl::max(save_seq_, loaded_seq);
   if (seq != nullptr) {
-    memcpy(seq, &data[6], 4);
+    *seq = loaded_seq;
   }
   return true;
+}
+
+uint32_t param_store::next_save_seq() {
+  return ++save_seq_;
 }
 
 uint32_t param_store::crc32(const uint8_t* data, uint32_t len) {

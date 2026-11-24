@@ -15,7 +15,7 @@ constexpr uint8_t SYNC = 0xA5;
 constexpr uint8_t HEADER_LEN = 2;    // SYNC | LEN
 constexpr uint8_t META_LEN = 2;      // PAYLOAD 内の TYPE | SEQ
 constexpr uint8_t CRC_LEN = 2;
-constexpr uint8_t MAX_DATA = 252;    // DATA 部最大（LEN ≤ 254）
+constexpr uint8_t MAX_DATA = 253;    // DATA 部最大（LEN ≤ 255）
 // 258B。uint8_t では表せないため uint16_t とする。
 constexpr uint16_t MAX_FRAME = HEADER_LEN + META_LEN + MAX_DATA + CRC_LEN;
 constexpr uint8_t PROTO_VER = 3;
@@ -80,15 +80,17 @@ namespace ready_mask {
 constexpr uint8_t IMU_OK = 0x01;       // IMU 正常
 constexpr uint8_t ESTOP_FREE = 0x02;   // E-Stop 解除
 constexpr uint8_t QUALIFIED = 0x04;    // 推定器 bias qualification 完了
-constexpr uint8_t TILT_OK = 0x08;      // tilt < controller.fallen_tilt
+constexpr uint8_t TILT_OK = 0x08;      // tilt < controller.start_tilt
 }  // namespace ready_mask
 
 // デコード済み受信フレーム。payload は DATA 部のみ（TYPE/SEQ は別フィールド）。
+// payload は decoder 内部バッファ内を指し、次回の push()/poll()/reset()
+// 呼出しまで有効（消費済み領域の解放は呼出し側の使用後に遅延される）。
 struct request {
   uint8_t type = 0;
   uint8_t seq = 0;
   uint8_t payload_len = 0;
-  uint8_t payload[MAX_DATA] = {};
+  const uint8_t* payload = nullptr;
 };
 
 uint16_t crc16(const uint8_t* data, uint32_t len);
@@ -119,10 +121,13 @@ class frame_decoder {
 
  private:
   void drop_front(uint16_t n);
+  void compact();
 
   // 最大フレーム 2 本分。SYNC 欠落ゴミが溜まっても poll 側で掃く。
   uint8_t buf_[2 * MAX_FRAME] = {};
   uint16_t n_ = 0;
+  // poll() が返した payload 参照を保護するため消費を遅延した先頭バイト数。
+  uint16_t pending_ = 0;
   uint32_t dropped_ = 0;
 };
 

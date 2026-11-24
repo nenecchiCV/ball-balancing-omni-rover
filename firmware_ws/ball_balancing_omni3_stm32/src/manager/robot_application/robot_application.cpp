@@ -186,9 +186,9 @@ int save_cmd_cb(const struct shell* sh, size_t argc, char** argv) {
     shell_error(sh, "save allowed in standby only");
     return -EPERM;
   }
-  static uint32_t save_seq = 0;
   static uint8_t blob[param_store::BLOB_SIZE];
-  param_store::build_blob(++save_seq, blob);
+  const uint32_t save_seq = param_store::next_save_seq();
+  param_store::build_blob(save_seq, blob);
   const bool ok = flash_store::write_slot(
       save_seq % flash_store::SLOT_COUNT, blob, param_store::BLOB_SIZE);
   shell_print(sh, "save %s (seq=%lu)", ok ? "ok" : "failed",
@@ -356,7 +356,15 @@ void robot_application::outer_task_cb() {
   const float pose_yaw = odometry::yaw_of(est_out_.euler[2]);
   const odometry::pose raw = odometry::raw();
 
-  enable_ = !estop_input::requested() && imu_ok_;
+  // E-Stop 要求はワンショット消費型フラグのため、観測した要求は非
+  // STANDBY 中ラッチして保持する（他消費者＝掃引中断・状態報告への
+  // 取りこぼし防止）。STANDBY では毎ティック解除し、単発押下を持ち越さない。
+  if (operation_manager::state() == operation_manager::op_state::STANDBY) {
+    estop_latch_ = false;
+  }
+  const bool estop = estop_input::requested() || estop_latch_;
+  estop_latch_ = estop;
+  enable_ = !estop && imu_ok_;
 
   const uint32_t now_ms = timebase::millis();
   const bool qualified = est_out_.updated_qualification_time >=
@@ -423,7 +431,7 @@ void robot_application::outer_task_cb() {
 
   // リンク向け状態メールボックス更新＋イベント生成（FR-11, FR-18）。
   const link_session::robot_state rs{enable_,
-                                     estop_input::requested(),
+                                     estop,
                                      imu_ok_,
                                      qualified,
                                      tilt,
@@ -450,9 +458,12 @@ void robot_application::outer_task_cb() {
 void robot_application::inner_task_cb() {
   // FR-17: TUNING 中はサーボを回さず掃引セッションの duty を直接適用。
   if (operation_manager::tuning()) {
+    // outer で先に消費された E-Stop 要求もラッチ経由で拾う
+    // （inner 側の観測もラッチへ反映し、状態報告へ残す）。
+    const bool estop = estop_input::requested() || estop_latch_;
+    estop_latch_ = estop;
     const tune_deadzone::output td = tune_deadzone::step(
-        wheel_speed_meter::rate(), estop_input::requested(),
-        task_scheduler::tick_count());
+        wheel_speed_meter::rate(), estop, task_scheduler::tick_count());
     for (int i = 0; i < 3; ++i) {
       motors_[i].set_duty(td.duty[i]);
     }
@@ -500,6 +511,9 @@ void robot_application::diag_task_cb() {
     status_led::set(status_led::pattern::OFF);
   } else if (ctrl_out_.mode == 2) {
     status_led::set(status_led::pattern::FAST_BLINK);
+  } else {
+    // mode 1（通常バランス中）は常時点灯で回復モード（mode 2）と区別する。
+    status_led::set(status_led::pattern::ON);
   }
   if (!telem_enabled_) return;
   char line[220];

@@ -122,6 +122,21 @@ void crc32_known_vector() {
   CHECK_TRUE(param_store::crc32(s, 9) == 0xCBF43926U);
 }
 
+void save_seq_counter() {
+  param_store::init_defaults();
+  // 新規ボード: 1 から採番。
+  CHECK_TRUE(param_store::next_save_seq() == 1);
+  // ロード済み blob の seq より必ず大きい値を返す
+  // （再起動後の保存が旧 blob より新しいと判定される）。
+  static uint8_t blob[param_store::BLOB_SIZE];
+  param_store::build_blob(7, blob);
+  CHECK_TRUE(param_store::parse_blob(blob, param_store::BLOB_SIZE, nullptr));
+  CHECK_TRUE(param_store::next_save_seq() == 8);
+  // init_defaults（既定値復元）でカウンタは 0 へ戻る。
+  param_store::init_defaults();
+  CHECK_TRUE(param_store::next_save_seq() == 1);
+}
+
 }  // namespace
 
 void param_store_tests() {
@@ -131,7 +146,9 @@ void param_store_tests() {
   key_at_is_sorted();
   blob_roundtrip();
   blob_rejects_corruption();
+  speed_limit_key();
   crc32_known_vector();
+  save_seq_counter();
 }
 
 }  // namespace bb

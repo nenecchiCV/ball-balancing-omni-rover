@@ -20,13 +20,13 @@ namespace link_protocol {
   namespace ack_result { OK=0, INVALID_PARAM=1, REJECTED_STATE=2, NOT_READY=3, UNSUPPORTED=4 }
   constexpr uint8_t PROTO_VER = 3;
   constexpr uint8_t ROBOT_CAPS = 0x17;       // bit0-2 既存機能 + bit4 運転管理対応
-  constexpr uint8_t MAX_PAYLOAD = 252;        // DATA 部（TYPE/SEQ を除く）の最大
+  constexpr uint8_t MAX_DATA = 253;           // DATA 部（TYPE/SEQ を除く）の最大
 
   struct request {           // デコード済み受信フレーム
     uint8_t type;
     uint8_t seq;
     uint8_t payload_len;
-    uint8_t payload[MAX_PAYLOAD];
+    const uint8_t* payload;  // decoder 内部バッファ参照（次回 push/poll/reset まで有効）
   };
 
   class frame_decoder {      // バイトストリーム → フレーム切出し
@@ -42,7 +42,7 @@ namespace link_protocol {
 
 `SYNC(0xA5) | LEN | PAYLOAD | CRC16-LE`。`PAYLOAD` の内部構造は `TYPE u8 | SEQ u8 | DATA[LEN-2]` とし、フレームは「スタートバイト・データ長・ペイロード・チェックサム」の 4 フィールド構成。`LEN` は `PAYLOAD` 長（`TYPE`+`SEQ`+`DATA`、2–255）。`DATA` 最大 253 B の可変長で、分割転送に対応する。
 
-- リクエスト `DATA` は 0–252 B（`TEST_ECHO` のエコー上限は 250 B とする）。
+- リクエスト `DATA` は 0–253 B（`TEST_ECHO` のエコー上限は 250 B とする）。
 - 受信側は `0xA5` 探索 → `LEN` 到着 → `PAYLOAD+CRC` 到着 → CRC 照合の順に受理し、CRC は `LEN` 先頭から `PAYLOAD` 末尾までに掛ける。
 - エンコード時は `out` に `SYNC|LEN|TYPE|SEQ|DATA|CRC16-LE` を書く。`request.type`/`request.seq` は `PAYLOAD` 先頭 2 B を展開したもの、`request.payload` は `DATA` 部のみ。
 - イベント送出は `seq = 0`。応答系は `seq` エコーを `DATA` 先頭に含める（ワイヤ `SEQ` フィールドは `PAYLOAD` 内の TYPE/SEQ 両方に含まれるが、応答では `DATA` 先頭の seq エコーを相関に使う）。
@@ -57,10 +57,11 @@ namespace link_protocol {
 ## 内部状態（frame_decoder）
 
 - `buf_[2*MAX_FRAME]`/`n_`: 受信バイトの保持バッファ。`poll()` が `0xA5` 位置まで先頭を捨て、`LEN>=2`・`PAYLOAD+CRC` 到着・CRC 照合の順に検査する。
+- `pending_`: `poll()` が返した `request.payload` が `buf_` 内を指すため、確定フレーム分の消費を次回 `push()`/`poll()`/`reset()` まで遅延する（`compact()` が冒頭で `drop_front`）。呼出し側は `request` の使用を 1 回の `poll`→処理サイクル内に閉じる。
 - `LEN` 異常・CRC 不一致は SYNC 1 バイトのみ捨てて次の `0xA5` 候補を走査し再同期する（アプリ側実装と同じ規則）。
 
 ## 備考
 
-- エンコード出力バッファは `MAX_FRAME`（=`MAX_PAYLOAD + 5`）バイト要求。イベント送出は `seq = 0`。
+- エンコード出力バッファは `MAX_FRAME`（=`MAX_DATA + 6`）バイト要求。イベント送出は `seq = 0`。
 - ペイロードの意味づけ（vx の符号等）は呼び出し側責務で、本コンポーネントは生バイトレイアウトのみ扱う。
 - rev B（`SYNC|TYPE|SEQ|LEN|PAYLOAD|CRC`）とは互換性がない。`link_test`・アプリ側も同時に rev C へ更新する。

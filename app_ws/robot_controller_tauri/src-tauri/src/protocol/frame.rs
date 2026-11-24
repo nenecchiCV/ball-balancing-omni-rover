@@ -9,7 +9,7 @@ pub const SYNC: u8 = 0xA5;
 pub const HEADER_LEN: usize = 2; // SYNC | LEN
 pub const META_LEN: usize = 2; // PAYLOAD 内の TYPE | SEQ
 pub const CRC_LEN: usize = 2;
-pub const MAX_DATA: usize = 252;
+pub const MAX_DATA: usize = 253;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Frame {

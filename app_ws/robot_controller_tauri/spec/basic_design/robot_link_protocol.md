@@ -52,7 +52,7 @@
 | `0x1A` | `SAVE_PARAMS` | なし | `0x80 ACK` | RAM 上の動作パラメータをフラッシュ（`storage_partition`）へ確定保存する。待機中のみ受理 |
 | `0x1B` | `RESET_PARAMS` | なし | `0x80 ACK` | 動作パラメータを出荷既定値へ戻し、フラッシュも消去する。待機中のみ受理 |
 | `0x1C` | `TUNE_DEADZONE` | `dir i8, max_duty f32, ramp_s f32`（9 B、省略可） | `0x80 ACK` + `0x86 TUNE_RESULT` | モータ不感帯の三角掃引同定を開始する。待機中のみ受理。`dir` は ±1 の符号（省略時 +1）、`max_duty` は掃引上限（0.01–0.8、省略時 0.25）、`ramp_s` は片道掃引秒（1–120、省略時 15）。受理時に ACK を返し、完了・中断時に `TUNE_RESULT` を即時送出する |
-| `0x20` | `SUBSCRIBE` | `event_type u8, rate_hz u8`（2 B） | `0x80 ACK` | イベント購読開始。`rate_hz` は `EVT_POSE`・`EVT_SENSORS` に適用（1–50、`0` はイベント発生時のみの意味で `EVT_LOG`/`EVT_STATUS` 向け） |
+| `0x20` | `SUBSCRIBE` | `event_type u8, rate_hz u8`（2 B） | `0x80 ACK` | イベント購読開始。`rate_hz` は `EVT_POSE`・`EVT_SENSORS`（1–50）と `EVT_STATUS`（1–50、ハートビート周期。`0` は変化検出のみ）に適用する。`EVT_LOG` では無視する |
 | `0x21` | `UNSUBSCRIBE` | `event_type u8`（1 B） | `0x80 ACK` | イベント購読停止 |
 | `0x30` | `GET_STATUS` | なし | `0x82 STATUS` | ロボット状態の単発取得 |
 | `0x31` | `TEST_ECHO` | 任意（0–250 B） | `0x84 TEST_ECHO_RESP` | リンク疎通・往復検証用のペイロードエコー。本番ファームとテストファーム（`link_test`）の双方で実装する |
@@ -71,7 +71,7 @@
 | `0x86` | `TUNE_RESULT` | `seq u8, result u8, dz_start f32[3], dz_keep f32[3], recommended f32[3]`（38 B） | `TUNE_DEADZONE` の完了報告（単発応答として即時送出）。`result`: `0`=成功、`1`=中断（E-Stop・タイムアウト）、`2`=失敗（車輪未回転）。`dz_start` は上り掃引の立上りデューティ、`dz_keep` は下り掃引の維持限界、`recommended` は推奨 `deadzone_comp`（車輪ごと） |
 | `0x90` | `EVT_POSE` | `t_ms u32, x f32, y f32, yaw f32, vx f32, vy f32, yaw_rate f32`（28 B） | 自己位置推定結果。`SUBSCRIBE` で指定したレートで送出 |
 | `0x91` | `EVT_LOG` | `level u8, text utf8[LEN-1]` | ログメッセージ。`level`: `0`=DEBUG、`1`=INFO、`2`=WARN、`3`=ERROR |
-| `0x92` | `EVT_STATUS` | `op_state u8, mode u8, enable u8, estop u8, imu_ok u8, calib_state u8, ready_mask u8, tilt f32`（11 B。旧ファームは拡張部なしの 6 B） | 状態変化時の送出。購読時は変化検出（先頭 7 B）+ 10 Hz 上限のハートビートで送出する。`ready_mask`/`tilt` 以外のフィールド定義は `STATUS` と同じ |
+| `0x92` | `EVT_STATUS` | `op_state u8, mode u8, enable u8, estop u8, imu_ok u8, calib_state u8, ready_mask u8, tilt f32`（11 B。旧ファームは拡張部なしの 6 B） | 状態変化時は変化検出（先頭 7 B）で即時送出し、それ以外は `SUBSCRIBE` の `rate_hz` 周期のハートビートで送出する。`ready_mask`/`tilt` 以外のフィールド定義は `STATUS` と同じ |
 | `0x93` | `EVT_SENSORS` | `t_ms u32, accel f32[3], gyro f32[3], enc_count i32[3]`（40 B） | IMU・エンコーダのセンサ生値。`accel` は比力 [m/s²]、`gyro` は角速度 [rad/s] で、いずれも機体軸写像後・推定処理前の読出し値そのまま。`enc_count` は車輪ごとのエンコーダ累積生カウント（x4 デコード前のタイマカウント積算値、ラップ自然許容）。`SUBSCRIBE` の `rate_hz`（1–50 Hz）で送出 |
 
 `ready_mask` は `START_OPERATION` 受理条件の充足を bit=1 で示すビットマスク: `0x01`=IMU 正常、`0x02`=E-Stop 解除、`0x04`=推定器 qualification 完了（0.5 秒静止）、`0x08`=傾斜が `start_tilt`（開始許容角）未満。`tilt` は推定姿勢の傾斜角 [rad]（`sqrt(roll² + pitch²)`）。`START_OPERATION` が `NOT_READY` で拒否された場合、これらで未充足条件を特定できる。 |

@@ -38,7 +38,7 @@ class link_session {  // static class
 - `static void run_once()` — `k_poll` をバッチ期限付きタイムアウトで待ち、受信排水→フレーム振分け→バッチフラッシュ判定を行うポンプ 1 周分（リンクスレッドの無限ループから呼ぶ）。
 - `static void publish_state(const robot_state& s)` — メールボックス整合コピー（`irq_lock`）。
 - `static command_output command()` — 指令スロット整合コピー。速度指令ウォッチドッグ（最終 `SET_VELOCITY` から `link.watchdog_ms`=500ms）と UART アイドル（`link.idle_ms`=1000ms）をここで評価し、失効時はゼロ指令を返す。アイドル超過時は購読もリセットする。
-- `static void generate_events(uint32_t now_ms)` — 購読中の `EVT_POSE`・`EVT_SENSORS` を指定レートで分周エンコード、`EVT_STATUS` を変化検出 + 10 Hz ハートビートでエンコードし、**バッチバッファへ投入**する（即時送出しない）。`EVT_SENSORS` は `t_ms, accel f32[3], gyro f32[3], enc_count i32[3]`（40 B）で、メールボックスの `imu_*`/`enc_count` をそのまま載せる（FR-18）。
+- `static void generate_events(uint32_t now_ms)` — 購読中の `EVT_POSE`・`EVT_SENSORS` を指定レートで分周エンコード、`EVT_STATUS` を変化検出（即時）+ 購読レート周期のハートビートでエンコードし、**バッチバッファへ投入**する（即時送出しない）。`EVT_SENSORS` は `t_ms, accel f32[3], gyro f32[3], enc_count i32[3]`（40 B）で、メールボックスの `imu_*`/`enc_count` をそのまま載せる（FR-18）。
 - `static void log(uint8_t level, const char* text)` — `EVT_LOG` をエンコードしてバッチバッファのログ FIFO へ投入（どちらのスレッドからも呼べる）。
 - `static void notify_calib_result(uint8_t result, uint8_t seq, float gyro_bias_z)` — `CALIB_RESULT(seq, result, bias)` をエンコードして `link_uart::write` で**即時送出**する（バッチ経由しない単発応答）。外側タスクが `operation_manager::calib_update` の完了検出時に呼ぶ。
 - `static void notify_tune_result(const tune_deadzone::result& r, uint8_t seq)` — `TUNE_RESULT(seq, code, dz_start[3], dz_keep[3], recommended[3])` を**即時送出**する。外側タスクが `tune_deadzone::is_done` 検出時に呼ぶ。
@@ -91,7 +91,7 @@ class link_session {  // static class
 
 - `decoder_`（`frame_decoder`）、`rx_scratch[256]`（リング排水用）。
 - `mode_`・`vel_cmd_`・`last_vel_ms_`・`last_rx_ms_`（指令スロット、`irq_lock` 保護）。
-- `subs_{pose_rate_hz, sensors_rate_hz, log, status}`（購読テーブル、`irq_lock` 保護）。
+- `subs_{pose_rate_hz, sensors_rate_hz, status_rate_hz, log, status}`（購読テーブル、`irq_lock` 保護）。`status_rate_hz` はハートビート周期で、`0` 購読は変化検出のみを意味する。
 - `state_box_`（`robot_state` メールボックス）。
 - `pose_slot_`/`sensors_slot_`/`status_slot_`/`log_fifo_`（バッチバッファ）、`next_flush_ms_`、`flush_threshold_`、`evt_sem_`。
 - `pose_div_count_`、`sensors_div_count_`、`prev_status_`、`last_status_tx_ms_`。
