@@ -10,8 +10,8 @@ function table_ = deadzoneSweep(cases)
 %   patterns.  Results append to deadzone_sweep_results.mat.
 
 model = 'ball_balancing_omni3_multibody_lqi_rev2';
-compPos = [0.1793, 0.1309, 0.1726];
-compNeg = [0.1512, 0.1266, 0.1960];
+compPos = [0.1817, 0.1596, 0.1786];
+compNeg = [0.1512, 0.1299, 0.1960];
 if nargin < 1
     cases = {};
     for s = [0.5, 0.75, 1.25, 1.5, 2.0]

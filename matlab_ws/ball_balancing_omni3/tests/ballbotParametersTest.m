@@ -78,9 +78,9 @@ classdef ballbotParametersTest < matlab.unittest.TestCase
             % FR-16 identified values mirrored from
             % control_params.hpp param_set::drive.
             testCase.verifyEqual(p.drive.deadzoneCompPos, ...
-                [0.1793, 0.1309, 0.1726], AbsTol=1.0e-12);
+                [0.1817, 0.1596, 0.1786], AbsTol=1.0e-12);
             testCase.verifyEqual(p.drive.deadzoneCompNeg, ...
-                [0.1512, 0.1266, 0.1960], AbsTol=1.0e-12);
+                [0.1512, 0.1299, 0.1960], AbsTol=1.0e-12);
             testCase.verifyTrue(p.drive.deadzoneCompEnabled);
             % Plant vectors default to the identified comp values
             % (perfect identification baseline for the robustness

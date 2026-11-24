@@ -729,8 +729,8 @@ p.motor.outputShaftFrictionEnabled = true;
 % limit cycle, while the duty clip reproduces the measured
 % input-output behaviour exactly.
 p.drive.deadzoneCompEnabled = true;
-p.drive.deadzoneCompPos = [0.1793, 0.1309, 0.1726];
-p.drive.deadzoneCompNeg = [0.1512, 0.1266, 0.1960];
+p.drive.deadzoneCompPos = [0.1817, 0.1596, 0.1786];
+p.drive.deadzoneCompNeg = [0.1512, 0.1299, 0.1960];
 p.drive.deadzonePlantPos = p.drive.deadzoneCompPos;
 p.drive.deadzonePlantNeg = p.drive.deadzoneCompNeg;
 % Online residual-deadzone adaptation: an event-driven PoC lives in
