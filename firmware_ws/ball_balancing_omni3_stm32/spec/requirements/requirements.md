@@ -18,7 +18,7 @@
 | FR-10 | 目標位置への位置制御を行う | [functional/FR-10.md](functional/FR-10.md) |
 | FR-11 | 自己位置・ログをプロトコルイベントとして送出する | [functional/FR-11.md](functional/FR-11.md) |
 | FR-12 | アプリ指示で待機 ⇔ 動作中を遷移しモータ駆動を管理する | [functional/FR-12.md](functional/FR-12.md) |
-| FR-13 | IMU キャリブレーション（ジャイロバイアス・姿勢オフセット）と初期位置設定をリンク経由で行う | [functional/FR-13.md](functional/FR-13.md) |
+| FR-13 | IMU キャリブレーション（ジャイロバイアス）と初期位置設定をリンク経由で行う | [functional/FR-13.md](functional/FR-13.md) |
 | FR-14 | 購読イベントを周期バッチでまとめて送出する | [functional/FR-14.md](functional/FR-14.md) |
 | FR-15 | 動作パラメータをメインフラッシュへ不揮発保存する | [functional/FR-15.md](functional/FR-15.md) |
 | FR-16 | 車輪ごとの駆動不感帯補償を wheel_servo へ適用する | [functional/FR-16.md](functional/FR-16.md) |

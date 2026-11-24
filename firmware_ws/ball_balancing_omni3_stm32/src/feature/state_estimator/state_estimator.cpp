@@ -40,6 +40,9 @@ void state_estimator::init(const config& cfg) {
   reset_estimate();
   gyro_bias_z_ = 0.0F;
   ekf_bias_xy_ = vec2{};
+  bias_capture_active_ = false;
+  bias_capture_sum_ = vec3{};
+  bias_capture_count_ = 0;
 }
 
 void state_estimator::request_reset() {
@@ -102,6 +105,9 @@ void state_estimator::reset_bias() {
   gyro_bias_z_ = 0.0F;
   ekf_bias_xy_ = vec2{};
   qualification_time_ = 0.0F;
+  bias_capture_active_ = true;
+  bias_capture_sum_ = vec3{};
+  bias_capture_count_ = 0;
 }
 
 void state_estimator::get_bias(float* gyro_bias_z, float* ekf_bias_x,
@@ -547,8 +553,33 @@ state_estimator::output state_estimator::step(const imu_sample& imu,
                       (gyro_body_raw[2] - gyro_bias_z_previous);
   bias_update = etl::clamp(bias_update, -e.bias_maximum_update_per_sample,
                            e.bias_maximum_update_per_sample);
-  const float gyro_bias_z = etl::clamp(gyro_bias_z_previous + bias_update,
-                                       -e.bias_maximum, e.bias_maximum);
+  float gyro_bias_z = etl::clamp(gyro_bias_z_previous + bias_update,
+                                 -e.bias_maximum, e.bias_maximum);
+
+  // CALIBRATE_IMU 捕捉（reset_bias で武装）: 連続した静止・有効サンプル
+  // の生ジャイロ時間平均をバイアス確定値として採用する。単一サンプル
+  // ではなく区間平均とし、失格・無効サンプルでウィンドウを取り直す。
+  // 採用後も IIR/EKF による継続学習はそのまま進行する。
+  if (bias_capture_active_) {
+    if (qualification_candidate && imu.valid) {
+      bias_capture_sum_ = bias_capture_sum_ + gyro_body_raw;
+      ++bias_capture_count_;
+    } else {
+      bias_capture_sum_ = vec3{};
+      bias_capture_count_ = 0;
+    }
+    if (bias_capture_count_ > 0 &&
+        static_cast<float>(bias_capture_count_) * dt >=
+            e.bias_qualification_time) {
+      const vec3 mean =
+          bias_capture_sum_ * (1.0F / static_cast<float>(bias_capture_count_));
+      ekf_bias_xy_ = {mean[0], mean[1]};
+      gyro_bias_z = etl::clamp(mean[2], -e.bias_maximum, e.bias_maximum);
+      bias_capture_active_ = false;
+      bias_capture_sum_ = vec3{};
+      bias_capture_count_ = 0;
+    }
+  }
 
   // 出力
   quaternion_ = quaternion;

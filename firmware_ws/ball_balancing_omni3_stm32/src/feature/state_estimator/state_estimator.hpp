@@ -41,7 +41,8 @@ class state_estimator {
   static void init(const config& cfg);
   static output step(const imu_sample& imu, const vec3& wheel_rate, float dt);
   // ジャイロバイアス学習状態（gyro_bias_z / EKF bias / qualification_time）
-  // をリセットする（CALIBRATE_IMU、FR-13）。姿勢・速度等は保持する。
+  // をリセットし、静止資格ウィンドウの生ジャイロ平均をバイアスとして
+  // 採用する捕捉を武装する（CALIBRATE_IMU、FR-13）。姿勢・速度等は保持。
   // 外側タスクから呼ぶ（step と同一スレッドのため排他不要）。
   static void reset_bias();
   // FR-15 永続化された IMU 特性の読み出し・書き戻し。
@@ -103,6 +104,13 @@ class state_estimator {
   static inline float inertial_hold_ = 0.0F;
   static inline float inertial_reject_hold_ = 0.0F;  // 種ズレ固着検出用
   static inline bool reset_req_ = false;  // request_reset の受信箱
+
+  // CALIBRATE_IMU 捕捉（reset_bias で武装）。静止資格ウィンドウの生
+  // ジャイロ累積で、連続静止が bias_qualification_time に達した時点で
+  // 時間平均をバイアス確定値として採用する。
+  static inline vec3 bias_capture_sum_{};
+  static inline uint32_t bias_capture_count_ = 0;
+  static inline bool bias_capture_active_ = false;
 };
 
 }  // namespace bb

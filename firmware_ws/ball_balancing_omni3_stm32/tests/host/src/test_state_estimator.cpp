@@ -211,6 +211,40 @@ void test_start_reset_keeps_yaw_and_qualification() {
              p.estimator.bias_qualification_time);
 }
 
+// CALIBRATE_IMU（reset_bias）後の静止ウィンドウで、生ジャイロの時間
+// 平均が gyro_bias_z / ekf_bias_xy の確定値として採用されることを確認
+// する（FR-13: 単一サンプルではなく区間平均。失格サンプルで取り直し）。
+void test_calib_capture_adopts_window_mean() {
+  const auto& p = get_params();
+  state_estimator::init({&p});
+  imu_sample s = still_sample();
+  s.gyro = {0.010F, -0.008F, 0.012F};  // 静止 + 未学習バイアス
+  state_estimator::reset_bias();
+
+  const int window = static_cast<int>(p.estimator.bias_qualification_time /
+                                      p.estimator.sample_time);
+  // ウィンドウ途中ではまだ採用されない（区間平均が未完成）
+  for (int i = 0; i < window / 2; ++i) {
+    (void)state_estimator::step(s, vec3{}, p.estimator.sample_time);
+  }
+  float bz = 0.0F, bx = 0.0F, by = 0.0F;
+  state_estimator::get_bias(&bz, &bx, &by);
+  CHECK_NEAR(bz, 0.0F, 0.005F);
+
+  // 失格サンプル（yaw 閾値超過）でウィンドウを取り直す
+  imu_sample bad = still_sample();
+  bad.gyro = {0.0F, 0.0F, 0.5F};
+  (void)state_estimator::step(bad, vec3{}, p.estimator.sample_time);
+
+  for (int i = 0; i < window; ++i) {
+    (void)state_estimator::step(s, vec3{}, p.estimator.sample_time);
+  }
+  state_estimator::get_bias(&bz, &bx, &by);
+  CHECK_NEAR(bz, 0.012F, 0.002F);
+  CHECK_NEAR(bx, 0.010F, 0.002F);
+  CHECK_NEAR(by, -0.008F, 0.002F);
+}
+
 }  // namespace
 
 void state_estimator_tests() {
@@ -222,6 +256,7 @@ void state_estimator_tests() {
   test_inverted_start_seeds_180deg();
   test_invalid_sample_marks_output();
   test_start_reset_keeps_yaw_and_qualification();
+  test_calib_capture_adopts_window_mean();
 }
 
 }  // namespace bb

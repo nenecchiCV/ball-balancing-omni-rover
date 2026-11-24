@@ -2,8 +2,8 @@
 
 `robot_controller_tauri`（セントラル）と `ball_balancing_omni3_stm32`（プロトコル終端）の間のアプリケーションプロトコルを定義する。転送は `uart_wireless_converter_esp32` の BLE NUS 透過バイトストリーム上で行い、変換器は内容を解釈しない。
 
-- ステータス: rev A は両端実装済み（`link_protocol`/`link_uart`/`link_session`/`odometry`/`position_controller`）。rev B（動作状態管理・キャリブレーション・初期位置設定・`TEST_ECHO`・イベントバッチ送出）は両端実装済み。rev C（可変長フレーム・パラメータ不揮発保存・調整系コマンド）は両端実装済み。rev D（`CALIBRATE_IMU` への姿勢オフセット較正統合・`CALIB_RESULT` 拡張・`imu.att_offset_*` パラメータ）は要求確定済み・実装は未着手。rev E（`EVT_SENSORS` センサ生データ送出）は両端実装済み。ファーム側要求は FR-09〜FR-18 にトレースする。
-- プロトコルバージョン: `5`（rev A = `1`、rev B = `2`、rev C = `3`、rev D = `4`）。`EVT_SENSORS` は追加型イベントであり後方互換のため、PONG で報告する実装基準バージョンは rev D 完了時に `5` へ揃える（現行ファーム・実装は rev C 基準の `3`）
+- ステータス: rev A は両端実装済み（`link_protocol`/`link_uart`/`link_session`/`odometry`/`position_controller`）。rev B（動作状態管理・キャリブレーション・初期位置設定・`TEST_ECHO`・イベントバッチ送出）は両端実装済み。rev C（可変長フレーム・パラメータ不揮発保存・調整系コマンド）は両端実装済み。rev D（`CALIBRATE_IMU` への姿勢オフセット較正統合・`CALIB_RESULT` 拡張・`imu.att_offset_*` パラメータ）は要求撤回により廃止（傾き推定は重力基準を維持する）。rev E（`EVT_SENSORS` センサ生データ送出）は両端実装済み。ファーム側要求は FR-09〜FR-18 にトレースする。
+- プロトコルバージョン: `3`（rev A = `1`、rev B = `2`、rev C = `3`）。rev D は廃止したため `4` は欠番、rev E（`EVT_SENSORS`）は後方互換の追加型イベントであり、PONG で報告する実装基準バージョンは `3` のままとする
 
 ## 設計方針
 
@@ -47,7 +47,7 @@
 | `0x15` | `START_OPERATION` | なし | `0x80 ACK` | 待機 → 動作中へ遷移する。受理条件: `imu_ok`・E-Stop 解除・非 `fault`・バイアス資格成立・姿勢が `start_tilt` 未満（既定 10 deg）。不成立時は `NOT_READY`/`REJECTED_STATE`。受理時に推定器の動的状態をリセットし、最後の `SET_POSE`/`RESET_ODOMETRY` 宣言位置へオドメトリを再適用する（待機中の推定ドリフトを動作へ持ち込まない） |
 | `0x16` | `STOP_OPERATION` | なし | `0x80 ACK` | 動作中 → 待機へ遷移し、モータ駆動を即時遮断する。常時受理し、故障（`op_state=2`）からも待機へ復帰する（故障リセット）。調整中は掃引を中断して待機へ戻る |
 | `0x17` | `SET_POSE` | `x f32, y f32, yaw f32`（12 B） | `0x80 ACK` | 現在のオドメトリ姿勢・位置を指定値へ設定する（所定位置へのセッティング）。待機中のみ受理、受理時に位置目標を解除し、**推定器もリセットする**（「初期位置にセットした」宣言として、静止状態から姿勢を再シード。学習済み IMU バイアスは保持） |
-| `0x18` | `CALIBRATE_IMU` | なし | `0x80 ACK` + `0x83 CALIB_RESULT` | ジャイロバイアスと姿勢（傾き）オフセットの再学習を開始する。待機中のみ受理。受理時に ACK を返し、完了・失敗時に `CALIB_RESULT` を即時送出する。実行前に機体を運用床の上へ基準姿勢（傾き 0 としたい姿勢）で静置しておく。完了時点の比力方向を新しい `imu.att_offset_*` として捕捉し、以後その姿勢が推定傾斜 0 となる |
+| `0x18` | `CALIBRATE_IMU` | なし | `0x80 ACK` + `0x83 CALIB_RESULT` | ジャイロバイアスの再学習を開始する。待機中のみ受理。受理時に ACK を返し、完了・失敗時に `CALIB_RESULT` を即時送出する。実行前に機体を水平近くで静置しておく。静止資格（0.5 s 連続静止）が成立した時点で、ウィンドウ中に計測した生ジャイロ角速度の時間平均を新しい `imu.gyro_bias_z`・`imu.ekf_bias_*` として採用する |
 | `0x19` | `SET_PARAM` | `key u8, value f32`（5 B） | `0x80 ACK` | 調整対象パラメータ 1 件を RAM 上の動作値へ設定する（範囲外は `INVALID_PARAM`）。フラッシュへは保存せず、再起動で保存値に戻る。チューニング中も受理する |
 | `0x1A` | `SAVE_PARAMS` | なし | `0x80 ACK` | RAM 上の動作パラメータをフラッシュ（`storage_partition`）へ確定保存する。待機中のみ受理 |
 | `0x1B` | `RESET_PARAMS` | なし | `0x80 ACK` | 動作パラメータを出荷既定値へ戻し、フラッシュも消去する。待機中のみ受理 |
@@ -65,7 +65,7 @@
 | `0x80` | `ACK` | `req_type u8, seq u8, result u8`（3 B） | リクエスト受理結果。`result`: `0`=OK、`1`=INVALID_PARAM、`2`=REJECTED_STATE（モード・動作状態の不整合等）、`3`=NOT_READY（推定・制御の準備未完）、`4`=UNSUPPORTED |
 | `0x81` | `PONG` | `seq u8, proto_ver u8, robot_caps u8`（3 B） | `PING` 応答。`robot_caps` ビット: bit0=位置制御対応、bit1=オドメトリ送出対応、bit2=ログ送出対応、bit3=テストビルド、bit4=運転管理対応（`START_OPERATION`/`STOP_OPERATION`/`CALIBRATE_IMU`/`SET_POSE`） |
 | `0x82` | `STATUS` | `seq u8, op_state u8, mode u8, enable u8, estop u8, imu_ok u8, calib_state u8, uptime_ms u32, ready_mask u8, tilt f32`（16 B。旧ファームは拡張部なしの 11 B） | `GET_STATUS` 応答。`op_state`: `0`=待機、`1`=動作中、`2`=終端（fault）、`3`=調整中（`TUNE_DEADZONE` 掃引実行中）。`mode` は `SET_CONTROL_MODE` と同じ定義。`calib_state`: `0`=未実施、`1`=実施中、`2`=完了、`3`=失敗 |
-| `0x83` | `CALIB_RESULT` | `seq u8, result u8, gyro_bias_z f32, att_offset_roll f32, att_offset_pitch f32`（14 B。旧ファームは 6 B） | `CALIBRATE_IMU` の完了報告（単発応答として即時送出）。`result`: `0`=成功（静止資格成立）、`1`=失敗（静止未検出・タイムアウト）、`2`=失敗（IMU 異常）。`att_offset_*` は完了後に有効な姿勢オフセット [rad]（成功時は捕捉値、失敗時は従来値）。旧ファーム（6 B）では未送信 |
+| `0x83` | `CALIB_RESULT` | `seq u8, result u8, gyro_bias_z f32`（6 B） | `CALIBRATE_IMU` の完了報告（単発応答として即時送出）。`result`: `0`=成功（静止資格成立）、`1`=失敗（静止未検出・タイムアウト）、`2`=失敗（IMU 異常）。`gyro_bias_z` は完了時点で有効なバイアス推定値 [rad/s]（成功時は静止ウィンドウ平均の採用値） |
 | `0x84` | `TEST_ECHO_RESP` | `seq u8, data u8[LEN-1]` | `TEST_ECHO` ペイロードのエコー |
 | `0x85` | `PARAMS` | `seq u8, total u8, count u8, [key u8, value f32]×count` | `GET_PARAMS` 応答。`total` は調整対象 key の全件数、`count` は本フレーム内の件数。収集件数が `total` に達するまで `start_key` を進めて再要求する |
 | `0x86` | `TUNE_RESULT` | `seq u8, result u8, dz_start f32[3], dz_keep f32[3], recommended f32[3]`（38 B） | `TUNE_DEADZONE` の完了報告（単発応答として即時送出）。`result`: `0`=成功、`1`=中断（E-Stop・タイムアウト）、`2`=失敗（車輪未回転）。`dz_start` は上り掃引の立上りデューティ、`dz_keep` は下り掃引の維持限界、`recommended` は推奨 `deadzone_comp`（車輪ごと） |
@@ -93,8 +93,6 @@
 | `0x50` | `imu.gyro_bias_z` | -0.2–0.2 | ジャイロ z バイアス（`CALIBRATE_IMU` で学習・永続化） |
 | `0x51` | `imu.ekf_bias_x` | -0.2–0.2 | EKF 推定 x 軸ジャイロバイアス |
 | `0x52` | `imu.ekf_bias_y` | -0.2–0.2 | EKF 推定 y 軸ジャイロバイアス |
-| `0x53` | `imu.att_offset_roll` | -0.5–0.5 | 姿勢オフセットの roll 成分 [rad]（`CALIBRATE_IMU` で捕捉・永続化）。推定姿勢へ適用される補正座標系の基準角 |
-| `0x54` | `imu.att_offset_pitch` | -0.5–0.5 | 同上 pitch 成分 [rad] |
 | `0x60` | `controller.max_speed` | 0.05–0x61 値 | 指令速度上限 [m/s]。初期値 0.4（シミュレーション検証値）。運動指令・位置目標の速度上限はこの値にクランプされる |
 | `0x61` | `controller.theoretical_max_speed` | — | 無滑り理論速度上限 [m/s] の**読み取り専用**派生値（`wheel_radius × motor.speed_command_limit ÷ sin(contact_latitude)` ≈ 0.81）。`0x60` の設定可能上限として参照する |
 
