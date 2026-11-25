@@ -348,13 +348,23 @@ void robot_application::outer_task_cb() {
   est_out_ = state_estimator::step(imu_sample, wheel_rate_, dt);
   imu_ok_ = imu_ok_ && imu_sample.valid;
 
-  // オドメトリ: 推定器のワールド速度を積分し、オフセット適用済の
-  // pose を得る（FR-10/11）。
-  odometry::update(est_out_.velocity_world2[0], est_out_.velocity_world2[1],
-                   dt);
+  // オドメトリ（FR-10/11）。動作中は推定器のワールド速度を積分し、
+  // 待機中は車輪が動かないため IMU 専用の慣性オドメトリで追跡する
+  // （検証用途。動作開始時に宣言位置へ再アンカーされる）。
+  if (operating) {
+    odometry::update(est_out_.velocity_world2[0], est_out_.velocity_world2[1],
+                     dt);
+  } else if (imu_sample.valid) {
+    odometry::update_inertial(est_out_.accel_world[0], est_out_.accel_world[1],
+                              est_out_.still, dt);
+  }
   const odometry::pose pose = odometry::get();
   const float pose_yaw = odometry::yaw_of(est_out_.euler[2]);
   const odometry::pose raw = odometry::raw();
+  // EVT_POSE の速度表示も待機中は慣性チャネルを使う。
+  const odometry::pose iv = odometry::inertial_velocity();
+  const float vx = operating ? est_out_.velocity_world2[0] : iv.x;
+  const float vy = operating ? est_out_.velocity_world2[1] : iv.y;
 
   // E-Stop 要求はワンショット消費型フラグのため、観測した要求は非
   // STANDBY 中ラッチして保持する（他消費者＝掃引中断・状態報告への
@@ -441,8 +451,8 @@ void robot_application::outer_task_cb() {
                                      pose.x,
                                      pose.y,
                                      pose_yaw,
-                                     est_out_.velocity_world2[0],
-                                     est_out_.velocity_world2[1],
+                                     vx,
+                                     vy,
                                      est_out_.gyro_body[2],
                                      imu_sample.specific_force,
                                      imu_sample.gyro,

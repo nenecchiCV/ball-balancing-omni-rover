@@ -32,6 +32,9 @@ class state_estimator {
     vec2 rel_pos_body2{};
     // diagnostics 相当。
     vec3 accel_world{};
+    // 待機中慣性オドメトリ（FR-11）の ZUPT 用静止候補。
+    // 車輪・ジャイロ・水平加速度残差が全て小さいとき true。
+    bool still = false;
     float updated_gyro_bias_z = 0.0F;
     bool bias_learning_enabled = false;
     float updated_qualification_time = 0.0F;

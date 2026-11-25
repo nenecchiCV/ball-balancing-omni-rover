@@ -15,8 +15,19 @@ class odometry {
   };
 
   static void init();
-  // 推定器の velocity_world2 を dt で前進 Euler 積分する（外側タスク呼出し）。
+  // 推定器の velocity_world2 を dt で前進 Euler 積分する（外側タスク呼出し、
+  // 動作中用）。待機中慣性チャネルの速度をリセットし、再突入時に
+  // 張り残した速度を持ち込まない。
   static void update(float vx_w, float vy_w, float dt);
+  // 待機中専用の IMU 慣性オドメトリ（FR-11、検証用途）。ワールド水平
+  // 加速度を 2 重積分して位置を進め、静止候補の継続（ZUPT）で速度を
+  // ゼロへ張り付ける。確定した静止の間は水平加速度残差をバイアスと
+  // して緩学習し、非静止中の積分入力から差し引く。等速運動は原理上
+  // 検知できず、搬送中の精度は参考値（動作開始時に宣言位置へ再
+  // アンカーされるため推定誤差は動作へ持ち越さない）。
+  static void update_inertial(float ax_w, float ay_w, bool still, float dt);
+  // 待機中慣性チャネルの現在速度 {vx, vy}（EVT_POSE 表示用）。
+  static pose inertial_velocity();
 
   // オフセット適用前の生積分位置。
   static pose raw();
@@ -47,6 +58,12 @@ class odometry {
   static inline float decl_x_ = 0.0F;
   static inline float decl_y_ = 0.0F;
   static inline float decl_yaw_ = 0.0F;
+  // 待機中慣性オドメトリ状態（update_inertial で更新）。
+  static inline float inertial_vx_ = 0.0F;
+  static inline float inertial_vy_ = 0.0F;
+  static inline float accel_bias_x_ = 0.0F;
+  static inline float accel_bias_y_ = 0.0F;
+  static inline float still_time_ = 0.0F;
 };
 
 }  // namespace bb

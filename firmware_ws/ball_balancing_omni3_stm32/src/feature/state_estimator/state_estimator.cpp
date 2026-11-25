@@ -15,6 +15,10 @@ inline float hypot2(float a, float b) {
 // 静止証明済みなのに残差がゲート超過し続ける場合の再シード待ち時間 [s]。
 constexpr float K_RESEED_HOLD_TIME = 2.0F;
 
+// 待機中慣性オドメトリの静止候補とみなす水平加速度残差上限 [m/s²]。
+// 手持ち微振（~0.2–0.4）と真の静止残差（~0.1）の間に置く。
+constexpr float K_STILL_ODOM_ACCEL_XY = 0.3F;
+
 // 静止時の比力（≈重力の反対向き）からロール/ピッチを定めた姿勢を作る。
 // yaw は current の値を維持する（yaw は加速度から観測できない）。
 vec4 tilt_quat_from_accel(const vec3& specific_force_body,
@@ -287,6 +291,11 @@ state_estimator::output state_estimator::step(const imu_sample& imu,
   const bool assembly_still = max_abs(filtered_wheel_rate_for_still_) <=
                                   e.ball_rate_still_wheel_rate_filtered &&
                               norm(gyro_body) <= e.ball_rate_still_gyro_rate;
+  // 待機中慣性オドメトリ（ZUPT）用の静止候補。車輪・ジャイロに加えて
+  // 水平加速度残差も小さいときだけ立てる（等速搬送は検知不可）。
+  const bool still =
+      assembly_still && hypot2(acceleration_world[0], acceleration_world[1]) <=
+                            K_STILL_ODOM_ACCEL_XY;
   if (!stillness_hold_init_) {
     stillness_hold_ = 0.0F;
     stillness_hold_init_ = true;
@@ -600,6 +609,7 @@ state_estimator::output state_estimator::step(const imu_sample& imu,
   out.velocity_world2 = {velocity_world[0], velocity_world[1]};
   out.rel_pos_body2 = relative_position_body;
   out.accel_world = acceleration_world;
+  out.still = still;
   out.updated_gyro_bias_z = gyro_bias_z;
   out.bias_learning_enabled = bias_learning_enabled;
   out.updated_qualification_time = qualification_time;

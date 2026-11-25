@@ -70,6 +70,51 @@ void reset_origin_declares_zero() {
   CHECK_NEAR(odometry::yaw_of(0.4F), 0.0F, 1e-6F);
 }
 
+// 待機中慣性オドメトリ（FR-11）: 確定静止で速度が張り付き（ZUPT）、
+// 加速度バーストで位置が進み、再静止で固定される。
+void inertial_zupt_and_motion() {
+  odometry::init();
+  const float dt = 0.005F;
+  // 静止残差 0.3 m/s² で 500 ms 静止 → ZUPT で速度はゼロへ張り付く
+  for (int i = 0; i < 100; ++i) {
+    odometry::update_inertial(0.3F, 0.0F, true, dt);
+  }
+  CHECK_NEAR(odometry::inertial_velocity().x, 0.0F, 1e-6F);
+  const odometry::pose p0 = odometry::raw();
+  CHECK_NEAR(p0.x, 0.0F, 0.02F);  // ZUPT 確定前の微少積分のみ
+
+  // 200 ms の加速度バーストで位置が前進し速度が残る
+  for (int i = 0; i < 40; ++i) {
+    odometry::update_inertial(0.5F, 0.0F, false, dt);
+  }
+  const odometry::pose p1 = odometry::raw();
+  CHECK_TRUE(odometry::inertial_velocity().x > 0.05F);
+  CHECK_TRUE(p1.x - p0.x > 0.005F);
+
+  // 再び確定静止すると速度はゼロへ戻り、以後位置は完全に固定される
+  for (int i = 0; i < 100; ++i) {
+    odometry::update_inertial(0.3F, 0.0F, true, dt);
+  }
+  CHECK_NEAR(odometry::inertial_velocity().x, 0.0F, 1e-6F);
+  const odometry::pose p2 = odometry::raw();
+  for (int i = 0; i < 40; ++i) {
+    odometry::update_inertial(0.3F, 0.0F, true, dt);
+  }
+  CHECK_NEAR(odometry::raw().x, p2.x, 1e-6F);
+}
+
+// 動作中パス（update）は待機慣性速度を無効化し、待機再突入時に
+// 張り残した速度を持ち込まない。
+void inertial_velocity_cleared_by_update() {
+  odometry::init();
+  for (int i = 0; i < 40; ++i) {
+    odometry::update_inertial(0.5F, 0.0F, false, 0.005F);
+  }
+  CHECK_TRUE(odometry::inertial_velocity().x > 0.05F);
+  odometry::update(0.0F, 0.0F, 0.005F);  // 動作中パス
+  CHECK_NEAR(odometry::inertial_velocity().x, 0.0F, 1e-6F);
+}
+
 }  // namespace
 
 void odometry_tests() {
@@ -78,6 +123,8 @@ void odometry_tests() {
   init_resets();
   declared_pose_reapplied();
   reset_origin_declares_zero();
+  inertial_zupt_and_motion();
+  inertial_velocity_cleared_by_update();
 }
 
 }  // namespace bb

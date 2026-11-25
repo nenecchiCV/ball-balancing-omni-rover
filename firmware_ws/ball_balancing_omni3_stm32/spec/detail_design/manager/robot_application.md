@@ -44,7 +44,7 @@ struct telemetry_snapshot {
 
 ## 外側タスクの指令選択（FR-09/FR-10/FR-12/FR-13）
 
-`outer_task_cb` は冒頭で `STANDBY`→`OPERATING` の遷移エッジを処理してから `state_estimator::step`・`odometry::update` を実行し、動作状態の処理（FR-12/FR-13）へ進む:
+`outer_task_cb` は冒頭で `STANDBY`→`OPERATING` の遷移エッジを処理してから `state_estimator::step`・オドメトリ更新を実行し、動作状態の処理（FR-12/FR-13）へ進む。オドメトリは `operating` で `odometry::update(velocity_world2)`、非動作中は `imu_sample.valid` のとき `odometry::update_inertial(accel_world, still, dt)` に振り分ける（待機中慣性オドメトリ、FR-11）。`EVT_POSE` の `vx/vy` も動作中は `velocity_world2`、待機中は慣性チャネル速度を載せる:
 
 - **開始エッジ（FR-12）**: `drives_motors()` の立上りで、推定器・制御器・オドメトリの滞留状態を最初の `OPERATING` ティックへ持ち込まないため `step()` より前に `balance_controller::reset()` + `state_estimator::reset_estimate(true)` + `odometry::reapply_declared(raw_x, raw_y, euler_z)` を実行する。待機中も推定・積分は走り続けるため（下記）、手で車体を動かす等で蓄積した速度・姿勢・位置ドリフトをここで捨てる。受理判定で確認済みのバイアス資格と学習済みバイアス・yaw は保持し、`SET_POSE`/`RESET_ODOMETRY` の宣言位置へ再アンカーする。
 - `operation_manager::take_bias_reset_req()` が真なら `state_estimator::reset_bias()` を呼ぶ（FR-13 キャリブレーション開始）。
@@ -58,7 +58,7 @@ struct telemetry_snapshot {
 
   その後 `balance_controller::step` へ渡す。`OPERATING` 中に `ctrl.mode==0`（mode0 終端ラッチ）に到達したら `operation_manager::notify_controller_terminal()` を呼び `FAULT` へ遷移させる（FR-12）。
 
-最後に `link_session::publish_state`（メールボックス更新。`tilt` は推定姿勢の傾斜角。`imu_accel`/`imu_gyro` は `lsm6dso::read()` の生値、`enc_count` は各 `encoder_counter::count()` の i32 切詰めを載せる。FR-18）と `generate_events`（EVT 生成→バッファ投入）を呼ぶ。qualified は `updated_qualification_time >= bias_qualification_time` で評価する。`EST`（推定器）と `odometry` は動作状態に関わらず常に更新する（待機中のキャリブレーション・位置合わせのため）。
+最後に `link_session::publish_state`（メールボックス更新。`tilt` は推定姿勢の傾斜角。`imu_accel`/`imu_gyro` は `lsm6dso::read()` の生値、`enc_count` は各 `encoder_counter::count()` の i32 切詰めを載せる。FR-18）と `generate_events`（EVT 生成→バッファ投入）を呼ぶ。qualified は `updated_qualification_time >= bias_qualification_time` で評価する。`EST`（推定器）と `odometry` は動作状態に関わらず常に更新する（待機中のキャリブレーション・位置合わせのため。待機中のオドメトリは慣性チャネル）。
 
 ## 内部状態
 
