@@ -19,7 +19,7 @@ struct param_set {
     float contact_preload = 0.0004F;
     float rolling_friction = 0.008F;
     float normal_load_nominal = 11.218703867678462F;
-    float contact_torque_limit = 0.2692488928242831F;
+    float contact_torque_limit = 0.11052023354035358F;  // mu=0.4 剛体プラ球
   } physical;
 
   struct motor {
@@ -152,7 +152,7 @@ struct param_set {
     float overspeed_coast_margin = 0.12F;
     float overspeed_coast_floor = 0.5F;
     float velocity_lean_gain = 0.3F;
-    float lean_setpoint_limit = 0.022F;
+    float lean_setpoint_limit = 0.013F;
     float accel_feedforward_gain = 1.0F;
     float lean_fade_tilt = 0.02F;
     float lean_rate_limit = 0.05F;
@@ -227,16 +227,19 @@ struct param_set {
   } torque_lqi;
 
   struct controller {
-    float max_speed = 0.4F;
+    // mu=0.4 接触では制動予算が 0.4 倍になり、巡航中のボール過走を
+    // 回収できないため実測包絡は 0.20 m/s（rev2 30 s 定速、rf 0.005-
+    // 0.015 全域で完走。0.25 は ~11 s で転倒）。
+    float max_speed = 0.2F;
     float max_yaw_rate = 0.8F;
     float max_planar_acceleration = 0.6F;
     float recovery_tilt = 0.0872664626F;        // 5 deg
     float recovery_exit_tilt = 0.03490658504F;  // 2 deg
     float fallen_tilt = 0.6108652382F;          // 35 deg
-    // START_OPERATION 受理の傾斜上限。Simulink の傾斜起動シナリオ
-    // （roll10: initialEulerWorld 10 deg、recovery 右起こしで ~0.4 s
-    // で復帰）と配置公差 <10 deg の実績に合わせる。
-    float start_tilt = 0.1745329252F;  // 10 deg
+    // START_OPERATION 受理の傾斜上限。mu=0.4 接触ではリカバリに必要な
+    // ~0.156 N*m が接触伝達限界 ~0.081 N*m を超えるため 10 deg 起步は
+    // 復帰不可（シムで t~0.45 s 転倒）。検証済み起立窓は ~5 deg。
+    float start_tilt = 0.0872664626F;  // 5 deg
     float recovery_gain_scale = 3.0F;
     float recovery_authority_clear_rate = 1.5F;
     float tilt_priority_start = 0.05235987756F;  // 3 deg
@@ -245,8 +248,10 @@ struct param_set {
     bool coupled_command_limit_enabled = true;
     float sample_time = 0.005F;
     float servo_sample_time = 0.001F;
-    float traction_limited_wheel_torque = 0.16224F;
-    float recovery_wheel_torque_limit = 0.16224F;
+    // mu_est=0.4 x 安全率0.8 x 実測静止荷重8.45 N x Rw の牽引予算。
+    // recovery 側は 0.8 ディレート無しの全閾値（非常時は接触を使い切る）。
+    float traction_limited_wheel_torque = 0.064896F;
+    float recovery_wheel_torque_limit = 0.08112F;
     vec2 velocity_integral_limit = {0.2F, 0.2F};
   } controller;
 

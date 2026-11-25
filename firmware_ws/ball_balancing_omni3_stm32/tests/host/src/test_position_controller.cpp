@@ -31,7 +31,8 @@ void proportional_command_slew_limited() {
   for (int i = 0; i < 400; ++i) {
     o = position_controller::update(0.0F, 0.0F, 0.005F);
   }
-  CHECK_NEAR(o.command[0], 0.4F, 0.02F);  // speed_limit 0.4 飽和
+  // 飽和は min(引数 0.4, max_speed=0.2) 側に効く。
+  CHECK_NEAR(o.command[0], get_params().controller.max_speed, 0.02F);
 }
 
 void speed_limit_clamped_to_max() {

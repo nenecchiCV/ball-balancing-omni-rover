@@ -32,7 +32,8 @@ void test_duty_sign_matches_torque() {
   wheel_servo::init({&p});
   // 昇順ランプを避けるため数回回す（prop_torque=0 のまま）。
   wheel_servo::input in = base_input();
-  in.attitude_torque = {0.05F, -0.05F, 0.10F};
+  // 線形領域の確認のため全輪を牽引キャップ（0.065 N*m）未満に抑える。
+  in.attitude_torque = {0.03F, -0.03F, 0.06F};
   wheel_servo::output out{};
   for (int i = 0; i < 50; ++i) out = wheel_servo::step(in);
   CHECK_TRUE(out.duty[0] > 0.0F);

@@ -267,15 +267,25 @@ p.rover.initialPositionWorld = [0; 0; ...
 p.rover.initialEulerWorld = deg2rad([0; 0; 0]);
 p.rover.noseAxisBody = [1; 0; 0];
 
-% Penalty contacts, idealized environment: near-critically damped normals
-% kill the settle bounce (bare values gave zeta ~0.1-0.4, the seed of the
-% startup tipping mode), and high fixed friction keeps wheel slip
-% controller-limited instead of contact-limited.  The wheel-slip
-% acceleration limit the controller must respect is NOT modeled here --
-% it lives in tractionLimitedWheelTorque below, which keeps the
-% effective mu=0.80 budget even though the contact itself cannot slip.
+% Penalty contacts: near-critically damped normals kill the settle
+% bounce (bare values gave zeta ~0.1-0.4, the seed of the startup
+% tipping mode).  The wheel-ball tangential friction is now the
+% PHYSICAL pair value, not the former slip-free idealization (mu=2.0):
+% the reference ball is a rigid juggling ball (hard PVC/PE-class shell),
+% and 50A-durometer rubber rollers on hard plastic land around
+% 0.4-0.6 clean/dry -- the real machine slips well under the old
+% rubber-on-rubber ~1.0-1.5 assumption.  mu=0.4 is the conservative
+% design point until the slip-onset torque is bench-measured; static
+% and dynamic share it (no stiction data).  The controller traction
+% budget below stays derated to 0.8x of this value, so normal-operation
+% slip remains controller-limited rather than contact-limited.
 % Ball compliance model: hollow Ø100 plastic shell + ~1-2 mm rubber
 % membrane -- the membrane, not the shell, sets the contact stiffness.
+% NOTE (mu=0.4 rework): the deployed ball is a FILLED rigid juggling
+% ball with no rubber membrane, so both this compliance split and the
+% hollow-shell (2/3)mr^2 ball inertia are stale assumptions, kept for
+% now pending a bench stiffness/inertia measurement -- only the
+% friction pair below has been re-based on the real hardware.
 % Wheel side adds the goBILDA roller in SERIES: 50A-durometer rubber
 % sleeve ~1.5 mm thick over the plastic roller core (E ~2.5 MPa,
 % contact patch ~1.5e-5 m^2 -> ~2.5e4 N/m), so the wheel-ball
@@ -293,8 +303,8 @@ p.contact.wheelBall.transitionWidth = 5.0e-4;
 % Wheel-ball contact transition width wired into the WheelNBallContact
 % blocks; the relaxed value damps contact-state chatter.
 p.contact.wheelBall.relaxedTransitionWidth = 1.5e-3;
-p.contact.wheelBall.staticFriction = 2.0;
-p.contact.wheelBall.dynamicFriction = 2.0;
+p.contact.wheelBall.staticFriction = 0.4;
+p.contact.wheelBall.dynamicFriction = 0.4;
 p.contact.wheelBall.rollerFriction = 0.02;
 p.contact.wheelBall.criticalVelocity = 5.0e-3;
 % 1e4 N/m gives ~1.8 mm ball sag at nominal load and ~2.3 mm at the 1 kg
@@ -360,14 +370,15 @@ end
 geometry = ballbotWheelGeometry(p);
 p.wheel.normalLoadNominal = ...
     p.rover.mass*p.gravity/(3*sin(p.wheel.contactLatitude));
-% Controller-side traction budget: keep the PHYSICAL mu of the real
-% wheel-ball pair so the torque cap still encodes the wheel-slip limit,
-% independent of the idealized (slip-free) contact friction above.
-% 50A-durometer rubber rollers on a rubber-sprayed ball: rubber-on-rubber
-% static friction is ~1.0-1.5 clean/dry (kinetic ~0.8-1.1), so 1.0 is a
-% conservative design point until the slip-onset torque is measured on
-% the real pair.  Revisit upward only with bench data.
-p.contact.wheelBall.tractionEstimateFriction = 1.0;
+% Controller-side traction budget: the PHYSICAL mu of the real
+% wheel-ball pair, kept equal to the contact-model value above so the
+% plant and the budget never disagree about where slip starts.  The
+% rubber-membrane ball that motivated the old 1.0 (rubber-on-rubber
+% ~1.0-1.5 static, ~0.8-1.1 kinetic) is not the deployed hardware: the
+% rigid juggling ball plus 50A rollers shows much lower grip on the
+% real machine, so 0.4 replaces it pending a bench slip-onset torque
+% measurement.  Revisit only with measured data.
+p.contact.wheelBall.tractionEstimateFriction = 0.4;
 p.wheel.contactTorqueLimit = p.contact.wheelBall.tractionEstimateFriction* ...
     p.wheel.normalLoadNominal*p.wheel.radius;
 % Limit the actuator command by the servo capability.  The former limit

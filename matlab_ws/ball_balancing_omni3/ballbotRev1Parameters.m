@@ -81,11 +81,13 @@ end
 % The assembled lambda=33 model's logged wheel-ball normal force is
 % ~8.45 N at rest (three wheels ~8.4 N each), below the idealized
 % mg/(3 sin(lat)) = 10.7 N because contact compliance redistributes the
-% load.  The clamp sits at 80% of the nominal slip threshold at that
-% measured load: with the idealized (critically damped, slip-free)
-% contacts the transient N-dips are modest.  The stale 4.07 N constant
-% came from the 65-deg assembly -- it starved the traction budget to
-% ~half of what the lambda=33 contact can actually transmit.
+% load.  The clamp sits at 80% of the slip threshold at that measured
+% load (~0.065 N*m at mu=0.4): the derating absorbs the transient
+% N-dips, and the plant's own contact model now slips at mu*N beyond
+% it, so the budget stays controller-limited in normal operation.  The
+% stale 4.07 N constant came from the 65-deg assembly -- it starved the
+% traction budget to ~half of what the lambda=33 contact can actually
+% transmit.
 % Applies to the default call too, not only payload sweeps.  The
 % measured rest load scales with supported mass, so the limit does too:
 % heavier builds get the larger traction budget their normal force can
@@ -96,19 +98,24 @@ p.controller.tractionLimitedWheelTorque = min( ...
     0.80*p.contact.wheelBall.tractionEstimateFriction*8.45* ...
     (p.rover.mass/(p.fullplant.payload.originalRoverMass + 0.50))* ...
     p.wheel.radius);
-% Recovery-mode traction allowance [N*m]: a tilted-start righting
-% maneuver needs ~0.44 N*m of moment about the ball centre at 10 deg,
-% and ~0.156 N*m per wheel righted 10 deg starts in ~0.4 s without
-% exciting wheel slip.  Raising it further (~0.25+) overdrives the
-% wheels and makes recovery WORSE -- at 0.32 the 10 deg start tipped
-% past 35 deg within ~0.6 s.  The old 2x ratio only existed because the
-% nominal cap was starved by the stale 4.07 N rest-load constant; now
-% that nominal is the real contact budget (~0.162), recovery simply
-% shares it -- validated band is roughly [0.145, 0.25).  Applies to
-% mode=2 only, so normal-operation slip budgeting is unchanged.
+% Recovery-mode traction allowance [N*m]: the righting maneuver gets
+% the FULL measured-load slip threshold (mu x 8.45 N x mass-scale x
+% Rw, no 0.8 derating) instead of sharing the normal-operation budget
+% -- the emergency may spend the whole contact, and the wheel-spin
+% cost of touching slip beats a topple.  Measured on the mu=0.4
+% contact (rev2): a 10 deg initial roll is NOT recoverable -- the
+% ~0.156 N*m the old slip-free plant needed for righting is above
+% the ~0.081 N*m this contact can transmit, so the chassis pitches
+% through in ~0.45 s.  A 5 deg start still rights (mode 1 within
+% ~0.5 s), so the verified recovery window is ~5 deg, down from
+% >=10 deg on the old high-mu budget.  Applies to mode=2 only, so
+% normal-operation slip budgeting is unchanged.
 p.controller.recoveryWheelTorqueLimit = min( ...
     p.driver.continuousTorqueLimit, ...
-    max(p.controller.tractionLimitedWheelTorque, 0.156));
+    max(p.controller.tractionLimitedWheelTorque, ...
+        p.contact.wheelBall.tractionEstimateFriction*8.45* ...
+        (p.rover.mass/(p.fullplant.payload.originalRoverMass + 0.50))* ...
+        p.wheel.radius));
 
 % Armature inductance is not in the FIT0521 datasheet; motors of this
 % class typically land in the 0.5-5 mH range.  5 mH gives tau_e = 2.7 ms
@@ -209,16 +216,21 @@ p.controller.slipLimitWheelSpeed = p.motor.noLoadSpeed* ...
 p.controller.slipLimitSpeed = min( ...
     p.controller.slipLimitWheelSpeed*p.wheel.radius/ ...
     sin(p.wheel.contactLatitude), p.controller.theoreticalMaxSpeed);
-% Command clamp: capped at the EKF-validated envelope.  Measured
-% matrix (stateless drag-FF + motion-model EKF): 0.40 m/s completes
-% the ramp+cruise window at every rolling friction in the 0.005-0.015
-% band (rf015 tracks 0.407 m/s, rf008 +11% hot, rf005 +45% hot but
-% survives -- the pre-EKF attitude under-read that failed this corner
-% at 15.8 s is gone).  >=0.6 m/s still tips at every friction
-% (overshoot reaches the ~0.97 m/s motor no-load ceiling during the
-% ramp).  The theoretical slip limit (~0.71 m/s) stays documented as
-% a hardware bound, not an achievable command.
-p.controller.maxSpeed = 0.40;
+% Command clamp: capped at the measured envelope on the mu=0.4
+% (rigid plastic ball) contact.  The failure mode that sets it is
+% brake authority, not tracking: in cruise the ball runs "hot"
+% (coasts above command on the drag-FF), and recapturing the
+% overshoot needs brake torque the 0.065 N*m traction cap cannot
+% supply -- the ball escapes ahead and the rover topples chasing it.
+% Measured (rev2, 30 s constant-speed runs): 0.20 m/s completes at
+% every rolling friction in the 0.005-0.015 band (+16% hot at rf008,
+% bounded); 0.25 tips at ~11 s and 0.30 at ~8 s, both to the same
+% overshoot-escape mechanism.  On the old mu~1 budget 0.40 passed
+% the same matrix -- the 0.4x traction cut took half the speed
+% envelope with it.  The geometry bound (slipLimitSpeed, now the
+% ~0.81 m/s motor ceiling since the torque-speed crossing moved
+% above it) stays a hardware bound, not an achievable command.
+p.controller.maxSpeed = 0.20;
 % Cruise at the slip-limit speed consumes ~20.4 rad/s of wheel speed;
 % allow the command to reach the full motor speed envelope.
 p.controller.lqi.maximumWheelSpeedCommand = ...
@@ -431,27 +443,29 @@ p.controller.torqueDrive.slipDampingGain = 0.02;
 % Enabled: the yaw-damper/ball-brake pump is now removed and the inner
 % loop holds machine-zero tilt, so the lean channel is the only physical
 % translation actuator.  leanSetpointLimit must sit well inside the
-% torque-limited hold cone: at lambda=33 the static cone is ~0.23 rad at
-% the corrected 0.162 N*m traction cap -- two wheels at the cap through
-% r_b/r_w (~0.58 N*m) vs the ~2.5 N*m/rad gravity moment about the ball
-% centre; it was ~0.11 rad at the stale 0.078 cap.  Much wider than the
-% ~0.023 rad the old 65-deg geometry measured, but a lean demand near
-% the cone edge still tips because tilt overshoot past the cone is
-% unrecoverable (gravity pole ~6.4 rad/s, ~150 ms e-folding).
+% torque-limited hold cone: at lambda=33 and the mu=0.4 cap (~0.065
+% N*m) the static cone is ~0.09 rad -- two wheels at the cap through
+% r_b/r_w (~0.23 N*m) vs the ~2.5 N*m/rad gravity moment about the
+% ball centre (it was ~0.23 rad at the old 0.162 N*m budget).  A lean
+% demand near the cone edge still tips because tilt overshoot past
+% the cone is unrecoverable (gravity pole ~6.4 rad/s, ~150 ms
+% e-folding).
 p.controller.torqueDrive.velocityLeanGain = 0.3;
 % Floor-drag-aware re-derivation (supersedes the 0.015 value, which was
 % itself a saturation-aware redo of the 65-deg-era 0.009).  Cruise on a
 % real floor needs a sustained lean of drag/(m*g): rollingFriction 0.015
 % (short-pile carpet) x ~21 N = ~0.32 N asks ~0.0154 rad — at the old
 % 0.015 cap there was literally no margin, so every carpet command
-% stalled (0.11 m displacement on the 0.12 m/s cycle).  0.022 leaves
-% ~40% lean headroom over the carpet figure, keeps tracking overshoot
-% ~0.03 rad at ~3x margin under the 0.087 rad recoveryTilt, and at
-% K_tilt ~4.3 N*m/rad demands ~0.095 N*m at the edge — ~60% of the
-% corrected 0.162 clamp.  Measured at the corrected budget: the 0.020
-% and 0.030 candidates both survived the 50 s cycle (0.030 sloppy), so
-% 0.022 sits inside the verified-stable band.
-p.controller.torqueDrive.leanSetpointLimit = 0.022;
+% stalled (0.11 m displacement on the 0.12 m/s cycle).  The cap is now
+% also bound by the tilt-channel demand at the edge: K_tilt ~3.05
+% N*m/rad at the redesigned gains, and keeping the edge demand under
+% ~60% of the new mu=0.4 traction clamp (~0.065 N*m) lands at ~0.013.
+% Consequence: floors needing a sustained lean above ~0.011 rad
+% (rf >~0.011, i.e. short-pile carpet) now sit at/past the clamp edge
+% and stall rather than track -- hardwood (rf 0.005-0.008, lean
+% ~0.005-0.008) keeps margin.  Tracking overshoot ~0.03 rad still sits
+% ~3x under the 0.087 rad recoveryTilt.
+p.controller.torqueDrive.leanSetpointLimit = 0.013;
 % Command-acceleration feedforward gain on the lean demand: the ramped
 % command needs lean ~a_cmd/g (0.003 rad at 0.03 m/s^2), far below the
 % P-error saturation cap, so feedforward carries the nominal lean and
@@ -460,8 +474,9 @@ p.controller.torqueDrive.accelFeedforwardGain = 1.0;
 % Tilt overshoot guard for the lean channel: once the measured tilt
 % exceeds the demanded lean by leanFadeTilt the demand fades to zero, so
 % a cone-exceeding excursion stops adding forward acceleration bias.
-% 0.02 rad starts fading just past the ~0.023 rad hold cone; tilt inside
-% the commanded band passes unattenuated.
+% 0.02 rad starts fading just past the 0.013 rad commanded band (the
+% mu=0.4 hold cone is ~0.09 rad, so the fade still sits well inside);
+% tilt inside the commanded band passes unattenuated.
 p.controller.torqueDrive.leanFadeTilt = 0.02;
 % Lean-setpoint slew limit [rad/s]: the ball accelerates only through
 % the wheel-contact friction, so a step lean command drives the chassis

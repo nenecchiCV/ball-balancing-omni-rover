@@ -105,9 +105,9 @@ void speed_limit_key() {
   float v = 0.0F;
   CHECK_TRUE(param_store::get_key(0x61, &v));
   CHECK_NEAR(v, theory, 1e-6F);
-  // 既定 max_speed = 0.4（シム検証値）、理論上限（≈0.81）まで設定可。
+  // 既定 max_speed = 0.2（mu=0.4 シム検証値）、理論上限（≈0.81）まで設定可。
   CHECK_TRUE(param_store::get_key(0x60, &v));
-  CHECK_NEAR(v, 0.4F, 1e-6F);
+  CHECK_NEAR(v, 0.2F, 1e-6F);
   CHECK_TRUE(param_store::set_key(0x60, 0.8F));
   CHECK_TRUE(!param_store::set_key(0x60, 0.9F));
   CHECK_TRUE(!param_store::set_key(0x60, 0.0F));
