@@ -102,14 +102,10 @@ p.controller.tractionLimitedWheelTorque = min( ...
 % the FULL measured-load slip threshold (mu x 8.45 N x mass-scale x
 % Rw, no 0.8 derating) instead of sharing the normal-operation budget
 % -- the emergency may spend the whole contact, and the wheel-spin
-% cost of touching slip beats a topple.  Measured on the mu=0.4
-% contact (rev2): a 10 deg initial roll is NOT recoverable -- the
-% ~0.156 N*m the old slip-free plant needed for righting is above
-% the ~0.081 N*m this contact can transmit, so the chassis pitches
-% through in ~0.45 s.  A 5 deg start still rights (mode 1 within
-% ~0.5 s), so the verified recovery window is ~5 deg, down from
-% >=10 deg on the old high-mu budget.  Applies to mode=2 only, so
-% normal-operation slip budgeting is unchanged.
+% cost of touching slip beats a topple.  Measured windows (rev2):
+% mu=0.4 -> 5 deg rights, 10 deg pitches through in ~0.45 s;
+% mu=0.2 (current) -> 2 deg rights, 3 deg tips at ~2.7 s.  Applies
+% to mode=2 only, so normal-operation slip budgeting is unchanged.
 p.controller.recoveryWheelTorqueLimit = min( ...
     p.driver.continuousTorqueLimit, ...
     max(p.controller.tractionLimitedWheelTorque, ...
@@ -222,15 +218,14 @@ p.controller.slipLimitSpeed = min( ...
 % (coasts above command on the drag-FF), and recapturing the
 % overshoot needs brake torque the 0.065 N*m traction cap cannot
 % supply -- the ball escapes ahead and the rover topples chasing it.
-% Measured (rev2, 30 s constant-speed runs): 0.20 m/s completes at
-% every rolling friction in the 0.005-0.015 band (+16% hot at rf008,
-% bounded); 0.25 tips at ~11 s and 0.30 at ~8 s, both to the same
-% overshoot-escape mechanism.  On the old mu~1 budget 0.40 passed
-% the same matrix -- the 0.4x traction cut took half the speed
-% envelope with it.  The geometry bound (slipLimitSpeed, now the
-% ~0.81 m/s motor ceiling since the torque-speed crossing moved
-% above it) stays a hardware bound, not an achievable command.
-p.controller.maxSpeed = 0.20;
+% Measured (rev2): on the mu=0.4 contact 0.20 m/s completed at every
+% rolling friction in the 0.005-0.015 band while 0.25 tipped at ~11 s.
+% On the current mu=0.2 contact the traction budget halves again, so
+% only ultra-slow motion is validated -- 0.05 m/s completes the 15 s
+% stepX run (maxTilt ~1.1 deg) and nothing faster is verified.  The
+% geometry bound (slipLimitSpeed, ~0.81 m/s) stays a hardware bound,
+% not an achievable command.
+p.controller.maxSpeed = 0.05;
 % Cruise at the slip-limit speed consumes ~20.4 rad/s of wheel speed;
 % allow the command to reach the full motor speed envelope.
 p.controller.lqi.maximumWheelSpeedCommand = ...
@@ -443,28 +438,25 @@ p.controller.torqueDrive.slipDampingGain = 0.02;
 % Enabled: the yaw-damper/ball-brake pump is now removed and the inner
 % loop holds machine-zero tilt, so the lean channel is the only physical
 % translation actuator.  leanSetpointLimit must sit well inside the
-% torque-limited hold cone: at lambda=33 and the mu=0.4 cap (~0.065
-% N*m) the static cone is ~0.09 rad -- two wheels at the cap through
-% r_b/r_w (~0.23 N*m) vs the ~2.5 N*m/rad gravity moment about the
-% ball centre (it was ~0.23 rad at the old 0.162 N*m budget).  A lean
-% demand near the cone edge still tips because tilt overshoot past
-% the cone is unrecoverable (gravity pole ~6.4 rad/s, ~150 ms
-% e-folding).
+% torque-limited hold cone: at lambda=33 and the mu=0.2 cap (~0.032
+% N*m) the static cone is ~0.045 rad -- two wheels at the cap through
+% r_b/r_w (~0.11 N*m) vs the ~2.5 N*m/rad gravity moment about the
+% ball centre (it was ~0.09 rad at the mu=0.4 cap).  A lean demand
+% near the cone edge still tips because tilt overshoot past the cone
+% is unrecoverable (gravity pole ~6.4 rad/s, ~150 ms e-folding).
 p.controller.torqueDrive.velocityLeanGain = 0.3;
-% Floor-drag-aware re-derivation (supersedes the 0.015 value, which was
-% itself a saturation-aware redo of the 65-deg-era 0.009).  Cruise on a
-% real floor needs a sustained lean of drag/(m*g): rollingFriction 0.015
-% (short-pile carpet) x ~21 N = ~0.32 N asks ~0.0154 rad — at the old
-% 0.015 cap there was literally no margin, so every carpet command
-% stalled (0.11 m displacement on the 0.12 m/s cycle).  The cap is now
-% also bound by the tilt-channel demand at the edge: K_tilt ~3.05
-% N*m/rad at the redesigned gains, and keeping the edge demand under
-% ~60% of the new mu=0.4 traction clamp (~0.065 N*m) lands at ~0.013.
-% Consequence: floors needing a sustained lean above ~0.011 rad
-% (rf >~0.011, i.e. short-pile carpet) now sit at/past the clamp edge
-% and stall rather than track -- hardwood (rf 0.005-0.008, lean
-% ~0.005-0.008) keeps margin.  Tracking overshoot ~0.03 rad still sits
-% ~3x under the 0.087 rad recoveryTilt.
+% Bound by the tilt-channel demand at the edge: K_tilt ~3.05 N*m/rad
+% at the redesigned gains.  At the mu=0.2 traction clamp (~0.032
+% N*m) the cap's edge demand (~0.040 N*m at 0.013) already exceeds
+% the clamp, so torque saturation -- not this limiter -- is the
+% binding constraint; measured on rev2, cutting to 0.006 makes the
+% velocity loop starve and the 0.05 m/s step tips at ~3.2 s, while
+% 0.013 completes it (tilt ~1.1 deg).  Keep 0.013.
+% Consequence: only very-low-drag floors stay inside the lean
+% authority (rf >~0.005, i.e. anything grippier than smooth
+% hardwood, sits at/past the edge and stalls rather than tracks).
+% Tracking overshoot ~0.03 rad still sits ~3x under the 0.087 rad
+% recoveryTilt.
 p.controller.torqueDrive.leanSetpointLimit = 0.013;
 % Command-acceleration feedforward gain on the lean demand: the ramped
 % command needs lean ~a_cmd/g (0.003 rad at 0.03 m/s^2), far below the

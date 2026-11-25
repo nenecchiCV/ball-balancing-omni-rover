@@ -303,8 +303,23 @@ p.contact.wheelBall.transitionWidth = 5.0e-4;
 % Wheel-ball contact transition width wired into the WheelNBallContact
 % blocks; the relaxed value damps contact-state chatter.
 p.contact.wheelBall.relaxedTransitionWidth = 1.5e-3;
-p.contact.wheelBall.staticFriction = 0.4;
-p.contact.wheelBall.dynamicFriction = 0.4;
+% Sweep result (rev2): hold + 0.05 m/s ultra-slow move both survive
+% at mu=0.20 but tip inside ~1.5 s at mu<=0.15 -- 0.20 is the lowest
+% viable wheel-ball friction for the deployed ball.
+p.contact.wheelBall.staticFriction = 0.2;
+p.contact.wheelBall.dynamicFriction = 0.2;
+% Controller-side traction budget: the PHYSICAL mu of the real
+% wheel-ball pair, kept equal to the contact-model value above so the
+% plant and the budget never disagree about where slip starts.  The
+% rubber-membrane ball that motivated the old 1.0 (rubber-on-rubber
+% ~1.0-1.5 static, ~0.8-1.1 kinetic) is not the deployed hardware: the
+% rigid juggling ball plus 50A rollers shows much lower grip on the
+% real machine.  mu=0.4 still slipped in hardware, so the value is
+% re-based on the lowest μ that keeps hold + ultra-slow motion alive
+% in simulation (0.20; see the note above).  Assigned here -- before
+% the design-override block -- so a design knob can re-base plant
+% friction and budget friction together.
+p.contact.wheelBall.tractionEstimateFriction = 0.2;
 p.contact.wheelBall.rollerFriction = 0.02;
 p.contact.wheelBall.criticalVelocity = 5.0e-3;
 % Rigid filled ball on the bare floor: no membrane/roller layer, so the
@@ -370,15 +385,6 @@ end
 geometry = ballbotWheelGeometry(p);
 p.wheel.normalLoadNominal = ...
     p.rover.mass*p.gravity/(3*sin(p.wheel.contactLatitude));
-% Controller-side traction budget: the PHYSICAL mu of the real
-% wheel-ball pair, kept equal to the contact-model value above so the
-% plant and the budget never disagree about where slip starts.  The
-% rubber-membrane ball that motivated the old 1.0 (rubber-on-rubber
-% ~1.0-1.5 static, ~0.8-1.1 kinetic) is not the deployed hardware: the
-% rigid juggling ball plus 50A rollers shows much lower grip on the
-% real machine, so 0.4 replaces it pending a bench slip-onset torque
-% measurement.  Revisit only with measured data.
-p.contact.wheelBall.tractionEstimateFriction = 0.4;
 p.wheel.contactTorqueLimit = p.contact.wheelBall.tractionEstimateFriction* ...
     p.wheel.normalLoadNominal*p.wheel.radius;
 % Limit the actuator command by the servo capability.  The former limit
