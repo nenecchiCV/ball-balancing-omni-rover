@@ -20,10 +20,13 @@ end
 
 p.gravity = 9.80665;
 
-% Reference ball: 100 mm, 0.285 kg rigid ball with thin-shell inertia.
+% Reference ball: Juggle Dream XL Ø100 filled rigid juggling ball,
+% ~0.285 kg (vendor spec).  Solid-sphere inertia (2/5)mr^2 -- the
+% previous (2/3)mr^2 thin-shell value described a hollow ball with a
+% rubber membrane, which is not the deployed hardware.
 p.ball.radius = 0.050;
 p.ball.mass = 0.285;
-p.ball.inertia = (2/3)*p.ball.mass*p.ball.radius^2*eye(3);
+p.ball.inertia = (2/5)*p.ball.mass*p.ball.radius^2*eye(3);
 
 % goBILDA/ServoCity 48 mm omniwheel (3624-4008-0048, 8 mm REX bore):
 % two staggered rows of six 50A-durometer rubber rollers; the second row
@@ -279,26 +282,23 @@ p.rover.noseAxisBody = [1; 0; 0];
 % and dynamic share it (no stiction data).  The controller traction
 % budget below stays derated to 0.8x of this value, so normal-operation
 % slip remains controller-limited rather than contact-limited.
-% Ball compliance model: hollow Ø100 plastic shell + ~1-2 mm rubber
-% membrane -- the membrane, not the shell, sets the contact stiffness.
-% NOTE (mu=0.4 rework): the deployed ball is a FILLED rigid juggling
-% ball with no rubber membrane, so both this compliance split and the
-% hollow-shell (2/3)mr^2 ball inertia are stale assumptions, kept for
-% now pending a bench stiffness/inertia measurement -- only the
-% friction pair below has been re-based on the real hardware.
-% Wheel side adds the goBILDA roller in SERIES: 50A-durometer rubber
+% Ball compliance model: filled rigid juggling ball (hard PVC/PE
+% class shell over a solid fill) -- no rubber membrane, so the ball
+% surface stiffness is the hard-shell value, not the old 3e4
+% membrane estimate.  1e5 N/m is a placeholder estimate for a hard
+% plastic ball under ~10 N contact loads; it stays a
+% bench-measure candidate before hardware sign-off.
+% Wheel side keeps the goBILDA roller in SERIES: 50A-durometer rubber
 % sleeve ~1.5 mm thick over the plastic roller core (E ~2.5 MPa,
 % contact patch ~1.5e-5 m^2 -> ~2.5e4 N/m), so the wheel-ball
-% interface is the series combination ~1.4e4 N/m, NOT the ball
-% membrane alone.  Sag check at ~8.5 N nominal wheel load: ~0.6 mm
-% total (roller + membrane), consistent with each layer compressing
-% a fraction of its thickness.  The floor contact below has no
-% roller layer and keeps the membrane-dominated value.  All values
-% remain bench-measure candidates before hardware sign-off.
-p.contact.wheelBall.ballMembraneStiffness = 3.0e4;
+% interface is the series combination ~2.0e4 N/m -- the roller
+% rubber now dominates the wheel-side compliance.  The floor
+% contact below has no roller layer and takes the bare
+% hard-ball value.
+p.contact.wheelBall.ballMembraneStiffness = 1.0e5;
 p.contact.wheelBall.rollerLayerStiffness = 2.5e4;
-p.contact.wheelBall.normalStiffness = 1/(1/3.0e4 + 1/2.5e4);   % ~1.4e4
-p.contact.wheelBall.normalDamping = 170;   % ~critical for k=1.4e4, m~0.5 kg/wheel
+p.contact.wheelBall.normalStiffness = 1/(1/1.0e5 + 1/2.5e4);   % ~2.0e4
+p.contact.wheelBall.normalDamping = 200;   % ~critical for k=2.0e4, m~0.5 kg/wheel
 p.contact.wheelBall.transitionWidth = 5.0e-4;
 % Wheel-ball contact transition width wired into the WheelNBallContact
 % blocks; the relaxed value damps contact-state chatter.
@@ -307,30 +307,30 @@ p.contact.wheelBall.staticFriction = 0.4;
 p.contact.wheelBall.dynamicFriction = 0.4;
 p.contact.wheelBall.rollerFriction = 0.02;
 p.contact.wheelBall.criticalVelocity = 5.0e-3;
-% 1e4 N/m gives ~1.8 mm ball sag at nominal load and ~2.3 mm at the 1 kg
-% payload -- small against the 50 mm radius and well inside the geometric
-% accuracy budget.  Stiffer values buy nothing for the solver: the
-% dominant step-size limiter in the Simscape rev1 plant is motor
-% electrical dynamics, not contact stiffness.
-p.contact.ballGround.normalStiffness = 3.0e4;
-p.contact.ballGround.normalDamping = 500;  % ~critical for k=3e4, m~2.1 kg
+% Rigid filled ball on the bare floor: no membrane/roller layer, so the
+% same 1e5 N/m hard-surface estimate carries the floor contact.  Sag at
+% the ~21 N total load is ~0.2 mm -- small against the 50 mm radius and
+% well inside the geometric accuracy budget.
+p.contact.ballGround.normalStiffness = 1.0e5;
+p.contact.ballGround.normalDamping = 917;  % ~critical for k=1e5, m~2.1 kg
 p.contact.ballGround.transitionWidth = 5.0e-4;
-% Ball-floor friction: real rubber-membrane ball on flooring/carpet is
-% ~0.8; 1.2 keeps a modest slip margin in the model without the old
-% idealized no-slip (mu=2.0) assumption.  Rolling -- not sliding -- is
-% still the dominant floor interaction for a ball.
-p.contact.ballGround.staticFriction = 1.2;
-p.contact.ballGround.dynamicFriction = 1.2;
+% Ball-floor friction: the rubber-membrane ball that motivated the
+% old ~0.8 estimate (and its 1.2 model value) is gone; hard PVC/PE on
+% flooring/carpet lands nearer 0.4-0.6, so 0.5 is the mid-band
+% estimate pending a floor-drag measurement.  Rolling -- not
+% sliding -- is still the dominant floor interaction for a ball.
+p.contact.ballGround.staticFriction = 0.5;
+p.contact.ballGround.dynamicFriction = 0.5;
 p.contact.ballGround.criticalVelocity = 5.0e-3;
-% Ball-ground rolling resistance: a real hollow ball rolling on the
+% Ball-ground rolling resistance: a real ball rolling on the
 % floor loses energy through contact-patch hysteresis and scrub -- a
 % horizontal drag opposing translation and a small torque on the
 % vertical spin.  The point contact above resists only sliding, so
 % without this term a coasting ball never sheds momentum.  Applied via
 % ballbotRev1PlantAugment + ballbotRollingResistance as an external
 % load scaled by the sensed normal force (vanishes when airborne).
-% rollingFriction is the effective drag coefficient: hollow
-% plastic/rubber balls sit around 0.005-0.02.  With the NiMH pack
+% rollingFriction is the effective drag coefficient: hard
+% plastic balls sit around 0.005-0.02.  With the NiMH pack
 % aboard, 0.008 is the value that carried a full move+stop window
 % cleanly -- 0.005 let the ball overrun the command at the cmd->0
 % corner (~0.08->0.24 m/s kick), 0.01 over-damped the ball (it lagged
@@ -360,7 +360,7 @@ if nargin >= 2 && ~isempty(design)
             case 4, p.(f{1}).(f{2}).(f{3}).(f{4}) = pair{2};
         end
     end
-    p.ball.inertia = (2/3)*p.ball.mass*p.ball.radius^2*eye(3);
+    p.ball.inertia = (2/5)*p.ball.mass*p.ball.radius^2*eye(3);
     p.rover.mass = p.rover.bodyMass + ...
         3*(p.motor.mass + p.wheel.mass);
     p.rover.initialPositionWorld = [0; 0; ...

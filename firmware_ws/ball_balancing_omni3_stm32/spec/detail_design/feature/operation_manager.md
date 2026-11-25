@@ -29,7 +29,7 @@ class operation_manager {  // static class
 - `static void init(const config& cfg)` — パラメータ参照を保持し、`STANDBY`・`calib_state::NONE`・未受理シーケンスで初期化する。
 - `static uint8_t state()` / `static uint8_t calib()` — `STATUS`/`EVT_STATUS` 用の状態値。`irq_lock` 保護の 1 バイト読出し。
 - `static bool drives_motors()` — `state == OPERATING` のとき true。`robot_application` の外側タスクが制御器実行・サーボ出力のゲートに使う。
-- `static uint8_t request_start(const start_cond& c)` — `START_OPERATION` 受理判定（リンクスレッドから呼ぶ）。`ack_result` を返し、`OK` のとき `OPERATING` へ遷移する。条件: `state==STANDBY` かつ `c.imu_ok && !c.estop && c.qualified && c.tilt < start_tilt`。`start_tilt`（既定 10 deg）は Simulink の傾斜起動検証値（roll10 シナリオ）で、終端転倒角 `fallen_tilt`（35 deg）とは別パラメータ。状態不整合は `REJECTED_STATE`、条件未成立は `NOT_READY`。
+- `static uint8_t request_start(const start_cond& c)` — `START_OPERATION` 受理判定（リンクスレッドから呼ぶ）。`ack_result` を返し、`OK` のとき `OPERATING` へ遷移する。条件: `state==STANDBY` かつ `c.imu_ok && !c.estop && c.qualified && c.tilt < start_tilt`。`start_tilt`（既定 5 deg）は Simulink の傾斜起動検証値（μ=0.4 現行構成のリカバリ窓 ~5 deg）で、終端転倒角 `fallen_tilt`（35 deg）とは別パラメータ。状態不整合は `REJECTED_STATE`、条件未成立は `NOT_READY`。
 - `static uint8_t request_start_shell(const start_cond& c)` — `bb start` 用。`request_start` と同じ判定（受理経路が違うだけ）。
 - `static void request_stop()` — `STOP_OPERATION`/`bb stop`。常時受理し、`OPERATING` → `STANDBY`（動作停止）と `FAULT` → `STANDBY`（故障リセット）へ遷移する。再開始可否は `request_start` の受理判定が担う。
 - `static uint8_t request_calib(uint8_t seq)` — `CALIBRATE_IMU` 受理判定。`STANDBY` 中のみ `OK`（受理時に `seq` を保持し `calib_state::RUNNING` へ。推定器のバイアスリセット指示は `take_bias_reset_req()` で外へ出す）。`OPERATING`/`FAULT` 中は `REJECTED_STATE`。
