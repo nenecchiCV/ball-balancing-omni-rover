@@ -1,58 +1,41 @@
-# 玉乗り3WDオムニローバー検証計画
+# 玉乗り3WDオムニローバー検証計画・ロバスト性受け入れ試験
 
 ## 状態
 
 | 項目 | 値 |
 |---|---|
-| ステータス | ドラフト |
-| 最終更新日 | 2026-09-01 |
-| アーキテクチャ | [アーキテクチャ仕様](ball_balancing_omnirover3wd-architecture.md) |
+| ステータス | 実装一致版（rev2 対応） |
+| 最終更新日 | 2026-10-22 |
+| 対象モデル | `matlab_ws/ball_balancing_omni3/ball_balancing_omni3_multibody_lqi_rev2.slx` |
+| 親仕様 | [システム仕様](ball_balancing_omnirover3wd-system.md) |
 
 ## 1. 検証段階
 
 ```mermaid
 flowchart LR
-  C[MATLAB関数] --> P[プラント開ループ]
-  P --> I[閉ループ統合MIL]
-  I --> R[ロバストネス]
+  C[MATLAB関数単体] --> P[プラント開ループ]
+  P --> I[閉ループベンチマーク<br/>G-01..G-11]
+  I --> R[ロバスト性受け入れマトリクス]
   R --> H[実機パラメーター同定後再検証]
 ```
 
-| 段階 | 合格ゲート |
-|---|---|
-| A. MATLAB関数 | 幾何、配分、静止推定、制御符号 |
-| B. プラント開ループ | 接触・重力・正トルクの運動方向 |
-| C. 閉ループMIL | 静止、速度、ヨー、復帰 |
-| D. ロバストネス | 摩擦・質量・ソルバー変動で有限・安定 |
+| 段階 | 合格ゲート | 実装 |
+|---|---|---|
+| A. MATLAB関数 | 幾何、推定、バイアス学習、パラメーター整合 | `ballbotEstimatorStepTest`、`ballbotParametersTest` |
+| B. プラント開ループ | 接触・重力・符号の整合 | §3 |
+| C. 閉ループベンチマーク | 6シナリオの G-01..G-11 採点 | `ballbotBenchmark`、§4 |
+| D. ロバスト性 | §5 の受け入れマトリクス全項目 | `deadzoneAcceptance`、`deadzoneSweep`、`scratch_ksweep` |
 
 ## 2. MATLAB関数検証
 
-| ID | 対象 | 入力 | 期待値 | 判定 |
-|---|---|---|---|---|
-| U-01 | WheelGeometry | 公称$p$ | $n_i,t_i,a_i$相互直交 | 内積$<10^{-12}$ |
-| U-02 | WheelGeometry | 公称$p$ | $A_\tau$フルランク | rank=3 |
-| U-03 | 輪速変換$W_\omega$ | $u=[u_{planar};r_d]$任意 | 疑似逆で往復一致 | 平面速度再構成誤差$<10^{-9}$ m/s |
-| U-04 | 輪速飽和 | 大指令 | 全輪飽和 | $|\omega_{w,d,i}|\le p.controller.lqi.maximumWheelSpeedCommand$ |
-| U-05 | CustomFriction | $v_t\ne0,F_n>0$ | $F_t^Tv_t\le0$ | 常に非正 |
-| U-06 | WheelRateDerivative | 変位増分$[0.01,-0.02,0.03]^T$ rad、$T_s=5$ ms | 後退差分 | $[2,-4,6]^T$ rad/s、誤差$<10^{-12}$ rad/s |
-| U-07 | Estimator | 静止IMU、車輪回転変位一定 | 状態不変 | ノルム誤差$<10^{-10}$ |
-| U-08 | Controller | 静止推定、指令0 | BALANCE、$\tau_w=0$ | mode=1、誤差$<10^{-12}$ |
-| U-09 | Controller | $\theta=+1$ deg | 復元球トルク | $\tau_{b,y}<0$ |
-| U-10 | Controller | 傾斜40 deg | FALLEN | mode=0、$\tau_w=0$ |
-| B-01 | BiasObserver | 静止、バイアス0 | 0付近を保持 | $|\hat b_{g,z}|<10^{-12}$ rad/s |
-| B-02 | BiasObserver | 静止、ヨーバイアス0.02 rad/s | 一次遅れ収束 | 15 s以内に誤差0.002 rad/s未満 |
-| B-03 | Qualification | 全条件成立、$t<t_{min}$ | 学習待機 | $\gamma=0$、$\hat b_{g,z}$不変 |
-| B-04 | Qualification | 車輪回転が閾値超過 | 学習停止 | $t_{qual}=0$、$\hat b_{g,z}$不変 |
-| B-05 | Qualification | 比力ノルム偏差が閾値超過 | 学習停止 | $t_{qual}=0$、$\hat b_{g,z}$不変 |
-| B-06 | Qualification | ロール・ピッチ角速度が閾値超過 | 学習停止 | $t_{qual}=0$、$\hat b_{g,z}$不変 |
-| B-07 | BiasObserver | 長時間の上限超過相当入力 | 飽和 | $|\hat b_{g,z}|\le b_{max}$ |
-| B-08 | BiasObserver | 静止→車輪回転→再静止 | 再認定後に学習再開 | 運動中保持、再静止後に推定値増加 |
-| B-09 | Interface | 静止推定と制御器呼出し | 既存互換 | 状態14、`estimate` 13、BALANCE、トルク0 |
-| B-10 | YawDrift | B-02学習後に静止10 s | ドリフト低減 | ヨードリフト0.5 deg未満 |
-| B-11 | BiasHold | 学習後に車輪回転5 s | 運動中保持 | 推定値変化0.002 rad/s未満 |
-| B-12 | StartupGuard | 学習未完了／完了／完了後運動 | ヨー抑止・解除ラッチ | 未完了時ヨートルク0、完了後と明示指令時は有効 |
+`matlab_ws/ball_balancing_omni3/tests/` のクラスベース試験として実装済み。
 
-B-01～B-12は`matlab_ws/ball_balancing_omni3/tests/ballbotEstimatorStepTest.m`のクラスベース試験として実装する。試験は公開関数を呼び出し、各テストメソッドをArrange–Act–Assertで独立させる。
+| ID | 対象 | 内容 | 現状 |
+|---|---|---|---|
+| U-01..U-16 | `ballbotEstimatorStepTest` | バイアス学習・抑止・上限・再開・起動ガード・インターフェース回帰 | 16件合格 |
+| U-17..U-19 | `ballbotParametersTest` | パラメーター構造体の整合・設計依存量の再構築 | 3件合格 |
+
+実行: `runtests('ballbotEstimatorStepTest')`、`runtests('ballbotParametersTest')`。
 
 ## 3. プラント開ループ
 
@@ -60,105 +43,155 @@ B-01～B-12は`matlab_ws/ball_balancing_omni3/tests/ballbotEstimatorStepTest.m`�
 
 | ID | 初期条件 | 入力 | 観測 | 合格条件 |
 |---|---|---|---|---|
-| P-01 | 公称直立 | 全輪0 N·m | 3輪法線力 | 各輪`p.wheel.normalLoadNominal`の±20%（公称約1.844 N） |
-| P-02 | 公称直立 | 全輪0 N·m | 球–床法線力 | $(m_R+m_b)g$の±10% |
-| P-03 | 公称直立 | 全輪0 N·m | 貫通量 | 各接触1 mm未満 |
-| P-04 | 公称直立 | 全輪0 N·m | 接触信号 | 4接触すべて1 |
+| P-01 | 公称直立 | 全輪duty 0 | 3輪法線力 | 各輪 `p.wheel.normalLoadNominal`（11.2 N）の±20% |
+| P-02 | 公称直立 | 全輪duty 0 | 球–床法線力 | $(m_R+m_b)g$ の±10% |
+| P-03 | 公称直立 | 全輪duty 0 | 貫通量 | 各接触1 mm未満 |
+| P-04 | 公称直立 | 全輪duty 0 | 接触信号 | 4接触すべて1 |
 
 ### 3.2 駆動符号
 
 | ID | 入力 | 期待運動 | 合格条件 |
 |---|---|---|---|
-| P-05 | $\tau_b=[+0.01,0,0]^T$相当 | 球中心$-Y_W$加速 | $a_{K,y}<0$ |
-| P-06 | $\tau_b=[0,+0.01,0]^T$相当 | 球中心$+X_W$加速 | $a_{K,x}>0$ |
-| P-07 | $\tau_b=[0,0,-0.005]^T$相当 | 機体$+Z_W$ヨー加速 | $\dot r_B>0$ |
+| P-05 | duty(1) = +0.05 | 球を駆動方向へ転がす | 接触法線力・球速度の符号整合 |
+| P-06 | 3輪同相 duty +0.05 | 機体 $+Z_W$ ヨー加速 | $\dot r_B>0$ |
 
-### 3.3 分離可能性
+## 4. 閉ループベンチマーク（基本受け入れ試験）
 
-| ID | 初期条件 | 期待 | 合格条件 |
+`ballbotBenchmark(scenario, tag, ov, sampleTime, model)` がシナリオを実行し、G-01..G-11 指標を採点して要約行を出力する。既定モデルはrev1のため、rev2 検証では第5引数に `'ball_balancing_omni3_multibody_lqi_rev2'` を渡す。実行は決定論的（パラメーター再生成＋`clear functions` によるpersistentリセット）。
+
+### 4.1 シナリオ定義
+
+| シナリオ | 指令/条件 | 時間 | 対象指標 |
+|---|---|---:|---|
+| `hold` | ゼロ指令 | 5 s | G-01, G-06, G-08 |
+| `stepX` | $v_x:0\to0.10$ m/s（ワールドX） | 15 s | G-02, G-08 |
+| `yaw` | 0.4 rad/s×1.5 sバウンドパルス | 10 s | G-03 |
+| `cycle` | 移動12 s→停止4 s×3周期（採点はヨー無しにピン留め） | ~50 s | G-01, G-04, G-05, G-06, G-07, G-08 |
+| `bias` | ヨージャイロバイアス +0.02 rad/s 注入保持 | 20 s | G-09, G-10, G-11 |
+| `moveYaw` | 0.15 m/s X + 0.4 rad/s×1.0 sパルス | 10 s | G-02, G-03 |
+
+### 4.2 合格基準（G-01..G-11）
+
+| ID | 指標 | 合格条件 | 採点式 |
 |---|---|---|---|
-| P-08 | 機体zを+5 mm | 3輪が球から分離 | 3接触信号=0の区間あり |
-| P-09 | ボールzを+5 mm | 球が床から分離 | 床接触信号=0の区間あり |
+| G-01 | 姿勢保持 | 最大傾斜 ≤1 deg かつ転倒なし | `maxTilt≤1° && tipTime=NaN` |
+| G-02 | 速度整定誤差 | 絶対値 ≤0.01 m/s | `\|settleErr\|≤0.01` |
+| G-03 | ヨー速度誤差 | 絶対値 ≤0.05 rad/s | `\|yawErr\|≤0.05`（パルス窓平均） |
+| G-04 | 3輪接触率 | ≥0.99 | `mean(all(wheelContact))≥0.99` |
+| G-05 | 球–床分離 | 0 s（最大浮遊高さは記録） | `separationTime=0` |
+| G-06 | 推定姿勢誤差 | ≤0.5 deg | `maxEstTiltErr≤0.5°` |
+| G-07 | 推定速度誤差 | RMS ≤0.02 m/s | `rmsEstVelErr≤0.02` |
+| G-08 | アクチュエーター制約 | duty飽和（\|d\|≥0.999）なし、最大duty・輪速を記録 | `~dutySaturated` |
+| G-09 | ヨーバイアス収束 | 終端誤差 <0.002 rad/s（収束時間を記録） | `\|biasErrEnd\|<0.002` |
+| G-10 | 学習後ヨードリフト | <0.5 deg | `yawDrift<0.5°` |
+| G-11 | 運動中誤学習 | バイアス変化を記録 | 診断観察 |
 
-## 4. 閉ループMIL
+指標の信号が得られない場合は NaN として未採点とする。`moveYaw` は結合リミッタの評価シナリオであり、G-02/G-03 を共用する。
 
-| ID | 指令/初期条件 | 計測時間 | 指標 | 合格条件 |
-|---|---|---:|---|---|
-| C-01 | $v_d=0,r_d=0$ | 4 s | 姿勢 | 最終1 sで$|\phi|,|\theta|<1$ deg |
-| C-02 | $v_x:0\to0.10$ m/s @1 s | 5 s | 速度 | 最終1 sで誤差<0.01 m/s |
-| C-03 | $v_y:0\to0.08$ m/s @1 s | 5 s | 速度 | 最終1 sで誤差<0.01 m/s |
-| C-04 | $r:0\to0.50$ rad/s @1 s | 5 s | ヨー速度 | 最終1 sで誤差<0.05 rad/s |
-| C-05 | $v=[0.08,0.06]$, $r=0.3$ | 6 s | 複合追従 | 3軸すべて目標内 |
-| C-06 | 初期$\phi=10$ deg | 4 s | 復帰 | 2 s以内に±2 deg |
-| C-07 | 初期$\theta=20$ deg | 4 s | モード | RECOVERYを経てBALANCE |
-| C-08 | 初期$\theta=40$ deg | 1 s | 安全 | FALLEN、トルク0 |
-| C-09 | 静止、ヨーバイアス0.02 rad/s | 20 s | バイアス収束 | 15 s以内に誤差0.002 rad/s未満 |
-| C-10 | C-09学習後、静止継続 | 10 s | ヨードリフト | 0.5 deg未満 |
-| C-11 | C-09学習後、走行指令 | 5 s | 誤学習防止 | バイアス変化0.002 rad/s未満 |
-| C-12 | 静止、IMU白色ノイズ・振動重畳 | 20 s | 認定ロバストネス | 発散なし、誤学習なし、退出後に再認定 |
-| C-13 | 走行、輪–球すべり増加 | 5 s | 接触ゲート | 低信頼区間で$\gamma=0$ |
-| C-14 | 3輪接触低下 | 3 s | 接触ゲート | 低信頼区間で$\gamma=0$、バイアス保持 |
+### 4.3 現在のベースライン（λ=33°・Fusion実測質量モデル・rev1/rev2共通プラント）
 
-### 共通接触判定
-
-| 指標 | 合格条件 |
+| シナリオ | 結果 |
 |---|---|
-| 3輪接触率 | 各輪99%以上 |
-| 球–床分離時間 | 0 s |
-| 輪–球すべりRMS | 0.03 m/s未満 |
-| 車輪トルク | 全サンプルで±`min(p.controller.tractionLimitedWheelTorque, p.controller.fullplant.motorTorqueLimit)`以内（正本構成の公称±0.010 N·m） |
-| 車輪速度指令 | 全サンプルで±`p.controller.lqi.maximumWheelSpeedCommand`以内 |
+| hold | 7/7（maxTilt 0.157°） |
+| cycle（ヨー無し採点） | 完走 49.5 s・6/8（G-02 -0.051・G-07 0.025 が閾値未達、転倒なし・tilt 0.838°・contact 1.000・sep 0・duty 0.24） |
+| stepX | 7/8 |
+| yaw（バウンドパルス） | 5/8 |
+| bias | 6/8 |
+| CG-20mm | 6/7 |
+| moveYaw | 5/9 |
 
-## 5. 推定精度
+※ cycle 既定プロファイル（隔周期 0.1 rad ヨーバースト込み）は 49.5 s 完走・maxTilt 1.295°・採点 4/8（全て閾値マージン系・転倒なし）。
 
-| ID | シナリオ | 推定量 | 合格条件 |
-|---|---|---|---|
-| E-01 | C-01 | ロール・ピッチ | RMS誤差<0.2 deg |
-| E-02 | C-02 | 平面速度 | RMS誤差<0.02 m/s |
-| E-03 | C-04 | ヨー角速度 | RMS誤差<0.02 rad/s |
-| E-04 | C-02 | ボール角速度 | RMS誤差<0.2 rad/s |
-| E-05 | 摩擦-20% | 平面速度・ボール角速度 | 公称値との偏差を記録（診断観察） |
-| E-06 | C-09 | ヨーバイアス | 15 s以内に誤差0.002 rad/s未満 |
-| E-07 | C-10 | ヨー角 | 10 sドリフト0.5 deg未満 |
+**回帰ゲート**: パラメーター・制御コードの変更後は hold/cycle/stepX/bias の4シナリオを最低限再実行し、転倒なし・採点がベースラインを下回らないことを合格とする。`scratch_cycle`/`scratch_hold`/`scratch_speed`/`scratch_lean10b` はシナリオ個別実行の補助スクリプト（`ballbotRev1SimConfig` 適用が必須 — 未適用ではブリッジ式切替の代数例外でソルバーが実質停止する）。
 
-## 6. 飽和・アンチワインドアップ
+## 5. ロバスト性受け入れ試験
 
-| ID | 条件 | 回復入力 | 合格条件 |
-|---|---|---|---|
-| A-01 | $v_d=0.5$ m/sを1 s印加 | $v_d=0$ | 指令は0.12 m/sへ制限 |
-| A-02 | A-01で輪トルク飽和 | $v_d=0$ | 積分器が飽和中に増加しない |
-| A-03 | $r_d=2$ rad/s | $r_d=0$ | 指令は0.8 rad/sへ制限 |
-| A-04 | BALANCE→RECOVERY | 傾斜18 deg超過 | 速度積分器0 |
+ロバスト性は**変更のたびにマトリクス全体を再実行**して担保する。各セルは §4 の採点基準を適用し、転倒しないことを必須合格条件とする（性能劣化は記録して傾向管理）。
 
-## 7. 感度試験
+### 5.1 デッドゾーン受け入れマトリクス（`deadzoneAcceptance`）
 
-| パラメーター | 公称 | 変動 | 再実行 | 合格条件 |
-|---|---:|---:|---|---|
-| ボール質量 | 0.285 kg | 0.228, 0.342 kg | C-01,C-02 | 転倒なし、誤差2倍以内 |
-| 輪–球$\mu_d$ | 0.75 | 0.60, 0.90 | C-02,C-05 | 接触維持 |
-| 球–床$\mu_d$ | 0.80 | 0.64, 0.96 | C-02 | 転倒なし |
-| 上部ロッド込み機体質量 | 1.179 kg | ±10% | C-01,C-02 | 転倒なし |
-| 接触緯度 | 33 deg | 30, 36 deg | C-01 | $A_\tau$ rank=3、接触維持 |
-| IMU補正ゲイン | 2.5 | 1.25, 5.0 | E-01 | 有限、発散なし |
+駆動系デッドゾーンの補償効果を検証する。`deadzone_acceptance_results.mat` へ逐次保存。
 
-## 8. 数値ロバストネス
+| 構成 | 設定 | シナリオ |
+|---|---|---|
+| `nodz` | 補償OFF・プラント不感帯0（ベースライン） | hold/stepX/yaw/cycle |
+| `dz_comp` | 補償ON・プラント不感帯=同定値（出荷構成） | 同上 |
+| `dz_nocomp` | 補償OFF・プラント不感帯=同定値（無補償比較） | 同上 |
 
-| ID | 変更 | 比較 | 合格条件 |
-|---|---|---|---|
-| N-01 | 最大ステップ$5\times10^{-5}$ s | C-01公称 | 最終姿勢差<0.2 deg |
-| N-02 | 最大ステップ$2\times10^{-4}$ s | C-01公称 | 完走、最終姿勢差<0.5 deg |
-| N-03 | RelTol$10^{-5}$ | C-02公称 | 最終速度差<0.005 m/s |
-| N-04 | 代替ソルバー | C-01公称 | 完走、接触維持 |
+**合格条件**: `dz_comp` が `nodz` と同等の採点を維持し、`dz_nocomp` より劣化しないこと。転倒は不合格。
 
-## 9. ログ
+### 5.2 デッドゾーン不整合スイープ（`deadzoneSweep`）
+
+補償値は同定値で固定し、**プラント側**不感帯を変動させて個体差・摩耗・方向非対称を再現する（補償が追従できない実在ミスマッチ）。hold＋stepX を実行し `deadzone_sweep_results.mat` へ保存。
+
+| ケース | プラント不感帯 | 目的 |
+|---|---|---|
+| `scale0.5/0.75/1.25/1.5/2.0` | 同定値の一様スケール | 過不足補償の限界 |
+| `wheel1x2` | wheel1 のみ2倍 | 単輪偏り |
+| `dirSkew` | 正回転1.5倍・負回転0.5倍 | 方向非対称 |
+
+**合格条件**: 全ケース転倒なし。採点・性能劣化は記録する（実測: 不足補償 +25% で転倒・過補償 2 倍は性能劣化のみ — 不足方向が脆弱）。
+
+### 5.3 接触剛性スイープ（`scratch_ksweep`）
+
+輪–球・球–床両接触に同一剛性 $k$ を適用し、減衰は各接触質量（輪 ~0.5 kg、床 ~2.1 kg 等価）で臨界整合する。`ksweep_summary_<tag>.txt` を出力。
+
+| 剛性点 | シナリオ | 合格条件 |
+|---|---|---|
+| $k\in\{1\times10^{4},3\times10^{4},6\times10^{4}\}$ N/m（＋設計点1.36e4） | hold 5 s、cycle 50 s、0.40 m/s定速、10°ロール | 全点で hold・v040 完走。cycle・roll10 の生存時間を記録 |
+
+**合格条件**: hold 5 s と 0.40 m/s 定速は全剛性点で完走（必須）。cycle・10°ロールは生存時間を記録し、新たな崖（保持時間の非連続な縮小）を検出した場合は原因を評価してから採用可否を判断する（実測: 3e4 以上で 10° 保持が ~13 s の崖に落ちる非単調特性を確認済み — ローラー剛性のベンチ実測で設計点を裏付ける課題がある）。
+
+### 5.4 転がり抵抗帯スイープ
+
+床想定をフローリング〜短毛絨毯の $r_f\in\{0.005,0.008,0.015\}$ で変動させる。
+
+| 指令速度 | 合格条件 |
+|---|---|
+| 0.12 m/s サイクル | 全帯で完走・転倒なし |
+| 0.40 m/s 定速 | 全帯で完走・転倒なし（追従誤差・惰行平衡のバイアスは記録） |
+| ≥0.5 m/s | 包絡外（低摩擦側で転倒し得る — 実施しても不合格としない） |
+
+### 5.5 ペイロード族・CGオフセット・床傾斜
+
+| 試験 | 設定 | 合格条件 |
+|---|---|---|
+| ペイロード族 | `ballbotRev1Parameters(payloadMass)` で 0–1.0 kg | ロバスト固定ゲインの設計範囲内で hold 完走・転倒なし |
+| CGオフセット | `p.fullplant.payload.lateralOffset`=10/15/20 mm | `staticLeanAdapt` により5 s保持・平衡リーンへ整定 |
+| 床傾斜 | `p.simulation.floorSlopeDeg`=1°（2°以上は包絡外） | 保持・転倒なし |
+| 初期傾斜起立 | `p.rover.initialEulerWorld`、5–10°・6方位 | 10°純粋ロールは ~39 s 保持（現構成実績） |
+| IMUバイアス注入 | ヨーバイアス +0.02 rad/s（`bias`シナリオ相当） | G-09..G-11 |
+
+### 5.6 数値・再現性
+
+| 試験 | 設定 | 合格条件 |
+|---|---|---|
+| ノイズシード変動 | `p.imu.noiseSeed` を複数点 | hold/cycle で転倒なし（採点変動は記録 — 境界近傍のシナリオはシード依存を許容） |
+| ソルバー感度 | MaxStep $10^{-4}$↔$10^{-3}$（`ballbotRev1SimConfig`） | 同一シナリオで結果が有意に変わらないこと |
+| persistentリセット | `clear functions` 前後 | 検証スクリプトは必ず `clear functions` を実行（解釈実行ブロックのpersistent残留で転倒時刻が変わる既知問題） |
+| rev1/rev2等価性 | `servoSampleTime` を 5 ms へオーバーライド | rev1 と同一タイミングで一致 |
+
+### 5.7 明示的な包絡外領域
+
+以下は物理包絡外として試験対象から除外し、指令側・運用側で制限する。
+
+| 領域 | 実測限界 | 対処 |
+|---|---|---|
+| 指令速度 ≥0.5 m/s | 低摩擦側で転倒、≥0.6 m/sは全摩擦で転倒（ボール追い越しを戻すブレーキが物理的に存在しない。滑り限界~0.71・幾何上限~0.81 m/sはハードウェア上界） | `maxSpeed=0.40` で指令制限 |
+| 持続ヨー回転 | 連続0.2–0.5 rad/sで2.6–3.4 s転倒（ボールzスピンポンプ→脱輪） | 総回転 ~0.4 rad/回以下のバーストに限定（cycle は `cycleYawEvery=2`・0.1 rad/窓） |
+| 床傾斜 ≥2° | 斜面を転がり落ちる | 平坦床の運用条件 |
+| 10°ロール・高剛性接触 | 接触剛性3e4以上で保持 ~13 s の崖（帯域でなく内力ブレーキ不能の惰性走行が機構） | 接触剛性のベンチ実測で設計点を裏付け |
+
+## 6. ログ
 
 | ログ名 | 内容 |
 |---|---|
 | `roverPose` | $x,y,z,\phi,\theta,\psi$ |
 | `ballPose` | 球中心位置・姿勢 |
-| `imuMeasurement` | 理想比力・角速度 |
-| `wheelDisplacement` | エンコーダーが直接計測する3輪回転変位 |
-| `wheelTorqueCommand` | 3輪トルク |
+| `imuMeasurement` | 比力・角速度（LSM6DSOノイズ・量子化・バイアス付き） |
+| `wheelDisplacement` | エンコーダーが直接計測する3輪回転変位（341.2 PPR量子化） |
+| `wheelDuty` | 3輪PWM duty |
+| `motorCurrent` | 3輪モータ電流 |
 | `estimatedState` | 14幅推定バス（estimate 13要素+末尾未使用パッド） |
 | `controllerMode` | 0/1/2 |
 | `estimatedYawGyroBias` | $\hat b_{g,z}$ [rad/s] |
@@ -168,30 +201,44 @@ B-01～B-12は`matlab_ws/ball_balancing_omni3/tests/ballbotEstimatorStepTest.m`�
 | `contactNormalForce` | 4接触法線力 |
 | `contactSlip` | 4接触接線速度 |
 
-## 10. 実行方法
+## 7. 実行方法
 
 ```matlab
-p = ballbotFullPlantParameters;
-assignin("base", "ballbotParams", p);
-in = Simulink.SimulationInput( ...
-    "ball_balancing_omni3_multibody_lqi_custom_contact_fullplant");
-in = in.setVariable("ballbotParams", p);
-in = in.setModelParameter("StopTime", "4");
-out = sim(in);
+cd matlab_ws/ball_balancing_omni3
+
+% 基本ベンチマーク（rev2 指定）
+r = ballbotBenchmark('hold', 'rev2_hold', {}, [], ...
+    'ball_balancing_omni3_multibody_lqi_rev2');
+
+% ロバスト性マトリクス
+deadzoneAcceptance('dz_comp');           % 出荷構成 × hold/stepX/yaw/cycle
+deadzoneAcceptance('nodz');
+deadzoneAcceptance('dz_nocomp');
+deadzoneSweep();                          % プラント不感帯変動
+scratch_ksweep(1e4); scratch_ksweep(3e4); scratch_ksweep(6e4);  % 接触剛性
+
+% 個別シナリオ
+scratch_cycle(50, 'tag');
+scratch_hold;
+scratch_speed('tag', 0.40, 0.008, 17.2); % 0.40 m/s定速・rf=0.008
+scratch_lean10b('tag');                  % 10°ロール
 ```
 
-ヨーバイアスMILでは`Simulink.SimulationInput`で注入振幅、ノイズ、振動、摩擦、接触条件を非破壊に上書きし、`Simulink.SimulationOutput`から上記3診断と`estimatedState`を取得する。マスク内部から参照する`ballbotParams`との互換性のため、実行前に同じ値をベースワークスペースへも設定する。エンコーダーは低運動認定だけに使用し、絶対ヨー角の正解信号として扱わない。
+全スクリプトは `ballbotRev1SimConfig`（MaxStep・MDD3A回生モード）を適用し、`sim` 前に `clear functions` を実行する。結果は `cycle_result_<tag>.mat`、`deadzone_acceptance_results.mat`、`deadzone_sweep_results.mat`、`ksweep_summary_<tag>.txt` へ逐次保存される。
 
-## 11. 今回の実行状態
+## 8. 受け入れ判定の運用
 
-| 項目 | 状態 | 理由 |
+| 変更区分 | 必須再実行 | 判定 |
 |---|---|---|
-| 更新則の離散計算 | 合格 | 0.02 rad/s注入時の15 s誤差$1.046\times10^{-8}$ rad/s、続く静止10 sドリフト$6.022\times10^{-7}$ deg |
-| B-01～B-12 | 合格 | MATLAB R2026aで16件中16件合格（現行LQI制御器向けに更新済み） |
-| モジュール化回帰 | 合格 | サブシステム化後モデルと再構成前ベースラインで全ログ信号が共通時間グリッド上で一致。最大相対差は摩擦力で約$4\times10^{-3}$（可変ステップ誤差範囲） |
-| モデル更新 | 合格 | モジュール化後モデルで`update`成功（ode15s） |
-| `run_fullplant_regression` | 3/4合格 | upright・x・yは4接触維持・転倒なし・トルク上限内。xy合成指令は両モデルとも接触維持限界域で、再構成モデルは約2 sで輪―球接触を一時喪失。再構成前モデルも最小法線力0.04 Nの限界域であり、静止・指令前区間では両モデル一致（$10^{-4}$ rad級）。保存済み`fullplant_verification_results.mat`は現行HEADモデルでも再現しない旧条件の結果であり、制御再調整後に回帰基準を再生成する |
-| C-09短時間ゲート | 合格 | 0.02 rad/s注入時、4 s誤差0.001916 rad/s、3～4 sドリフト0.005293 deg |
-| C-09～C-14長時間 | 未完 | 全機体モデルがバイアス試験で4.760 s、公称指令で2.195 sにFALLENへ遷移するため |
-| 既存C-01～C-08回帰 | 一部合格 | 0.5 s複合指令は平均ヨー速度0.197879 rad/s、最終mode=1。長時間ゲートは未完 |
-| ノイズ・振動・すべり・接触低下 | 未実行 | 注入モデルと長時間安定化の整備後にC-12～C-14を実施 |
+| パラメーター値のみ | hold/cycle/stepX/bias | §4.3 ベースラインを下回らない・転倒なし |
+| 制御器構造・ゲイン | §4 全シナリオ＋§5.1・§5.4 | 同上 |
+| プラントモデル・接触/摩擦/質量 | §4 全シナリオ＋§5 全マトリクス | 同上 |
+| ファームウェア連動（duty・デッドゾーン・サーボ） | §4 全シナリオ＋§5.1・§5.2 | 同上＋`wheel_servo.cpp` との対応確認 |
+
+## 9. 関連文書
+
+- [システム仕様](ball_balancing_omnirover3wd-system.md)
+- [アーキテクチャ](ball_balancing_omnirover3wd-architecture.md)
+- [制御・状態推定理論](ball_balancing_omnirover3wd-control-estimation-theory.md)
+- [状態方程式](ball_balancing_omnirover3wd-state-equations.md)
+- [仕様変更記録](ball_balancing_omnirover3wd-change-history.md)

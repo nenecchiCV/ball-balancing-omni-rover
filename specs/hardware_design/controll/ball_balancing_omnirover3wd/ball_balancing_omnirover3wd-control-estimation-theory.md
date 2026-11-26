@@ -4,9 +4,10 @@
 
 | 項目 | 値 |
 |---|---|
-| ステータス | 実装一致版 |
-| 最終更新日 | 2026-09-01 |
+| ステータス | 実装一致版（rev2 対応） |
+| 最終更新日 | 2026-10-22 |
 | 実装 | `matlab_ws/ball_balancing_omni3/*.m` |
+| 対象モデル | `ball_balancing_omni3_multibody_lqi_rev2.slx` |
 
 ## 1. 座標・姿勢
 
@@ -32,7 +33,7 @@ $$
 ## 2. 3輪球面接触幾何
 
 $$
-\beta_i\in\{0,2\pi/3,4\pi/3\},\qquad\lambda=\pi/4
+\beta_i\in\{0,2\pi/3,4\pi/3\},\qquad\lambda=33\ \mathrm{deg}\;(0.576\ \mathrm{rad})
 $$
 
 $$
@@ -70,7 +71,7 @@ A_\tau=\frac{R_b}{R_w}
 \begin{bmatrix}a_1^B&a_2^B&a_3^B\end{bmatrix}
 $$
 
-上式は3輪トルクがボールへ及ぼす一般化トルクの物理関係である。現行の制御器はトルク配分ではなく輪速空間で指令を生成するため、速度指令への対応として同じ幾何から
+上式は3輪トルクがボールへ及ぼす一般化トルクの物理関係である。現行の制御器はトルク入力LQIで姿勢トルクを生成し、推進チャネルは輪速空間で目標を生成する。輪速目標への写像として同じ幾何から
 
 $$
 \omega_{w,d}=W_\omega
@@ -95,8 +96,10 @@ $$
 
 | 接触 | $k_n$ [N/m] | $c_n$ [N/(m/s)] | $w$ [m] |
 |---|---:|---:|---:|
-| ホイール–ボール | $2.0\times10^5$ | 250 | $5.0\times10^{-4}$ |
-| ボール–床 | $3.0\times10^5$ | 180 | $5.0\times10^{-4}$ |
+| ホイール–ボール | $1.36\times10^{4}$（ボール膜 $3.0\times10^{4}$ と goBILDA 50A ゴムローラー層 $2.5\times10^{4}$ の直列合成） | 170 | $5.0\times10^{-4}$ |
+| ボール–床 | $3.0\times10^{4}$ | 500 | $5.0\times10^{-4}$ |
+
+剛性の不確かさはロバスト性受け入れ試験（[検証計画](ball_balancing_omnirover3wd-test-plan.md)）で $k\in\{1\times10^{4},3\times10^{4},6\times10^{4}\}$ N/m を掃引して担保する。
 
 ### 3.2 オムニホイール異方性摩擦
 
@@ -113,11 +116,13 @@ $$
 
 | パラメーター | 値 |
 |---|---:|
-| $\mu_d$ | 0.75 |
-| $\mu_r$ | 0.02 |
+| $\mu_s=\mu_d$（駆動方向） | 2.0 |
+| $\mu_r$（ローラー方向） | 0.02 |
 | $v_c$ | 0.005 m/s |
 
-対応実装: `ballbotCustomFriction.m`。
+球–床接触は等方性 $\mu_s=\mu_d=1.2$ とし、加えて転がり抵抗を `ballbotRollingResistance` が印加する（係数 `p.contact.ballGround.rollingFriction`=0.008、臨界速度 0.005 m/s、スピンスクラブ項 `spinScrubArm`=1 mm・`spinScrubCriticalRate`=0.5 rad/s）。転がり抵抗係数の許容帯は 0.005–0.015（フローリング〜短毛絨毯想定）で、帯全域の生存は受け入れ試験で確認する。トラクション推定用の摩擦係数は `tractionEstimateFriction`=1.0（実物摩擦 2.0 に対し保守側・80%ディレート込み）。
+
+対応実装: `ballbotCustomFriction.m`、`ballbotRollingResistance.m`。
 
 ## 4. IMU観測式
 
@@ -162,7 +167,9 @@ $$
 d_b=\begin{bmatrix}\hat b_{g,z,k+1}&\gamma_k&t_{qual,k+1}\end{bmatrix}^T
 $$
 
-### 5.2 姿勢更新
+### 5.2 姿勢更新（レガシー比例補正・フォールバック）
+
+現行既定は §5.2b の誤差状態EKFである。本節のゲート付き比例補正は `p.estimator.ekf.enabled=false` のフォールバック経路として残置する。
 
 $$
 u_g^B=R_{WB}^Te_3,\qquad
@@ -193,9 +200,9 @@ $$
 | $T_s$ | 0.005 s |
 | $K_a$ | 2.5 s$^{-1}$ |
 
-### 5.2b 誤差状態EKF拡張（既定有効、`p.estimator.ekf.*`）
+### 5.2b 誤差状態EKF（現行既定、`p.estimator.ekf.*`）
 
-IMUをLSM6DSOとする最終構成では、上記のゲート付き比例補正を**誤差状態EKF**へ拡張する。誤差状態ベクトルは5状態（姿勢誤差$\delta\theta\in\mathbb{R}^3$、ロール/ピッチ軸ジャイロバイアス誤差$\delta b_{xy}\in\mathbb{R}^2$）で、クォータニオンは名目状態として非誤差側に保持する。
+現行構成では上記のゲート付き比例補正を**誤差状態EKF**へ置き換えた（`ekf.enabled=true`・`useLegacyCorrection=false`）。誤差状態ベクトルは5状態（姿勢誤差$\delta\theta\in\mathbb{R}^3$、ロール/ピッチ軸ジャイロバイアス誤差$\delta b_{xy}\in\mathbb{R}^2$）で、クォータニオンは名目状態として非誤差側に保持する。ヨー軸ジャイロバイアスは絶対方位参照がなく本EKFでは観測不能なため、従来どおり §5.6 の低運動認定学習に委ねる。
 
 **予測**: バイアス補正後ジャイロでクォータニオンを伝播し、
 
@@ -366,83 +373,134 @@ $$
 
 ## 6. 速度・姿勢・ヨー制御
 
-正本モデルの制御器は階層構造とし、`ballbotLqiControllerUpdate` が `p.controller.fullplant.enabled` を検査して `ballbotFullPlantHierarchyUpdate` へ委譲する。外側層は輪速指令$\omega_{w,d}$を生成し、内側層 `ballbotSpeedPiMotorStep` が輪速PIとDCモータモデルで輪トルクへ変換する。
+正本モデル（rev2）の制御器は**トルク入力LQI**を中核とするマルチレート構成とする。外側 200 Hz タスク `ballbotLqiControllerUpdateRev2` が姿勢トルク・運動学的輪速目標・モード・コンテキストを生成し、内側 1 kHz タスク `ballbotWheelServoDutyStep` が推進輪速サーボとDCモータ式duty反転を実行する。
 
-### 6.1 モード管理と指令成形
+$$
+\mathrm{output}_{outer}=
+\begin{bmatrix}\tau_{att}(1{:}3)&I_v(4{:}5)&\mathrm{mode}(6)&s_{ready}(7)&\omega_{w,d}(8{:}10)&s_{settle}(11)&\mathrm{enable}(12)\end{bmatrix}^T
+$$
+
+### 6.1 モード管理
 
 $$
 \mathrm{mode}=
 \begin{cases}
-0 & \lnot\mathrm{enable}\ \lor\ \sqrt{\hat\phi^2+\hat\theta^2}\ge35\ \mathrm{deg}\\
-2 & \sqrt{\hat\phi^2+\hat\theta^2}\ge17\ \mathrm{deg}\\
+0 & \lnot\mathrm{enable}\ \lor\ \sqrt{\hat\phi^2+\hat\theta^2}\ge35\ \mathrm{deg}\ \lor\ \mathrm{latch}\\
+2 & \sqrt{\hat\phi^2+\hat\theta^2}\ge5\ \mathrm{deg}\ \lor\ (\mathrm{prev}=2\ \land\ \mathrm{tilt}\ge2\ \mathrm{deg})\\
 1 & \mathrm{otherwise}
 \end{cases}
 $$
 
-接触信頼度ゲートは全運転域で不発だったため削除し、傾斜だけでRECOVERYへ進入する。
+mode 0 は**終端状態**（fallen→recovery 再突入は床バウンス反復フェースプラントを生じるため経路を持たない）であり、進入時にシミュレーションも打ち切る。mode 2 進入は `elevatedAuthority` をアームし、車輪がフィルタ済み輪速で 1.5 rad/s 未満へ静止するまで保持する。有効中はトルク上限を `recoveryWheelTorqueLimit`（公称 0.162 N·m）とし、mode 1 復帰後のセトル区間（`settleWitness`）では推定器のボール/機体速度チャネル（ドリフト中に ~7 倍/~3 倍のバイアスを実測）をエンコーダー輪速の運動学逆解（`pinv(wheelSpeedFromPlanarVelocity)`、0.25 s一次フィルタ）へ切替える。
+
+### 6.2 指令成形
+
+指令はワールド→機体変換の後、3段の制限を通す。
 
 $$
-{}^Bv_d=c_{scale}R_z(\hat\psi)^T{}^Wv_d,\qquad
-\|{}^Bv_d\|\le p.\mathrm{controller.maxSpeed}
+\omega_{demand}=\sin\lambda\,\|{}^Bv_d\|+R_c|r_d|
+\le R_w\,\omega_{cmd,max}
 $$
 
-指令スケール$c_{scale}=0.60$は、輪速変換を介してモータ速度指令が物理上限へ達するまでの余裕を確保する。
+結合リミッタ（`coupledCommandLimitEnabled`）が並進・ヨーの合成輪速要求を輪速予算内へ同率縮退し、`maxSpeed`（0.40 m/s）で速度を制限する。さらに**フォロースルーチェイス**を適用する: 指令速度がボール速度の `stopFollowGain`（0.75）倍未満のとき、輪速サーボへ与える指令を `followGain·v_{ball}` へ書換え、ボールとの共転を維持する（速度誤差フィードバックには書換え前のユーザー指令を残す）。settle 中は `settleFollowGain`=1.0 の純粋追従とする。
 
-### 6.2 機体平面速度の再構成
+### 6.3 速度積分（休眠経路）
 
-階層制御ではIMU積分速度ではなく、車輪角速度から機体平面速度を再構成する。
+ボール速度誤差の条件付き積分状態 $I_v\in\mathbb{R}^2$（デッドゾーン・指令ゲート・リーク・非対称アンワインド）は簿記として保持するが、現行 `torqueLqi.integralGain` はゼロであり出力へ寄与しない。車輪トルク経路の積分は内力でボールを駆動できず、リーン需要経路の積分は蓄積バイアスで ~0.9 m/s 暴走を反復したため廃止し、定常抵抗は §6.5 の無状態ドラッグFFで賄う。
 
-$$
-{}^B\hat v=\left(W_{\omega}(:,1{:}2)\right)^\dagger\omega_w
-$$
+### 6.4 トルク入力LQI
 
-エンコーダー由来の輪速を直接使うため、比力積分のドリフトが速度外側ループへ入らない。
-
-### 6.3 速度外側ループと傾斜指令
+フィードバック状態は10状態とする。
 
 $$
-e_v={}^Bv_d-{}^B\hat v
-$$
-
-$$
-I_{v,k+1}=\operatorname{sat}(I_{v,k}+T_se_v,\pm0.20)
+x=\begin{bmatrix}
+v_{ball,x}^B&v_{ball,y}^B&\theta&-\phi&q&-p&r&\omega_{w,1}&\omega_{w,2}&\omega_{w,3}
+\end{bmatrix}^T
 $$
 
 $$
-a_d=K_{p,v}e_v+K_{i,v}I_v,\qquad\|a_d\|\le0.60\ \mathrm{m/s^2}
+\tau_{att}=-K_{10}\,x
+$$
+
+| 状態要素 | 条件 |
+|---|---|
+| $v_{ball}^B$（1:2） | settle 中のみ $\hat v_{ball}^B-{}^Bv_d^{user}$、通常運転では0（通常時に有効化すると力チャネルが惰性走行ボールを牽引駆動する回帰のため） |
+| $\theta,-\phi$（3:4） | リーン整定点・静的リーンバイアスを引いた傾斜誤差 |
+| $q,-p,r$（5:7） | 20 ms一次遅れフィルタ済み機体角速度（gyroノイズ→トルクノイズ増幅の抑制）。$r$ はヨーゲート成立時のみ指令差を引く |
+| $\omega_w$（8:10） | 30 ms一次遅れフィルタ済み輪速（量子化フリッカー ~3.7 rad/s対策。`wheelRateObserverEnabled=false` が既定 — オブザーバの driveGain=306 が荷重応答を ~100 倍過大予測し推進を抑制するため） |
+
+ゲイン $K_{10}$ は `ballbotRobustTorqueGains` が設計するロバスト固定ゲインである。公称 0.5 kg ビルドで計測したトルクステップB行列（6×3、傾斜加速度・輪加速度行）をペイロード族 0–1 kg へスケーリング（傾斜行は $1/I_{pivot}$、ヨー行は $1/I_{yaw}$、輪行は不変、不安定傾斜係数は $mgh/I_{pivot}$）し、8状態内側プラント $[\theta,-\phi,q,-p,r,\omega_{w,1..3}]$ の離散LQR（$Q=\operatorname{diag}(200,200,20,20,5,0.2,0.2,0.2)$、$R=4000I_3$）を質量毎に解く。全候補ゲインを全プラントへ適用し、最悪閉ループ極半径が最小のゲイン（常に重端設計）を採用する。実装値は経験的列スケーリング（tilt×1.8、tilt-rate×1.0、yaw-rate×5）を適用済みで、速度状態2列はゼロである（`ballbotVelocityTorqueGains` が別設計）。輪速コラムへは -1.35/s のコンプライアンス減衰を加える。
+
+素の状態フィードバックに加え、次の補助項をトルクへ重畳する。
+
+| 項 | 仕様 |
+|---|---|
+| 傾き剛性スケジュール | `tiltStiffenGain`=2（`leanSetpointLimit`超過で`tiltStiffenTilt`=0.006 rad帯へ線形ブースト、settle中はエッジを`settleLeanCap`へ降下）。小信号は低ゲインでIMUノイズを抑え、コーン縁の大外乱は高剛性で捕捉する |
+| 傾斜積分 | `tiltIntegralGain`=1（リーク0.5/s・上限0.03 rad、重端で比例ゲインが静的保持床の ~5% 上しかないため定常保持荷重を積分器が引き受ける） |
+| 重力保持FF | `leanHoldTorque`×要求リーン角をトルクへFF（要求リーンの保持トルクを滑らかに供給し、フィードバックは偏差のみを扱う） |
+| スリップ減衰 | `slipDampingGain`=0.02（フィルタ済み輪速−運動学転がりレートの滑り差分、デッドゾーン付き） |
+
+RECOVERY（mode 2）ではリーン整定点を0へ強制して姿勢復帰のみを行い、mode 0 では全トルク0とする。
+
+### 6.5 リーン要求外側ループ
+
+車輪トルクは機体＋ボール系に対して内力でありアセンブリ重心を加速できないため、並進追従は重力を介したリーン駆動のみが外部推力として機能する。外側ループは速度誤差から傾斜整定点を生成し、状態の傾斜項へ注入する。
+
+$$
+a_{lean}=K_{v,lean}\,e_v^{user},\qquad
+e_v^{user}={}^Bv_d^{user}-{}^B\hat v_{ball},\qquad
+K_{v,lean}=0.30\ (settle中は1.0)
+$$
+
+| 項 | 仕様 |
+|---|---|
+| 加速度フィードフォワード | `accelFeedforwardGain`×指令加速度を片側加算（ボール先行時は遮断） |
+| ドラッグフィードフォワード | `dragLeanFeedforward`×$r_f g$ を進行方向へ片側加算（無状態、積分器の暴走機構を持たない） |
+| リーン上限 | `leanSetpointLimit`（0.022 rad、settle中は`settleLeanCap`=0.015） |
+| スルー制限 | `leanRateLimit`×$g$ rad/s 相当（ステップ要求が支持を剥がす実績対策） |
+| コーンフェード | 傾斜超過分に応じて需要を減衰（ブレーキ成分は殺さない片側適用） |
+| 偏心ガード | `accelRelPosGuardGain`=12（ボール先行幾何への突入加速を絞る、フロア0.1） |
+| コーストゲート | ボールが指令+`overspeedCoastMargin`（0.12 m/s、フロア0.5 m/s）を超えたとき運動方向成分を全剥がし（settle中は不発） |
+| settle減衰 | `settleLeanDamping`=1 でフィルタ済みドリフト加速度を需要から減算 |
+
+### 6.6 静的リーン適応（CGオフセット）
+
+`staticLeanAdapt*`（既定ON、gain 0.5）が指令0時のドリフト速度シグネチャをローパス・デッドバンド(0.02)・積分し、リーン整定点バイアスとして `state(3:4)` へ注入する。真の平衡リーンで自己停止する負帰還とし、アーム条件・注入は指令0時のみ・成分クリップ±0.10 rad の安全性を備える。実測で 20 mm ロッドオフセット（CG横ずれ ~5.6 mm・平衡リーン ~2°）まで保持する。
+
+### 6.7 ヨーチャネル
+
+ヨーレート状態はコモンモードトルクがボールの自由zスピンをポンプするため**指令時のみ有効**とし、無指令時は状態を0へ強制する。無ヨー指令時は姿勢トルクのコモンモード残差（`rawWheelCommand-mean`）を除去し、受動ヨーダンパー（`yawDampingGain`=0.3、移動指令中のみ）とボールzスピンブレーキ（`ballYawGain`=0.12、トルク上限0.025 N·m）に任せる。起動時は `ballbotYawBiasStartupGuard` がバイアス収束までヨートルクだけを抑止し、明示指令は抑止をバイパスする。
+
+### 6.8 内側 1 kHz 車輪サーボ
+
+`ballbotWheelServoDutyStep`（`servoSampleTime`=1 ms）はZOHされた姿勢トルク・輪速目標・コンテキストを受け取る。
+
+$$
+\tau_{prop}=\operatorname{sat}\!\left(K_{prop}\,\operatorname{dz}(\omega_{w,d}-\hat\omega_w),\pm\tau_{prop,max}\right)
+\ \ (\mathrm{mode}=1のみ、settle中0)
 $$
 
 $$
-\alpha_d=
-\begin{bmatrix}\operatorname{atan2}(a_{d,x},g)\\ \operatorname{atan2}(a_{d,y},g)\end{bmatrix},
-\qquad\|\alpha_d\|_\infty\le4\ \mathrm{deg}
+\tau=\operatorname{sat}(\tau_{att}+\tau_{prop},\pm\tau_{lim}),\qquad
+\tau_{lim}=\min(\tau_{cont},\tau_{traction}/\tau_{recovery})
 $$
 
-| ゲイン | 値 |
+$$
+d=\operatorname{sat}\!\left(\frac{(R_a+R_{br})I+K_e\hat\omega_w}{V_s}+d_{comp},\ \pm d_{max}\right)
+$$
+
+| 項 | 値 |
 |---|---:|
-| $K_{p,v}$ | $\operatorname{diag}(2.3,2.3)$ s$^{-1}$ |
-| $K_{i,v}$ | $\operatorname{diag}(0,0)$ s$^{-2}$ |
+| 推進ゲイン $K_{prop}$ | 0.020 N·m/(rad/s) |
+| 推進トルク上限 | 0.045 N·m（ヘッドルーム配分＋最小シェア0.25） |
+| back-EMFフィルタ時定数 | 1 ms（5 ms計測窓の輪速を平滑） |
+| トルク上限（通常） | $\min(0.919,0.162)=0.162$ N·m |
+| トルク上限（リカバリ/セトル） | 0.162 N·m |
+| 起動ランプ | 0.4 s（推進項のみ） |
+| FR-16デッドゾーン補償 | `drive.deadzoneCompPos/Neg`（輪別・符号別同定値）、enable時かつmode≠0 |
+| dutyクランプ | ±0.8333 |
 
-### 6.4 傾斜安定化と輪速指令
-
-傾斜状態は$[\theta;-\phi]$、傾斜角速度は$[q;-p]$で統一する。
-
-$$
-u_{planar}=s_{stab}\left\{
-K_{p,\alpha}(\alpha-\alpha_d)+K_{d,\alpha}\dot\alpha
-\right\}-K_{ff}\,{}^Bv_d
-$$
-
-| パラメーター | 値 |
-|---|---:|
-| $K_{p,\alpha}$ | $\operatorname{diag}(16,16)$ |
-| $K_{d,\alpha}$ | $\operatorname{diag}(1.6,1.6)$ |
-| $s_{stab}$ | $+1$ |
-| $K_{ff}$ | $1.0$ |
-
-RECOVERYでは$\alpha_d=0$、FALLEN/DISABLEDでは$u_{planar}=0$とする。
-
-### 6.5 起動時ヨー制御ガード
+### 6.9 起動時ヨー制御ガード
 
 $$
 s_{ready,k+1}=s_{ready,k}\lor
@@ -452,84 +510,25 @@ $$
 $$
 r_{d,eff}=
 \begin{cases}
-\operatorname{sat}(r_d,\pm0.80) & s_{ready}\ \lor\ |r_d|>1.0\times10^{-6}\\
+\operatorname{sat}(r_d,\pm0.80) & s_{ready}\ \lor\ |r_d|>t_{bypass}\\
 0 & \mathrm{otherwise}
 \end{cases}
 $$
 
 明示的なヨー指令がない場合はヨー速度指令だけを0とし、未補正バイアスに制御器が反応して車輪を回し、低運動認定を自ら解除する競合を防ぐ。傾斜安定化と速度追従は常時有効である。一度成立した$s_{ready}$は推定器・制御器リセットまで保持する。明示指令では指令を優先するが、運動中のバイアス更新は低運動ゲートにより停止する。
 
-### 6.6 輪速変換と飽和
+### 6.10 代替・廃止経路
 
-$$
-\omega_{w,d}=\operatorname{sat}\!\left(
-W_\omega\begin{bmatrix}u_{planar}\\ r_{d,eff}\end{bmatrix},
-\ \pm\,0.70\,\omega_{max,motor}\right)
-$$
-
-$\omega_{max,motor}=$ `p.motor.speedCommandLimit` $=d_{max}\omega_{nl}$（$d_{max}$はMDD3A最大デューティ、$\omega_{nl}=210$ rpmの無負荷速度）。
-
-| 条件 | $I_v$更新 |
+| 経路 | 状態 |
 |---|---|
-| $\omega_{w,d}$非飽和かつBALANCE | 候補値を採用 |
-| いずれかの輪速が飽和 | 前回値を保持 |
-| mode≠BALANCE | 0 |
+| `ballbotFullPlantHierarchyUpdate`（旧階層制御） | `p.controller.fullplant.enabled=true` で選択可能な実験経路。既定はトルクLQI |
+| 輪速指令10状態LQI＋輪速PI（rev1経路） | `torqueDrive.enabled=false` のフォールバック。`ballbotDesignLqi` が縮約プラント線形化から設計 |
+| 速度積分出力 | §6.3 の休眠経路（簿記のみ） |
+| 輪速オブザーバ | `wheelRateObserverEnabled=false` が既定（荷重応答 ~100倍過大予測バグ） |
+| デッドゾーンオンライン適応 | `ballbotDeadzoneAdaptStep` PoC 保存のみ・未接続 |
+| cascade/ballforce 経路 | 全指標でトルクLQIに劣後したため削除済み |
 
-### 6.7 輪速内側ループとモータ
-
-`ballbotSpeedPiMotorStep` は輪速PI、MDD3A電圧制限、DCモータ電気式、トルク制限を順に適用する。
-
-$$
-e_\omega=\omega_{w,d}-\omega_w
-$$
-
-$$
-V_{raw}=K_{p,\omega}e_\omega+K_{i,\omega}I_{\omega,k},\qquad
-V=\operatorname{sat}(V_{raw},\pm d_{max}V_{supply})
-$$
-
-$$
-I_{\omega,k+1}=\operatorname{sat}\!\left(
-I_{\omega,k}+T_s\big(e_\omega+K_{aw,\omega}(V-V_{raw})\big),
-\pm\frac{V_{supply}}{K_{i,\omega}}\right)
-$$
-
-電圧飽和はバックカリキュレーション（$K_{aw,\omega}=1/K_{p,\omega}$）で積分器へ戻す。$V_{supply}=6$ V、$d_{max}$はMDD3A最大デューティ。mode=0では電圧と積分器を0へリセットする。
-
-$$
-I=\operatorname{sat}\!\left(\frac{V-K_e\omega_w}{R_a},\pm I_{cont}\right),\qquad
-I_{cont}=3.0\ \mathrm{A}
-$$
-
-$$
-\tau_w=\operatorname{sat}\!\left(K_tI-B\omega_w,\pm\tau_{lim}\right),\qquad
-\tau_{lim}=\min(\tau_{traction},\tau_{motor})
-$$
-
-正本構成では$\tau_{motor}=$ `p.controller.fullplant.motorTorqueLimit` $=0.010$ N·mを輪トルク上限とし、接触摩擦限界$\tau_{traction}=\mu_d N_{nom}R_w$とMDD3A連続定格トルクの小さい方と併せて制限する。輪速PIゲインは正本構成で$\times0.25$に再調整する（`p.fullplant.speedPiGainScale`）。
-
-### 6.8 代替パス：10状態MIMO LQI
-
-`p.controller.fullplant.enabled=false` の構成では、`ballbotLqiControllerUpdate` 内部の10状態LQIを直接適用する。
-
-$$
-x=\begin{bmatrix}{}^Bv^T&\theta&-\phi&q&-p&r&\omega_w^T\end{bmatrix}^T\in\mathbb{R}^{10}
-$$
-
-$$
-\omega_{w,d}=\operatorname{sat}\!\left(
-W_\omega\begin{bmatrix}0\\0\\r_{d,eff}\end{bmatrix}
--Kx-\lambda_K K_i I_v,\ \pm\omega_{max,motor}\right)
-$$
-
-$$
-I_v^+=I_v+T_se_v+T_sK_{aw}\,
-\left[W_\omega^\dagger(\omega_{w,d}-\omega_{w,raw})\right]_{1:2}
-$$
-
-ヨーは運動学的フィードフォワードのみとし、平面追従は積分状態経由で入れるため、速度ステップが加速度・傾斜制限を迂回しない。飽和差分は$W_\omega$の疑似逆行列で平面速度空間へ戻し、$K_{aw}=8$で積分器を補正する。RECOVERYでは$\omega_{w,d}=-1.35Kx$、FALLEN/DISABLEDでは0とする。ゲイン$K,K_i$は`ballbotDesignLqi.m`が縮約プラントの線形化モデルから積分拡張LQRで設計する。
-
-対応実装: `ballbotLqiControllerUpdate.m`、`ballbotFullPlantHierarchyUpdate.m`、`ballbotLqiFeedbackState.m`、`ballbotSpeedPiMotorStep.m`、`ballbotMdd3aVoltageController.m`、`ballbotYawBiasStartupGuard.m`、`ballbotDesignLqi.m`。
+対応実装: `ballbotLqiControllerUpdateRev2.m`、`ballbotWheelServoDutyStep.m`、`ballbotLqiControllerUpdate.m`、`ballbotLqiFeedbackState.m`、`ballbotRobustTorqueGains.m`、`ballbotDesignTorqueLqi.m`、`ballbotTorquePlantDynamics.m`、`ballbotVelocityTorqueGains.m`、`ballbotYawBiasStartupGuard.m`。
 
 ## 7. 可観測性・推定誤差
 
@@ -548,13 +547,16 @@ $$
 |---|---|---|
 | §2 | `ballbotWheelGeometry.m` | パラメーター初期化（`ballbotFullPlantParameters`から呼出し） |
 | §2 | $W_\omega$生成 | `ballbotFullPlantParameters.m` |
-| §3 | `ballbotCustomFriction.m` | MultibodyPlant/WheelNCustomFriction→WheelAssemblyN/WheelNBallContact |
+| §3 | `ballbotCustomFriction.m`、`ballbotRollingResistance.m` | MultibodyPlant/WheelNCustomFriction→WheelAssemblyN/WheelNBallContact、Ball/BallRollResFcn |
 | §4 | `ballbotImuFromJoint.m`→`ballbotIdealImu.m` | MultibodyPlant/IdealIMU |
-| §5.4 | `ballbotWheelRateFromDisplacement.m` | Controller/WheelSpeedSensing/WheelRateCalculation |
+| §5.4 | `ballbotWheelRateFromDisplacement.m` | Controller/WheelSpeedSensing、ServoWheelSpeedSensing/WheelRateCalculation |
 | §5 | `ballbotEstimatorUpdate.m`→`ballbotEstimatorStep.m` | Controller/StateEstimator/EstimatorUpdate |
-| §6.1–6.6 | `ballbotLqiControllerUpdate.m`→`ballbotFullPlantHierarchyUpdate.m` | Controller/BalanceController/LqiController |
-| §6.7 | `ballbotSpeedPiMotorStep.m`→`ballbotMdd3aVoltageController.m` | Controller/WheelDrive/SpeedPiAndDcMotor |
-| 全パラメーター | `ballbotFullPlantParameters.m`（基礎値は`ballbotParameters.m`） | Model workspace `ballbotParams` |
+| §6.1–6.7, 6.9 | `ballbotLqiControllerUpdateRev2.m` | Controller/BalanceController/LqiController（5 ms） |
+| §6.8 | `ballbotWheelServoDutyStep.m` | Controller/WheelDrive/SpeedPiDuty（1 ms） |
+| §6.10 | `ballbotLqiControllerUpdate.m`→`ballbotFullPlantHierarchyUpdate.m`、`ballbotDesignLqi.m` | 代替経路（実験用） |
+| §6.4 ゲイン設計 | `ballbotRobustTorqueGains.m`、`ballbotDesignTorqueLqi.m`、`ballbotTorquePlantDynamics.m` | パラメーター初期化 |
+| 駆動・補償 | `ballbotMdd3aGateDrive.m`、`ballbotShaftFrictionTorque.m` | MultibodyPlant/WheelAssemblyN |
+| 全パラメーター | `ballbotRev1Parameters.m`（`ballbotFullPlantParameters.m`→`ballbotParameters.m`、実行時付加は`ballbotRev1PlantAugment.m`） | Model workspace `ballbotParams` |
 
 ## 9. 参考資料
 
@@ -564,3 +566,11 @@ $$
 | [Lalほか, 2019](https://busoniu.net/files/papers/ddecs19.pdf) | 3オムニホイール球駆動、LQR設計の基礎構成 |
 | [Lalほか, 2020](https://busoniu.net/files/papers/ifac20-ioana.pdf) | $D(q)\ddot q+C(q,\dot q)\dot q+G(q)=B\tau$、3輪トルク変換 |
 | [Mucchiani, 2018](https://escholarship.org/uc/item/2cd979dq) | 高ヨー速度時の非線形球乗りロボット、EKF・モデルベース制御 |
+
+## 10. 関連文書
+
+- [システム仕様](ball_balancing_omnirover3wd-system.md)
+- [アーキテクチャ](ball_balancing_omnirover3wd-architecture.md)
+- [状態方程式](ball_balancing_omnirover3wd-state-equations.md)
+- [検証計画・ロバスト性受け入れ試験](ball_balancing_omnirover3wd-test-plan.md)
+- [仕様変更記録](ball_balancing_omnirover3wd-change-history.md)

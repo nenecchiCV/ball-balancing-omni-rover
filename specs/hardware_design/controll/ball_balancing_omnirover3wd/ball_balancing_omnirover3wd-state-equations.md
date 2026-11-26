@@ -2,9 +2,9 @@
 
 ## 1. 対象と結論
 
-車輪角速度を入力とし、ボールとローバーの位置・姿勢および車輪回転変位を出力とするプラントを、非線形記述系（DAE）として定義する。
+車輪軸トルクを入力とし、ボールとローバーの位置・姿勢および車輪回転変位を出力とするプラントを、非線形記述系（DAE）として定義する。正本モデル rev2 は車輪トルクをFIT0521 DCモータ＋MDD3AドライバのSimscape Electrical回路（PWM duty入力）から生成するが、本書では電気系を含まない力学系の記述に集中し、duty→トルク変換は [アーキテクチャ §4.2](ball_balancing_omnirover3wd-architecture.md) に委ねる。
 
-車輪角速度3量だけでは、ボール角速度3量とローバー角速度3量を運動学だけから一意に分離できない。このため、絶対運動を表すプラントには質量・慣性・重力・接触反力を含む運動方程式が必要である。車輪速度から姿勢までを直接写像する陽な運動学モデルは、この機構の自由度を失うため採用しない。
+車輪入力3量だけでは、ボール角速度3量とローバー角速度3量を運動学だけから一意に分離できない。このため、絶対運動を表すプラントには質量・慣性・重力・接触反力を含む運動方程式が必要である。車輪速度やトルクから姿勢までを直接写像する陽な運動学モデルは、この機構の自由度を失うため採用しない。
 
 ## 2. 座標系と記号
 
@@ -19,7 +19,7 @@
 | $v_K^W,v_B^W$ | ボール中心、ローバー基準点の並進速度 | m/s |
 | $\omega_K^K,\omega_B^B$ | ボール、ローバーの物体固定角速度 | rad/s |
 | $\theta_w$ | 3輪の回転変位 | rad |
-| $u=\omega_w$ | 入力となる3輪の回転速度 | rad/s |
+| $u=\tau_w$ | 入力となる3輪の車軸トルク | N·m |
 
 クォータニオンはスカラー先頭の$q=[q_0,q_1,q_2,q_3]^T$とする。車輪番号は$eta_i=[0,120,240]$ degの順とし、正回転方向は既存実装の$+a_i^B$に合わせる。
 
@@ -36,10 +36,12 @@ x=
 $$
 
 $$
-u=\dot\theta_w=
-\begin{bmatrix}\omega_{w,1}&\omega_{w,2}&\omega_{w,3}\end{bmatrix}^T
+u=\tau_w=
+\begin{bmatrix}\tau_{w,1}&\tau_{w,2}&\tau_{w,3}\end{bmatrix}^T
 \in\mathbb{R}^{3}
 $$
+
+トルク入力の場合、$\theta_w$ は拘束を受けない通常の自由度として運動方程式で時間発展する。理想速度源を用いる設計モデルでは $u=\dot\theta_w=\omega_w$ とし、§6 の $S_w\nu-u=0$ を車輪軸速度拘束として課す。
 
 指定された出力は、姿勢をZYXオイラー角で表すと次の15要素である。
 
@@ -60,7 +62,7 @@ $$
 $$
 \dot p_K^W=v_K^W,qquad
 \dot p_B^W=v_B^W,qquad
-\dot\theta_w=u
+\dot\theta_w=\omega_w
 $$
 
 とする。姿勢は、
@@ -151,33 +153,32 @@ $$
 
 ## 6. 非線形記述状態方程式
 
-質量・慣性と接触反力を含むプラントは、次のDAEで表す。
+質量・慣性と接触反力を含むプラントは、次のDAEで表す（トルク入力版）。
 
 $$
 \boxed{
 \begin{aligned}
 \dot q &= T(q)\nu\\
-M(q)\dot\nu+h(q,\nu) &= S_w^T\tau_a+J_n(q)^T\lambda_n+J_t(q)^T\lambda_t\\
+M(q)\dot\nu+h(q,\nu) &= S_w^T\tau_w+J_n(q)^T\lambda_n+J_t(q)^T\lambda_t\\
 0&=\Phi_n(q)\\
-0&=J_t(q)\nu-D_wu\\
-0&=S_w\nu-u
+0&=J_t(q)\nu-D_w\omega_w
 \end{aligned}}
 $$
 
 | 項 | 内容 |
 |---|---|
-| $M(q)$ | ボール、機体、サーボ、車輪を含む一般化質量行列 |
-| $h(q,\nu)$ | コリオリ・遠心項、重力、受動摩擦 |
+| $M(q)$ | ボール、機体、モータポッド、車輪を含む一般化質量行列 |
+| $h(q,\nu)$ | コリオリ・遠心項、重力、受動摩擦（輪軸Coulomb/静摩擦・球転がり抵抗） |
 | $S_w$ | 一般化速度から車輪軸速度を選ぶ行列 |
-| $\tau_a$ | 理想速度源が拘束維持のため発生する代数的な車輪軸トルク |
+| $\tau_w$ | 駆動系が印加する車輪軸トルク（rev2ではduty→DCモータ式で生成） |
 | $J_n^T\lambda_n$ | 床1点と車輪3点の法線反力 |
 | $J_t^T\lambda_t$ | 無すべり時の接線反力 |
 
-$J_t\nu-D_wu=0$の車輪3行と$S_w\nu-u=0$は、一般化速度の取り方に応じて同じ車輪速度条件を二重に課さない。車輪角を独立一般化座標に含む本定義では、$S_w\nu-u=0$を車輪軸拘束、$J_t\nu-D_wu=0$を接触点速度拘束として両方用いる。
+理想速度源による設計モデルでは入力を $u=\dot\theta_w$ として $0=S_w\nu-u$（車輪軸速度拘束）を加え、$\tau_a$ は拘束維持のため発生する代数トルクとなる。$J_t\nu-D_w\omega_w=0$の車輪3行は接触点速度拘束であり、速度拘束モデルでは $S_w\nu-u=0$ とともに用いる（同じ速度条件を二重に課さない）。
 
-初期値は$\Phi_n(q_0)=0$と速度拘束を満たす整合初期値でなければならない。速度指令が不連続な場合、理想速度源はインパルス状トルクを要求するため、実装では車輪速度指令に一次遅れまたは加速度制限を加える。
+初期値は$\Phi_n(q_0)=0$と速度拘束を満たす整合初期値でなければならない。速度拘束モデルで速度指令が不連続な場合、理想速度源はインパルス状トルクを要求するため、実装では車輪速度指令に一次遅れまたは加速度制限を加える（正本のトルク入力経路ではこの問題は生じない）。
 
-### 6.1 ペナルティ接触を使う既存Simscapeモデル
+### 6.1 ペナルティ接触を使う正本Simscapeモデル
 
 既存モデルと同じ有限剛性接触を用いる場合は、$\Phi_n=0$と接触反力$\lambda$を代数拘束から外し、貫入量$d$と相対速度から計算する接触力$F_c$に置き換える。
 
@@ -193,7 +194,7 @@ $$
 F_t=-\mu_dF_n\tanh(v_d/v_c)t-\mu_rF_n\tanh(v_r/v_c)r
 $$
 
-この形は分離とすべりを扱え、正本モデル`ball_balancing_omni3_multibody_lqi_custom_contact_fullplant.slx`のcustom contact物理モデルに対応する。
+この形は分離とすべりを扱え、正本モデル`ball_balancing_omni3_multibody_lqi_rev2.slx`のcustom contact物理モデルに対応する。輪–球接触の接線摩擦は異方性（駆動方向とローラー方向で別係数）とし、球–床接触には転がり抵抗を別途印加する。
 
 ## 7. 出力方程式
 
@@ -230,38 +231,42 @@ $$
 | $m_b$ | 0.285 | kg | `p.ball.mass` |
 | $I_b$ | $4.75\times10^{-4}I_3$ | kg m$^2$ | `p.ball.inertia` |
 | $R_w$ | 0.024 | m | `p.wheel.radius` |
-| $m_w$ | 0.039 | kg/輪 | `p.wheel.mass` |
+| $m_w$ | 0.032 | kg/輪 | `p.wheel.mass`（goBILDA 48 mm） |
 | $\beta_i$ | $[0,120,240]$ | deg | `p.wheel.azimuth` |
-| $\lambda$ | 33 | deg | `p.wheel.contactLatitude` |
-| $\delta_p$ | $5.0\times10^{-5}$ | m | `p.wheel.contactPreload` |
-| $m_R$ | 1.179 | kg | `p.rover.mass` |
-| $h_{BK}$ | 0.125 | m | 機体原点の幾何高さ |
-| $h_{COM}$ | 0.1074 | m | ローバー合成重心高（Fusion実測反映後）、`p.rover.centerAboveBall` |
-| $k_{n,w},c_{n,w}$ | $2.0\times10^5,250$ | N/m, N/(m/s) | `p.contact.wheelBall.*` |
-| $k_{n,g},c_{n,g}$ | $3.0\times10^5,180$ | N/m, N/(m/s) | `p.contact.ballGround.*` |
-| $\mu_d,\mu_r$ | 0.75, 0.02 | - | `p.contact.wheelBall.*Friction` |
-| $v_c$ | 0.005 | m/s | `p.contact.wheelBall.criticalVelocity` |
+| $\lambda$ | 33 | deg | `p.wheel.contactLatitude`（0.576 rad） |
+| $\delta_p$ | $4.0\times10^{-4}$ | m | `p.wheel.contactPreload` |
+| $m_R$ | 1.866（ペイロード0.5 kg込み、実機部1.366） | kg | `p.rover.mass` |
+| $h_{BK}$ | 0.143 | m | 機体原点の幾何高さ、`p.rover.centerAboveBall` |
+| $h_{COM}$ | 0.1812 | m | ローバー合成重心高（Fusion実測 MotorMount_v12 反映後）、`p.rover.comAboveBall` |
+| $I_B$ | $\operatorname{diag}(0.00729,0.00729,0.00312)$ | kg m$^2$ | `p.rover.bodyInertia` |
+| $R_c$ | 0.080 | m | `p.rover.chassisRadius` |
+| $k_{n,w},c_{n,w}$ | $1.36\times10^4,170$ | N/m, N/(m/s) | `p.contact.wheelBall.*`（膜$3\times10^4$とローラー層$2.5\times10^4$の直列） |
+| $k_{n,g},c_{n,g}$ | $3.0\times10^4,500$ | N/m, N/(m/s) | `p.contact.ballGround.*` |
+| $\mu_d,\mu_r$（輪–球） | 2.0, 0.02 | - | `p.contact.wheelBall.*Friction` |
+| $\mu_{s},\mu_{d}$（球–床） | 1.2, 1.2 | - | `p.contact.ballGround.*Friction` |
+| $r_f$（転がり抵抗） | 0.008（許容帯0.005–0.015） | - | `p.contact.ballGround.rollingFriction` |
+| $v_c$ | 0.005 | m/s | `p.contact.*.criticalVelocity` |
+| 輪軸摩擦 | Coulomb 0.0199・breakaway 0.0239 | N·m | `ballbotShaftFrictionTorque`（augment追加） |
 
-状態方程式は実行モデルおよび実機CAD測定値に合わせて$\lambda=33$ degを採用する（案B内向きモーター格納の幾何学的成立限界）。
+状態方程式は実行モデルおよび実機CAD測定値に合わせて$\lambda=33$ degを採用する（案B内向きモーター格納の幾何学的成立限界）。機体質量分布はFusion 360 実測の MotorMount_v12 部品表へ整合済みである。
 
-### 8.2 独立実装前に追加・同定する値
+### 8.2 実機化時に同定・更新する値
 
 | パラメーター | 必要性 | 推奨取得方法 |
 |---|---|---|
-| ローバー重心位置$r_{G_B/B}^B$ | 重力モーメントと質量行列 | 組立CADまたは吊り下げ実測 |
-| ローバー慣性テンソル$I_B$ | ロール・ピッチ・ヨー運動 | 組立CADから抽出し振り子試験で確認 |
-| 各車輪の重心・慣性$I_{w,i}$ | 速度源の反力と高速運動 | CADまたはメーカー値 |
-| $r_{F_i/B}^B$と車輪軸方向 | 接触ヤコビアン | 組立CADから抽出 |
-| サーボ速度ループ帯域・加速度上限 | 理想速度源の非現実的トルクを回避 | 実機ステップ応答 |
-| 転がり抵抗、粘性摩擦 | 定常速度と減衰 | 惰行試験 |
+| ボール実測質量・慣性・反発 | プラント真値の更新 | 実球の計量・落下試験 |
+| 輪–球・球–床摩擦係数 | トラクション限界の精度 | 実機の傾斜保持・滑り試験 |
+| ゴムローラー層剛性 | 接触剛性直列合成の実測裏付け | ベンチ圧縮試験（現値は推定） |
+| 駆動系デッドゾーン | FR-16補償値の個体差 | 実機デューティ掃引同定 |
+| IMUノイズ・バイアス・温度特性 | 推定器共分散・学習閾値 | 実機IMU静止ログ・温度試験 |
 
-これらは既存Simscape Multibodyモデルでは各Solid、Rigid Transform、Jointに分散している。制御設計用の独立した$M(q)$を生成する場合は、`ballbotParameters.m`へ一元化してから線形化する。
+これらはSimscape Multibodyモデルではパラメーター構造体 `ballbotParams`（`ballbotRev1Parameters`生成）へ一元化されている。
 
 ## 9. モデル利用上の前提
 
 - 3輪すべてとボール–床が接触する運転領域では、無すべりDAEを使用できる。
 - 転倒、接触分離、駆動方向すべりを含める場合は、ペナルティ接触形を使用する。
-- 入力を車輪速度にすると、サーボトルクは状態入力ではなく拘束反力$\tau_a$になる。実サーボの飽和評価には、速度制御器とモータートルクを追加する。
+- 入力を車輪トルクにすると、駆動系の飽和・不感帯評価にはduty→トルクの電気系モデル（FIT0521＋MDD3A）を併せて使う。理想速度源モデルではトルクは拘束反力$\tau_a$になるため、実サーボの飽和評価には速度制御器とモータートルクを追加する。
 - 絶対位置と絶対ヨーは、外部位置・方位センサーなしでは観測できない。ただしプラント真値としては状態および出力に保持できる。
 
 ## 10. 関連文書
@@ -269,3 +274,5 @@ $$
 - [制御・状態推定理論](ball_balancing_omnirover3wd-control-estimation-theory.md)
 - [制御・推定アーキテクチャ](ball_balancing_omnirover3wd-architecture.md)
 - [システム仕様](ball_balancing_omnirover3wd-system.md)
+- [検証計画・ロバスト性受け入れ試験](ball_balancing_omnirover3wd-test-plan.md)
+- [仕様変更記録](ball_balancing_omnirover3wd-change-history.md)
