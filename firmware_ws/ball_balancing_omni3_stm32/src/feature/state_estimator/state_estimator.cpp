@@ -19,6 +19,14 @@ constexpr float K_RESEED_HOLD_TIME = 2.0F;
 // 手持ち微振（~0.2–0.4）と真の静止残差（~0.1）の間に置く。
 constexpr float K_STILL_ODOM_ACCEL_XY = 0.3F;
 
+// 推定水平速度の物理包絡 [m/s]。車輪飽和由来の理論上限 ~0.9
+// （param_store::derive の theory_max_speed 相当）を大きく超える推定値は
+// 実運動ではなく幻影（姿勢残差の重力混入・非接触時のアンカー注入等）と
+// みなして飽和する。幻影速度が leak 減衰を待たずオドメトリ・制御器へ
+// 残り続けるのを防ぐ。制御器はこの速度をフィードバックに使うため、
+// 実運動をクリップしないよう理論上限に対し余裕を持たせる。
+constexpr float K_VELOCITY_WORLD_LIMIT = 1.5F;
+
 // 静止時の比力（≈重力の反対向き）からロール/ピッチを定めた姿勢を作る。
 // yaw は current の値を維持する（yaw は加速度から観測できない）。
 vec4 tilt_quat_from_accel(const vec3& specific_force_body,
@@ -510,6 +518,16 @@ state_estimator::output state_estimator::step(const imu_sample& imu,
         anchor_weight * (ball_velocity_world[0] - velocity_world[0]);
     velocity_world[1] +=
         anchor_weight * (ball_velocity_world[1] - velocity_world[1]);
+  }
+
+  // 水平速度の物理包絡: 理論上限を大きく超える推定値は幻影とみなして
+  // 等比飽和する。アンカー/ドレイン適用後の最終値に掛けることで、
+  // 保持状態・出力・相対速度のすべてを bounded にする。
+  const float velocity_xy = hypot2(velocity_world[0], velocity_world[1]);
+  if (velocity_xy > K_VELOCITY_WORLD_LIMIT) {
+    const float s = K_VELOCITY_WORLD_LIMIT / velocity_xy;
+    velocity_world[0] *= s;
+    velocity_world[1] *= s;
   }
 
   const vec3 relative_velocity_world = velocity_world - ball_velocity_world;

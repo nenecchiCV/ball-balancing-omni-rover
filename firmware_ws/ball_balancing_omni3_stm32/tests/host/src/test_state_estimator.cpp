@@ -245,6 +245,29 @@ void test_calib_capture_adopts_window_mean() {
   CHECK_NEAR(by, -0.008F, 0.002F);
 }
 
+// 推定速度の物理包絡: 持続した水平加速（搬送中・幻影加速度相当）で
+// velocity_world が理論上限に飽和し、leak 減衰を待たず暴走しない
+// ことを確認する。
+void test_velocity_world_speed_capped() {
+  const auto& p = get_params();
+  state_estimator::init({&p});
+  // 水平加速度 + yaw ジャイロ。ジャイロで assembly_still を外して
+  // 静止ドレインを無効化し、輪速 0 でアンカーも効かない条件にする
+  // （純粋に加速度積分が伸びる）。
+  imu_sample mv = still_sample();
+  mv.specific_force = {3.0F, 0.0F, 9.8F};
+  mv.gyro = {0.0F, 0.0F, 0.5F};
+  state_estimator::output out{};
+  for (int i = 0; i < 600; ++i) {  // 3 s: 包絡が無ければ ~9 m/s 級
+    out = state_estimator::step(mv, vec3{}, p.estimator.sample_time);
+  }
+  const float v = hypotf(out.velocity_world[0], out.velocity_world[1]);
+  CHECK_TRUE(v <= 1.5F + 1e-6F);  // K_VELOCITY_WORLD_LIMIT
+  CHECK_TRUE(v > 1.0F);           // 包絡へ達している（飽和の確認）
+  CHECK_TRUE(fabsf(out.velocity_world2[0]) <= 1.5F + 1e-6F);
+  CHECK_TRUE(fabsf(out.velocity_world2[1]) <= 1.5F + 1e-6F);
+}
+
 }  // namespace
 
 void state_estimator_tests() {
@@ -257,6 +280,7 @@ void state_estimator_tests() {
   test_invalid_sample_marks_output();
   test_start_reset_keeps_yaw_and_qualification();
   test_calib_capture_adopts_window_mean();
+  test_velocity_world_speed_capped();
 }
 
 }  // namespace bb
