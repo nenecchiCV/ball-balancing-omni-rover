@@ -765,7 +765,7 @@ if torqueDrive
             end
         end
         state(3:4) = state(3:4) - ...
-            [accelerationDemand(1); -accelerationDemand(2)]/p.gravity;
+            [accelerationDemand(1); accelerationDemand(2)]/p.gravity;
     else
         accelerationDemand = zeros(2, 1);
     end
@@ -868,7 +868,7 @@ if torqueDrive
         % multiplies the noisy measured deviation.
         rawWheelCommand = rawWheelCommand + startupRamp( ...
             p.controller.torqueDrive.leanHoldTorque* ...
-            [accelerationDemand(1); -accelerationDemand(2)]/p.gravity, ...
+            [accelerationDemand(1); accelerationDemand(2)]/p.gravity, ...
             enable, mode, p);
     end
     if ~yawActive

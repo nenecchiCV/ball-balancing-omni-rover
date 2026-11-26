@@ -106,7 +106,7 @@ void param_store::derive() {
   const float s = sinf(params_.physical.contact_latitude);
   theory_max_speed_ =
       (s > 1e-6F)
-          ? params_.physical.wheel_radius *
+          ? params_.physical.wheel_radius_effective *
                 params_.motor.speed_command_limit / s
           : 0.0F;
   // blob 適用で物理定数が変わり得るため、0x60 の設定可能上限と

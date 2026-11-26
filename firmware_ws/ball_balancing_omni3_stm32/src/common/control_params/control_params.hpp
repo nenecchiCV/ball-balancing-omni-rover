@@ -15,6 +15,10 @@ struct param_set {
     float ball_mass = 0.285F;
     float ball_inertia11 = 0.000475F;
     float wheel_radius = 0.024F;
+    // 車輪<->ボール運動学専用の有効転がり半径（MATLAB
+    // wheel.radiusEffective）。W_map・エンコーダ証人・輪速<->速度
+    // 換算に使う。トルク腕・牽引限界・慣性・接触幾何は幾何半径のまま。
+    float wheel_radius_effective = 0.0266F;
     float contact_latitude = 0.5759586531581288F;  // 33 deg
     float contact_preload = 0.0004F;
     float rolling_friction = 0.008F;
@@ -201,7 +205,7 @@ struct param_set {
     } yaw_gate;
     // 3x2 行列。lean_hold_torque(:,i)*demand_i を車輪トルクへ写像する。
     // MATLAB: lean_hold_torque*[acceleration_demand(1);
-    // -acceleration_demand(2)]/g
+    // acceleration_demand(2)]/g
     float lean_hold_torque[3][2] = {{-0.002259759286F, -1.094245997F},
                                     {0.9486184733F, 0.5454573916F},
                                     {-0.9466042491F, 0.5489415641F}};
@@ -209,9 +213,9 @@ struct param_set {
 
   struct lqi {
     mat33 wheel_speed_from_planar_velocity = {
-        {{0.0F, -22.693293125626127F, 3.333333333333333F},
-         {19.65296833583689F, 11.346646562813063F, 3.333333333333333F},
-         {-19.65296833583689F, 11.346646562813063F, 3.333333333333333F}}};
+        {{0.0F, -20.475151692294251F, 3.007518796992481F},
+         {17.732001511866763F, 10.237575846147120F, 3.007518796992481F},
+         {-17.732001511866759F, 10.237575846147134F, 3.007518796992481F}}};
     float anti_windup_gain = 8.0F;
     float tracking_gain_scale = 1.0F;
     mat33 state_gain = {};     // legacy speed path: 未使用

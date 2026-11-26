@@ -118,16 +118,20 @@ if isfield(p.command, "yawPulseDuration") && ...
     command(3) = command(3)*yawFraction;
 end
 % Piecewise-constant velocity schedule (RC-style instantaneous
-% setpoint switches): [t vx vy; ...] overrides command(1:2) with the
-% last row whose time has passed, bypassing every ramp above.  Used by
-% acceptance scenarios that step the setpoint the way a joystick does
-% (e.g. +v -> -v reversal at cruise).
+% setpoint switches): [t vx vy (yawRate); ...] overrides command(1:2)
+% with the last row whose time has passed, bypassing every ramp above.
+% The optional 4th column overrides the yaw-rate command the same way.
+% Used by acceptance scenarios that step the setpoint the way a
+% joystick does (e.g. +v -> -v reversal at cruise).
 if isfield(p.command, "stepVelocitySchedule") && ...
         ~isempty(p.command.stepVelocitySchedule)
     sched = p.command.stepVelocitySchedule;
     k = find(sched(:, 1) <= time, 1, "last");
     if ~isempty(k)
         command(1:2) = sched(k, 2:3).';
+        if size(sched, 2) >= 4
+            command(3) = sched(k, 4);
+        end
     end
 end
 end

@@ -193,7 +193,8 @@ void balance_controller::prepare_commands(step_context& ctx) {
         sinf(p_->physical.contact_latitude) * ctx.command_speed +
         p_->rover.chassis_radius * fabsf(ctx.command[2]);
     const float wheel_rate_budget =
-        p_->physical.wheel_radius * p_->motor.speed_command_limit;
+        p_->physical.wheel_radius_effective *
+        p_->motor.speed_command_limit;
     if (wheel_rate_demand > wheel_rate_budget) {
       const float scale = wheel_rate_budget / wheel_rate_demand;
       ctx.command_velocity_body = ctx.command_velocity_body * scale;
@@ -511,7 +512,7 @@ void balance_controller::compute_acceleration_demand(step_context& ctx) {
       }
     }
     ctx.state[2] -= ctx.acceleration_demand[0] / g;
-    ctx.state[3] += ctx.acceleration_demand[1] / g;
+    ctx.state[3] -= ctx.acceleration_demand[1] / g;
   }
 
   // 静的リーン適応のバイアス注入（指令 ≈ 0 のときのみ）
@@ -568,7 +569,7 @@ void balance_controller::synthesize_torque(step_context& ctx) {
   }
   if (velocity_lean_gain != 0.0F) {
     const vec2 demand_dir = {ctx.acceleration_demand[0] / ctx.g,
-                             -ctx.acceleration_demand[1] / ctx.g};
+                             ctx.acceleration_demand[1] / ctx.g};
     vec3 hold{};
     for (int i = 0; i < 3; ++i) {
       hold[i] = td.lean_hold_torque[i][0] * demand_dir[0] +

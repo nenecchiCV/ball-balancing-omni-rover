@@ -30,6 +30,12 @@ function result = ballbotBenchmark(scenario, tag, ov, sampleTime, modelName)
 %                                       -> coupled v/yaw limiter, G-02/03
 %     reverse- +0.30 -> -0.30 m/s instant reversal at cruise, 16 s
 %                                       -> reversalGuardSpeed, G-01/02/04/05
+%     reverseMax- +-0.40 m/s instant reversals on BOTH axes, 26 s
+%                                       -> survival at the app speed cap
+%     moveMax- 8-direction sweep at 0.40 m/s (2.5 s legs), 25 s
+%                                       -> all-direction max-speed envelope
+%     yawMax - +-0.35 rad/s yaw pulses (1 s each), 10 s
+%                                       -> max-rate rotation envelope
 %
 %   All runs share the realistic plant (IMU noise + shaft friction from
 %   ballbotRev1Parameters/ballbotRev1PlantAugment).
@@ -127,6 +133,66 @@ switch scenario
             0.5, 0.30, 0;
             7.0, -0.30, 0];
         stopTime = 16;
+    case 'reverseMax'
+        % Instant +-0.40 m/s reversals on BOTH axes at the app speed
+        % cap -- the harshest legal command the link can send.  The
+        % reversal guard degrades each flip to a stop; survival is the
+        % acceptance criterion (measured 5/8, tilt 1.94 deg: G-01 over
+        % the 1 deg gate, G-02/G-07 unsettled by design on the short
+        % legs).
+        p.command.cyclesEnabled = false;
+        p.command.velocityWorld = [0; 0];
+        p.command.yawRate = 0;
+        p.command.stepVelocitySchedule = [ ...
+            0.5,  0.40, 0;
+            7.0, -0.40, 0;
+            12.0, 0,     0.40;
+            17.0, 0,    -0.40;
+            22.0, 0,     0];
+        stopTime = 26;
+    case 'moveMax'
+        % All-direction max-speed translation: 8 heading steps around
+        % the compass at the 0.40 m/s app cap, 2.5 s per leg.  Legs
+        % stay short because sustained >=0.4 m/s cruise enters the
+        % documented overspeed-coast runaway regime in ~12-15 s on any
+        % axis (the envelope limit, not a direction-specific defect);
+        % the 45 deg step transitions are themselves RC-style command
+        % jumps.  Survival is the criterion (measured 6/8, tilt
+        % ~1.4 deg: G-01 over the gate, G-02 unsettled on the short
+        % legs).
+        p.command.cyclesEnabled = false;
+        p.command.velocityWorld = [0; 0];
+        p.command.yawRate = 0;
+        s44 = 0.40/sqrt(2);
+        p.command.stepVelocitySchedule = [ ...
+            0.5,   0.40, 0;
+            3.0,   s44,  s44;
+            5.5,   0,    0.40;
+            8.0,  -s44,  s44;
+            10.5, -0.40, 0;
+            13.0, -s44, -s44;
+            15.5,  0,   -0.40;
+            18.0,  s44, -s44;
+            20.5,  0,    0];
+        stopTime = 25;
+    case 'yawMax'
+        % Max-rate rotation both directions: +-0.35 rad/s rectangular
+        % yaw pulses, 1 s each (~+-0.35 rad, inside the ~0.4 rad
+        % z-spin envelope).  The schedule's 4th column overrides the
+        % yaw command; translation stays zero so the planar channels
+        % only see the spin pumped through the contact.  Survival is
+        % the criterion (measured 7/8: G-03 misses because the 1 s
+        % pulse ends mid-ramp; on a longer stop time the residual
+        % unregulated z-spin drift additionally trips G-10).
+        p.command.cyclesEnabled = false;
+        p.command.velocityWorld = [0; 0];
+        p.command.yawRate = 0;
+        p.command.stepVelocitySchedule = [ ...
+            0.5, 0, 0,  0.35;
+            1.5, 0, 0,  0;
+            3.5, 0, 0, -0.35;
+            4.5, 0, 0,  0];
+        stopTime = 10;
     otherwise
         error('ballbotBenchmark:unknownScenario', ...
             'unknown scenario %s', scenario);

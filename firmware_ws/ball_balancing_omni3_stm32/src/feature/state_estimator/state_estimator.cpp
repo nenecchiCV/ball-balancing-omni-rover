@@ -274,7 +274,8 @@ state_estimator::output state_estimator::step(const imu_sample& imu,
       kin[w][j] =
           r_w[0] * surf[0][j] + r_w[1] * surf[1][j] + r_w[2] * surf[2][j];
     const vec3 wc_vel = velocity_world + cross(body_rate_world, c_w);
-    rhs[w] = dot(r_w, wc_vel) - p_->physical.wheel_radius * wheel_rate[w];
+    rhs[w] = dot(r_w, wc_vel) -
+             p_->physical.wheel_radius_effective * wheel_rate[w];
   }
   // ball_rate_kinematic = (K'K + reg I) \ K' rhs
   mat33 kk{};

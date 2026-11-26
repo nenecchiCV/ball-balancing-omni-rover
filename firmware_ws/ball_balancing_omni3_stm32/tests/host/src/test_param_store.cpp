@@ -96,16 +96,16 @@ void blob_rejects_corruption() {
 
 void speed_limit_key() {
   param_store::init_defaults();
-  // 理論上限 = wheel_radius*speed_command_limit/sin(contact_latitude)
+  // 理論上限 = wheel_radius_effective*speed_command_limit/sin(contact_latitude)
   const param_set ref{};
-  const float theory = ref.physical.wheel_radius *
+  const float theory = ref.physical.wheel_radius_effective *
                        ref.motor.speed_command_limit /
                        sinf(ref.physical.contact_latitude);
   CHECK_NEAR(param_store::theoretical_max_speed(), theory, 1e-6F);
   float v = 0.0F;
   CHECK_TRUE(param_store::get_key(0x61, &v));
   CHECK_NEAR(v, theory, 1e-6F);
-  // 既定 max_speed = 0.4（シム検証値）、理論上限（≈0.81）まで設定可。
+  // 既定 max_speed = 0.4（シム検証値）、理論上限（≈0.89）まで設定可。
   CHECK_TRUE(param_store::get_key(0x60, &v));
   CHECK_NEAR(v, 0.4F, 1e-6F);
   CHECK_TRUE(param_store::set_key(0x60, 0.8F));

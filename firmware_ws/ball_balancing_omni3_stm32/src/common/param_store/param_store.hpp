@@ -34,7 +34,7 @@ class param_store {
   static bool get_key(uint8_t key, float* value);
   static bool set_key(uint8_t key, float value);  // 未定義/範囲外/読取専用は false
   static uint8_t key_at(uint32_t index);          // 昇順列挙（index < KEY_COUNT）
-  // 派生値: 無滑り理論速度上限 = wheel_radius*speed_command_limit/sin(lat)。
+  // 派生値: 無滑り理論速度上限 = wheel_radius_effective*speed_command_limit/sin(lat)。
   static float theoretical_max_speed();
 
   static uint32_t blob_size() {

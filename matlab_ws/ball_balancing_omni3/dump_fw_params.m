@@ -6,6 +6,7 @@ s.ball_radius = p.ball.radius;
 s.ball_mass = p.ball.mass;
 s.ball_inertia_11 = p.ball.inertia(1, 1);
 s.wheel_radius = p.wheel.radius;
+s.wheel_radius_effective = p.wheel.radiusEffective;
 s.wheel_azimuth = p.wheel.azimuth(:).';
 s.contact_latitude = p.wheel.contactLatitude;
 s.contact_preload = p.wheel.contactPreload;
