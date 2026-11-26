@@ -116,7 +116,7 @@ if isfield(p.controller, "coupledCommandLimitEnabled") && ...
         p.controller.coupledCommandLimitEnabled
     wheelRateDemand = sin(p.wheel.contactLatitude)*commandSpeed + ...
         p.rover.chassisRadius*abs(command(3));
-    wheelRateBudget = p.wheel.radius*p.motor.speedCommandLimit;
+    wheelRateBudget = p.wheel.radiusEffective*p.motor.speedCommandLimit;
     if wheelRateDemand > wheelRateBudget
         coupledScale = wheelRateBudget/wheelRateDemand;
         commandVelocityBody = coupledScale*commandVelocityBody;

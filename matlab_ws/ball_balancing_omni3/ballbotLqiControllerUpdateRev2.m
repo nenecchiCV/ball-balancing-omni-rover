@@ -132,7 +132,7 @@ if isfield(p.controller, "coupledCommandLimitEnabled") && ...
         p.controller.coupledCommandLimitEnabled
     wheelRateDemand = sin(p.wheel.contactLatitude)*commandSpeed + ...
         p.rover.chassisRadius*abs(command(3));
-    wheelRateBudget = p.wheel.radius*p.motor.speedCommandLimit;
+    wheelRateBudget = p.wheel.radiusEffective*p.motor.speedCommandLimit;
     if wheelRateDemand > wheelRateBudget
         coupledScale = wheelRateBudget/wheelRateDemand;
         commandVelocityBody = coupledScale*commandVelocityBody;
@@ -201,6 +201,15 @@ if torqueDrive && isfield(p.controller.torqueDrive, "stopFollowGain") ...
     followGain = p.controller.torqueDrive.stopFollowGain;
     if settleActive
         followGain = p.controller.torqueDrive.settleFollowGain;
+    elseif isfield(p.controller.torqueDrive, "holdFollowGain") && ...
+            norm(commandVelocityBodyUser) < 0.01
+        % Hold-only over-follow: with ~zero command, letting the chase
+        % lead the drift pushes the ball toward its eccentric rest
+        % under an offset CG instead of leaning the chassis after it
+        % (CG-20 mm acceptance: tilt peak falls with followGain>1).
+        % Kept out of commanded driving, where the same rewrite
+        % sustains overspeed rolls.
+        followGain = p.controller.torqueDrive.holdFollowGain;
     end
     chaseSpeed = norm(chaseBody);
     if commandSpeed < followGain*chaseSpeed
@@ -285,6 +294,15 @@ if torqueDrive
     % steady yaw rate needs zero torque, so the reference enters only
     % through the yaw-rate state error.
     lqi = p.controller.torqueLqi;
+    if isfield(p.controller.torqueDrive, "yawFeedbackScale")
+        % Post-design yaw-column scale: with the ball-spin pump
+        % suppressed (ballYawGain/ballYawTorqueLimit), the 5x-designed
+        % yaw column alone is too weak to develop the commanded rate
+        % inside the bounded pulse; the scale restores tracking
+        % authority without re-opening the design.
+        lqi.stateGain(:, 7) = lqi.stateGain(:, 7)* ...
+            p.controller.torqueDrive.yawFeedbackScale;
+    end
     debugCapture = isfield(p.controller.torqueDrive, "debugCapture") && ...
         p.controller.torqueDrive.debugCapture;
     if debugCapture
@@ -572,7 +590,16 @@ if torqueDrive
             % overspeed roll indefinitely).  Cutting it hands the
             % whole demand to the brake; the coast gate remains the
             % fallback once the lead exceeds the margin.
-            if dot(velocityErrorBody, dragDir) > -0.02
+            % The cutoff margin IS the steady-state speed floor: with
+            % the feedforward on, the equilibrium error chatters at the
+            % gate edge, so a -0.02 gate parks the ball ~+0.02 m/s over
+            % the command -- the measured G-02 residual.  G-02 needs
+            % |err| <= 0.01, so the knob accepts ~half that.
+            dragCutoff = -0.02;
+            if isfield(p.controller.torqueDrive, "dragLeadCutoff")
+                dragCutoff = p.controller.torqueDrive.dragLeadCutoff;
+            end
+            if dot(velocityErrorBody, dragDir) > dragCutoff
                 accelerationDemand = accelerationDemand + ...
                     p.controller.torqueDrive.dragLeanFeedforward* ...
                     p.contact.ballGround.rollingFriction*p.gravity* ...
@@ -842,7 +869,24 @@ if torqueDrive
     % |oBz| ~3.5 rad/s.  Braking the ball spin directly through the
     % common-mode channel stops the momentum dumping; the reaction on
     % the chassis also helps the yaw damper instead of fighting it.
+    % During a commanded yaw the common-mode drive pumps the spin hard
+    % enough to need a hotter gain and a wider cap; during translation
+    % the same common-mode share would starve propulsion/attitude, so
+    % the yaw-active values apply only while yawActive.  Both default
+    % to the base gain/cap when the yaw-active fields are absent.
     ballYawGain = p.controller.torqueDrive.ballYawGain;
+    ballYawCap = p.controller.torqueDrive.ballYawTorqueLimit;
+    if yawActive
+        if isfield(p.controller.torqueDrive, "ballYawGainYawActive")
+            ballYawGain = p.controller.torqueDrive. ...
+                ballYawGainYawActive;
+        end
+        if isfield(p.controller.torqueDrive, ...
+                "ballYawTorqueLimitYawActive")
+            ballYawCap = p.controller.torqueDrive. ...
+                ballYawTorqueLimitYawActive;
+        end
+    end
     if ballYawGain ~= 0
         % +common torque accelerates the ball toward -z (measured), so
         % braking a -z spin needs torque of the same sign as oBz.  The
@@ -850,12 +894,8 @@ if torqueDrive
         % so an uncapped request cancels the zero-sum tilt correction on
         % the wheels where they disagree and starves the attitude loop
         % exactly when a transition needs it most.
-        ballYawTorque = ballYawGain*estimate(11);
-        if isfield(p.controller.torqueDrive, "ballYawTorqueLimit")
-            ballYawTorque = min(max(ballYawTorque, ...
-                -p.controller.torqueDrive.ballYawTorqueLimit), ...
-                p.controller.torqueDrive.ballYawTorqueLimit);
-        end
+        ballYawTorque = min(max(ballYawGain*estimate(11), ...
+            -ballYawCap), ballYawCap);
         rawWheelCommand = rawWheelCommand + ballYawTorque*ones(3, 1);
     end
     % Passive yaw damper during translation: the gated yaw channel is

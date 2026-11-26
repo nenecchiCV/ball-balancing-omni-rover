@@ -207,7 +207,7 @@ p.command.yawPulseDuration = 0;
 p.controller.slipLimitWheelSpeed = p.motor.noLoadSpeed* ...
     (1 - p.wheel.contactTorqueLimit/p.motor.stallTorque);
 p.controller.slipLimitSpeed = min( ...
-    p.controller.slipLimitWheelSpeed*p.wheel.radius/ ...
+    p.controller.slipLimitWheelSpeed*p.wheel.radiusEffective/ ...
     sin(p.wheel.contactLatitude), p.controller.theoreticalMaxSpeed);
 % Command clamp: capped at the EKF-validated envelope.  Measured
 % matrix (stateless drag-FF + motion-model EKF): 0.40 m/s completes
@@ -438,7 +438,7 @@ p.controller.torqueDrive.slipDampingGain = 0.02;
 % ~0.023 rad the old 65-deg geometry measured, but a lean demand near
 % the cone edge still tips because tilt overshoot past the cone is
 % unrecoverable (gravity pole ~6.4 rad/s, ~150 ms e-folding).
-p.controller.torqueDrive.velocityLeanGain = 0.3;
+p.controller.torqueDrive.velocityLeanGain = 0.60;
 % Floor-drag-aware re-derivation (supersedes the 0.015 value, which was
 % itself a saturation-aware redo of the 65-deg-era 0.009).  Cruise on a
 % real floor needs a sustained lean of drag/(m*g): rollingFriction 0.015
@@ -450,8 +450,11 @@ p.controller.torqueDrive.velocityLeanGain = 0.3;
 % K_tilt ~4.3 N*m/rad demands ~0.095 N*m at the edge — ~60% of the
 % corrected 0.162 clamp.  Measured at the corrected budget: the 0.020
 % and 0.030 candidates both survived the 50 s cycle (0.030 sloppy), so
-% 0.022 sits inside the verified-stable band.
-p.controller.torqueDrive.leanSetpointLimit = 0.022;
+% 0.022 sits inside the verified-stable band.  Retuned 0.022 -> 0.014:
+% under the measured mass/CG (1366 g, CoM +0.143 m) the smaller cap
+% keeps the worst-case lean demand inside the G-01 1 deg tilt gate on
+% the step/cycle legs (0.92-0.94 deg measured at the acceptance).
+p.controller.torqueDrive.leanSetpointLimit = 0.014;
 % Command-acceleration feedforward gain on the lean demand: the ramped
 % command needs lean ~a_cmd/g (0.003 rad at 0.03 m/s^2), far below the
 % P-error saturation cap, so feedforward carries the nominal lean and
@@ -468,7 +471,7 @@ p.controller.torqueDrive.leanFadeTilt = 0.02;
 % ahead of its support and relPos converts the offset into tilt runaway
 % within ~0.1 s.  0.05 rad/s ramps a full 0.008 rad lean in ~160 ms,
 % keeping the commanded tilt inside the rate the ball can track.
-p.controller.torqueDrive.leanRateLimit = 0.05;
+p.controller.torqueDrive.leanRateLimit = 0.04;
 % Tilt-gain scheduling: tilt disturbance sensitivity scales like
 % 1/(B*K_tilt - mgh/I), so the quiet low-gain design (IMU-noise
 % robustness) leaves almost no rejection exactly where the pendulum
@@ -569,7 +572,22 @@ p.controller.torqueDrive.propulsionMinShare = 0.25;
 % bleeds off smoothly (vB 0.24 -> 0.05 over the stop window) and the
 % stop phase survives; the residual failure moves into the next move
 % leg.  0 disables.
-p.controller.torqueDrive.stopFollowGain = 0.75;
+p.controller.torqueDrive.stopFollowGain = 0.90;
+% Hold-only chase gain: applied while |user command| ~ 0 (parked hold,
+% not decelerating).  >1 lets the chase LEAD the measured drift so the
+% ball is pushed toward its eccentric rest under an offset CG instead
+% of leaning the chassis after it -- measured on the CG-20 mm hold:
+% follow 1.3-1.4 cuts the settle-in tilt peak ~1.36 -> ~0.97 deg while
+% the driven-path value stays at 0.90 so an overspeed ball is not
+% chased.
+p.controller.torqueDrive.holdFollowGain = 1.4;
+% Drag-feedforward cutoff margin [m/s]: the one-sided gate keeps the
+% rolling-drag feedforward on while the ball leads the command by less
+% than this margin, and the equilibrium error chatters at the gate
+% edge -- so the margin IS the steady-state overspeed floor.  At -0.02
+% the ball parks ~+0.02 m/s over the command (the measured G-02
+% residual on the cycle decel ramp); -0.003 holds ~+0.005.
+p.controller.torqueDrive.dragLeadCutoff = -0.003;
 % Post-recovery settle follow gain: replaces stopFollowGain while
 % elevatedAuthority is held (mode 1 after a recovery).  The 0.75 brake
 % fraction demands torque AGAINST the residual ball roll; in the weak
@@ -590,7 +608,7 @@ p.controller.torqueDrive.settleLeanDamping = 1.0;
 % Settle-only velocity-lean gain [m/s^2 per m/s]: replaces
 % velocityLeanGain during elevated-authority settle.  The drift brake
 % needs a lean demand larger than the IMU accel bias + attitude droop;
-% the normal-drive value (0.3) cannot push the real lean back through
+% the normal-drive value (0.6) cannot push the real lean back through
 % zero against them.  Kept separate so normal move legs keep the
 % validated gain.
 p.controller.torqueDrive.settleLeanGain = 1.0;
@@ -646,7 +664,7 @@ p.controller.torqueDrive.staticLeanAdaptLimit = 0.10;
 p.controller.torqueDrive.staticLeanAdaptTimeConstant = 0.30;
 p.controller.torqueDrive.staticLeanAdaptDeadband = 0.02;
 p.controller.torqueDrive.staticLeanAdaptGate = 0.30;
-p.controller.torqueDrive.staticLeanAdaptMaxRate = 1.0;
+p.controller.torqueDrive.staticLeanAdaptMaxRate = 0.5;
 p.controller.torqueDrive.staticLeanAdaptLeak = 0.3;
 % Ball vertical-spin brake [N*m per rad/s of omegaBall_z]: translation
 % pumps ball z-spin through the omni kinematics and through the
@@ -657,14 +675,24 @@ p.controller.torqueDrive.staticLeanAdaptLeak = 0.3;
 % traction budget, 0.12 damps the spin residual faster without starving
 % the balance channels (the clamp is ~33% wider, so the brake's share
 % is affordable).
-p.controller.torqueDrive.ballYawGain = 0.12;
+p.controller.torqueDrive.ballYawGain = 0.20;
+% Brake gain while a yaw command is active: the commanded-yaw pump
+% needs a hotter request to reach its (wider) cap; defaults to the
+% translation gain when unset.
+p.controller.torqueDrive.ballYawGainYawActive = 0.60;
 % Brake torque cap [N*m]: the spin brake is a common-mode term, so at
 % |oBz| ~0.5 rad/s the uncapped request (~0.06 N*m) would eat most of
 % the ~0.078 N*m traction clamp and cancel the zero-sum tilt pattern on
 % the wheels where they disagree -- measured: the first stop transition
 % starved the roll channel this way.  0.025 leaves the brake effective
 % against spin buildup while keeping ~2/3 of the budget for attitude.
-p.controller.torqueDrive.ballYawTorqueLimit = 0.025;
+p.controller.torqueDrive.ballYawTorqueLimit = 0.040;
+% Brake cap while a yaw command is active: the commanded-yaw common-mode
+% drive is what ignites the spin pump (~1.6 rad/s buildup inside the
+% bounded pulse), and killing it needs a wider cap than the translation
+% budget allows.  A strong brake here plus a raised yawFeedbackScale
+% restores yaw tracking without touching the translation-share cap.
+p.controller.torqueDrive.ballYawTorqueLimitYawActive = 0.12;
 % Passive yaw damper during translation [N*m common-mode per rad/s of
 % yaw rate]: the gated yaw channel is off while a translation command
 % is active and ball z-spin drags the chassis yaw, rotating the push
@@ -675,6 +703,13 @@ p.controller.torqueDrive.ballYawTorqueLimit = 0.025;
 % failure.  0.10-0.30 all held cruise 15 s at <=0.011 rad tilt; 0.30
 % keeps the drift fully damped without measurable budget cost.
 p.controller.torqueDrive.yawDampingGain = 0.30;
+% Yaw-feedback column scale on the designed torqueLqi gain: with the
+% spin pump suppressed by the ball-spin brake, the 5x-designed yaw
+% column is too weak to build the commanded rate inside the bounded
+% yawPulseDuration -- the measured yaw response lags far below the
+% trapezoid.  Applied at runtime in ballbotLqiControllerUpdateRev2 so
+% the scale stays a tunable knob (not baked into the design).
+p.controller.torqueDrive.yawFeedbackScale = 2.0;
 
 % Mounted-IMU realism (LSM6DSO, on-board or shield-mounted at the
 % 200 Hz estimator rate).  ballbotImuFromJoint applies these when
@@ -744,6 +779,19 @@ p.drive.deadzonePlantNeg = p.drive.deadzoneCompNeg;
 % hold).  The validated robust design is instead: identified comp +
 % safety margin (over-compensation is tolerable to ~2x) + periodic
 % TUNE_DEADZONE re-identification.
+%
+% Gearhead backlash is deliberately NOT modelled.  Bench estimate bounds
+% the output-shaft play at <=0.3 deg, which is undetectable inside the
+% sensing and actuation chain: the 341.2 PPR output encoder resolves
+% 1.06 deg/count (~28% of a count), the motor winds the ~10 deg of
+% rotor-side play through in ~0.2-0.3 ms at reversal (sub-sample for
+% the 1 ms servo / 5 ms estimator), and the ~0.13 mm of wheel-arc lost
+% motion fits inside the rubber-contact compliance.  The identified
+% ~0.13-0.20 duty deadzone dominates by orders of magnitude, and a
+% position-domain play model would cost an extra mechanical state plus
+% tooth-contact stiffness (microsecond-scale dynamics) for an effect
+% the feedback cannot see.  Revisit only if bench reversal tests show
+% hysteresis the deadzone model cannot explain.
 
 % Diagnostic: feed plant truth (roverPose/ballPose) through TruthGate
 % instead of the estimator output, to separate estimator error from

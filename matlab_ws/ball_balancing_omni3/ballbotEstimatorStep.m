@@ -147,7 +147,7 @@ for wheelIndex = 1:3
         cross(bodyRateWorld, wheelCenterWorld(:, wheelIndex));
     kinematicRightSide(wheelIndex) = ...
         rollingWorld(:, wheelIndex)'*wheelCenterVelocity - ...
-        p.wheel.radius*wheelRate(wheelIndex);
+        p.wheel.radiusEffective*wheelRate(wheelIndex);
 end
 
 regularization = p.estimator.kinematicRegularization;
