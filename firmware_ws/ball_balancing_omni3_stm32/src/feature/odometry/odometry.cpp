@@ -1,5 +1,7 @@
 #include "feature/odometry/odometry.hpp"
 
+#include <math.h>
+
 namespace bb {
 
 // 待機中慣性オドメトリ（検証用途）の ZUPT・バイアス学習定数。
@@ -7,6 +9,16 @@ namespace bb {
 constexpr float K_ZUPT_HOLD_TIME = 0.3F;  // ZUPT 確定までの静止継続 [s]
 constexpr float K_ACCEL_BIAS_TIME_CONSTANT =
     2.0F;  // 加速度バイアス学習時定数 [s]
+
+// 動作開始直後のオドメトリ settle 保持・積分速度包絡の定数。
+// ボールへの配置トランジェント中の幻影速度を捨てるための保持時間と、
+// 物理的にあり得ない推定速度を飽和する包絡で、いずれも設計定数とする。
+constexpr float K_SETTLE_HOLD_TIME = 1.0F;   // settle 保持の上限 [s]
+constexpr float K_SETTLE_STILL_TIME = 0.2F;  // still 継続による早期解除 [s]
+// 速度包絡 [m/s]: 理論上限 ~0.9（wheel_radius_effective×
+// speed_command_limit/sinλ、param_store::derive 相当）に過渡余裕を
+// 載せた値。これを超える推定速度は実運動ではなく幻影とみなす。
+constexpr float K_ODOM_SPEED_LIMIT = 1.0F;
 
 void odometry::init() {
   raw_x_ = 0.0F;
@@ -22,11 +34,35 @@ void odometry::init() {
   accel_bias_x_ = 0.0F;
   accel_bias_y_ = 0.0F;
   still_time_ = 0.0F;
+  settle_left_ = 0.0F;
+  settle_still_ = 0.0F;
 }
 
-void odometry::update(float vx_w, float vy_w, float dt) {
-  raw_x_ += vx_w * dt;
-  raw_y_ += vy_w * dt;
+void odometry::arm_settle_hold() {
+  settle_left_ = K_SETTLE_HOLD_TIME;
+  settle_still_ = 0.0F;
+}
+
+void odometry::update(float vx_w, float vy_w, bool still, float dt) {
+  if (settle_left_ > 0.0F) {
+    // settle 保持: 宣言位置へ張り付き、配置トランジェントの幻影速度を
+    // 積分しない。still（水平加速度残差小＝姿勢収束済み）が継続すれば
+    // 早期解除し、上限時間でも解除する。
+    settle_left_ -= dt;
+    settle_still_ = still ? settle_still_ + dt : 0.0F;
+    if (settle_left_ <= 0.0F || settle_still_ >= K_SETTLE_STILL_TIME) {
+      settle_left_ = 0.0F;
+    }
+  } else {
+    const float vn = sqrtf(vx_w * vx_w + vy_w * vy_w);
+    if (vn > K_ODOM_SPEED_LIMIT) {
+      const float s = K_ODOM_SPEED_LIMIT / vn;
+      vx_w *= s;
+      vy_w *= s;
+    }
+    raw_x_ += vx_w * dt;
+    raw_y_ += vy_w * dt;
+  }
   // 動作中は待機用慣性速度を無効化する（次回待機突入時に張り残さない。
   // 加速度バイアスは学習済み値として跨いで保持してよい）。
   inertial_vx_ = 0.0F;

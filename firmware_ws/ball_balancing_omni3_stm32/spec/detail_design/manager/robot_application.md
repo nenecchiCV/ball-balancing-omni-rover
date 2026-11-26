@@ -44,9 +44,9 @@ struct telemetry_snapshot {
 
 ## 外側タスクの指令選択（FR-09/FR-10/FR-12/FR-13）
 
-`outer_task_cb` は冒頭で `STANDBY`→`OPERATING` の遷移エッジを処理してから `state_estimator::step`・オドメトリ更新を実行し、動作状態の処理（FR-12/FR-13）へ進む。オドメトリは `operating` で `odometry::update(velocity_world2)`、非動作中は `imu_sample.valid` のとき `odometry::update_inertial(accel_world, still, dt)` に振り分ける（待機中慣性オドメトリ、FR-11）。`EVT_POSE` の `vx/vy` も動作中は `velocity_world2`、待機中は慣性チャネル速度を載せる:
+`outer_task_cb` は冒頭で `STANDBY`→`OPERATING` の遷移エッジを処理してから `state_estimator::step`・オドメトリ更新を実行し、動作状態の処理（FR-12/FR-13）へ進む。オドメトリは `operating` で `odometry::update(velocity_world2, still, dt)`、非動作中は `imu_sample.valid` のとき `odometry::update_inertial(accel_world, still, dt)` に振り分ける（待機中慣性オドメトリ、FR-11）。`EVT_POSE` の `vx/vy` も動作中は `velocity_world2`、待機中は慣性チャネル速度を載せる:
 
-- **開始エッジ（FR-12）**: `drives_motors()` の立上りで、推定器・制御器・オドメトリの滞留状態を最初の `OPERATING` ティックへ持ち込まないため `step()` より前に `balance_controller::reset()` + `state_estimator::reset_estimate(true)` + `odometry::reapply_declared(raw_x, raw_y, euler_z)` を実行する。待機中も推定・積分は走り続けるため（下記）、手で車体を動かす等で蓄積した速度・姿勢・位置ドリフトをここで捨てる。受理判定で確認済みのバイアス資格と学習済みバイアス・yaw は保持し、`SET_POSE`/`RESET_ODOMETRY` の宣言位置へ再アンカーする。
+- **開始エッジ（FR-12）**: `drives_motors()` の立上りで、推定器・制御器・オドメトリの滞留状態を最初の `OPERATING` ティックへ持ち込まないため `step()` より前に `balance_controller::reset()` + `state_estimator::reset_estimate(true)` + `odometry::reapply_declared(raw_x, raw_y, euler_z)` + `odometry::arm_settle_hold()` を実行する。待機中も推定・積分は走り続けるため（下記）、手で車体を動かす等で蓄積した速度・姿勢・位置ドリフトをここで捨てる。受理判定で確認済みのバイアス資格と学習済みバイアス・yaw は保持し、`SET_POSE`/`RESET_ODOMETRY` の宣言位置へ再アンカーする。settle 保持はボールへの配置トランジェント（手振れ・ボール転がり・姿勢再シード誤差による重力混入）に由来する幻影速度を開始直後の積分へ持ち込まないための保持で、`still` 継続で早期解除される。
 - `operation_manager::take_bias_reset_req()` が真なら `state_estimator::reset_bias()` を呼ぶ（FR-13 キャリブレーション開始）。
 - `operation_manager::calib_update(now_ms, qualified, imu_ok)` の返値が `>=0` なら `link_session::notify_calib_result(result, calib_seq, gyro_bias_z)` で `CALIB_RESULT` を送出する。
 - `drives_motors()==false`（`STANDBY`/`FAULT`）→ `balance_controller::step` を**実行せず**、制御出力はゼロ化した `output`（`mode` は直前値維持、`attitude_torque=0`）として扱う。

@@ -13,8 +13,9 @@ class odometry {  // static class
 
 ## 公開関数
 
-- `static void init()` — 積分値・オフセット・慣性チャネルをゼロ初期化する。
-- `static void update(float vx_w, float vy_w, float dt)` — 生積分位置 `raw_x/raw_y` を前進 Euler で更新する（動作中用）。待機中慣性チャネルの速度はここで無効化し、次回待機突入時に張り残さない（加速度バイアスは学習済み値として保持する）。
+- `static void init()` — 積分値・オフセット・慣性チャネル・settle 保持をゼロ初期化する。
+- `static void update(float vx_w, float vy_w, bool still, float dt)` — 生積分位置 `raw_x/raw_y` を前進 Euler で更新する（動作中用）。`still` は推定器の静止候補で、settle 保持の早期解除証人に使う。待機中慣性チャネルの速度はここで無効化し、次回待機突入時に張り残さない（加速度バイアスは学習済み値として保持する）。入力速度ノルムが `K_ODOM_SPEED_LIMIT=1.0 m/s`（理論上限 ~0.9 m/s `param_store::derive` 相当＋過渡余裕）を超えるときは同方向のままクランプして積分する — 姿勢残差の重力混入・輪速高値化など実運動であり得ない推定速度を幻影として飽和させる。
+- `static void arm_settle_hold()` — START_OPERATION 受理の再アンカーに続けて呼び、settle 保持を武装する。保持中（`K_SETTLE_HOLD_TIME=1.0 s` 上限）は `update` が速度入力を積分せず位置は宣言位置へ張り付くため、ボールへの配置トランジェント（手振れ・ボール転がり・姿勢再シード誤差の重力混入）に由来する幻影速度を開始直後の積分へ持ち込まない。`still` が `K_SETTLE_STILL_TIME=0.2 s` 連続すれば早期解除し、保持上限・早期解除のいずれでも解除ティック自体は積分しない。保持中の実移動（バランス取り等）は捨てる — 宣言位置への再アンカー前提であり精度要求上許容とする。
 - `static void update_inertial(float ax_w, float ay_w, bool still, float dt)` — 待機中専用の IMU 慣性オドメトリ（FR-11、検証用途）。ワールド水平加速度をバイアス補正後に 2 重積分して `raw_x/raw_y` を進める。`still`（推定器の静止候補）が `K_ZUPT_HOLD_TIME=0.3 s` 継続すると速度をゼロへ張り付け（ZUPT）、かつ確定静止中は水平加速度残差を `K_ACCEL_BIAS_TIME_CONSTANT=2.0 s` 時定数の EMA でバイアス学習して非静止中の積分入力から差し引く。等速運動は検知できず、位置精度は搬送時間に比例して劣化する表示用参考値とする。動作開始時は `reapply_declared` で宣言位置へ再アンカーされるため誤差は動作へ持ち越されない。
 - `static pose inertial_velocity()` — 待機中慣性チャネルの現在速度 `{vx, vy}`（EVT_POSE 表示用）。
 - `static pose raw()` — オフセット適用前の積分位置。
@@ -32,8 +33,9 @@ class odometry {  // static class
 - `inertial_vx_`, `inertial_vy_` — 待機中慣性チャネル速度（ZUPT 対象）。
 - `accel_bias_x_`, `accel_bias_y_` — 確定静止中に学習する水平加速度バイアス。
 - `still_time_` — 静止候補の連続時間（ZUPT 確定判定用）。
+- `settle_left_`, `settle_still_` — 動作開始後の settle 保持状態（`arm_settle_hold` で武装、残り時間と still 連続時間）。
 
 ## 備考
 
-- 精度は動作中は推定器の `velocity_world2` 品質に従う。待機中は慣性チャネルが検証用の位置変位を示すが、IMU 単独では等速運動を検知できないため精度は参考値に留まる。いずれにせよ動作開始時に宣言位置を再適用してリセットする（FR-12）。
-- `update`（動作中）と `update_inertial`（待機中、`imu_sample.valid` のとき）は外側タスク（200 Hz）から推定器出力をそのまま渡す。`reset_origin`/`set_pose` はリンクスレッドから、`reapply_declared` は外側タスクから呼ばれるため、呼出し側が `irq_lock` 等で排他する。
+- 精度は動作中は推定器の `velocity_world2` 品質に従う。待機中は慣性チャネルが検証用の位置変位を示すが、IMU 単独では等速運動を検知できないため精度は参考値に留まる。いずれにせよ動作開始時に宣言位置を再適用してリセットする（FR-12）。開始直後の settle 保持と速度包絡クランプは、推定速度が物理的にあり得ない区間（配置トランジェント・姿勢再シード収束前・リカバリ後の輪速高値化）でのドリフトを抑える防御であり、推定器自体の速度推定は変更しない（`EVT_POSE` の `vx/vy` には生の推定値が出る）。
+- `update`（動作中、`still` は推定器の静止候補）と `update_inertial`（待機中、`imu_sample.valid` のとき）は外側タスク（200 Hz）から推定器出力をそのまま渡す。`reset_origin`/`set_pose` はリンクスレッドから、`reapply_declared`/`arm_settle_hold` は外側タスクから呼ばれるため、呼出し側が `irq_lock` 等で排他する。

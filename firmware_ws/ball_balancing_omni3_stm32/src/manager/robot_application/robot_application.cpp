@@ -333,13 +333,16 @@ void robot_application::outer_task_cb() {
   // サンプルで姿勢を再シードし（受理時点の資格は保持、yaw も保持）、
   // オドメトリは SET_POSE/RESET_ODOMETRY の宣言位置を現在の生値へ
   // 再適用する。step() より前に行い、最初の OPERATING ティックから
-  // リセット済みの推定値を使う。
+  // リセット済みの推定値を使う。さらにオドメトリの settle 保持を武装し、
+  // ボールへの配置トランジェント（手振れ・ボール転がり等）に由来する
+  // 幻影速度を開始直後の積分へ持ち込まない。
   const bool operating = operation_manager::drives_motors();
   if (operating && !prev_operating_) {
     balance_controller::reset();
     state_estimator::reset_estimate(true);
     const odometry::pose raw0 = odometry::raw();
     odometry::reapply_declared(raw0.x, raw0.y, est_out_.euler[2]);
+    odometry::arm_settle_hold();
   }
   prev_operating_ = operating;
 
@@ -348,12 +351,13 @@ void robot_application::outer_task_cb() {
   est_out_ = state_estimator::step(imu_sample, wheel_rate_, dt);
   imu_ok_ = imu_ok_ && imu_sample.valid;
 
-  // オドメトリ（FR-10/11）。動作中は推定器のワールド速度を積分し、
+  // オドメトリ（FR-10/11）。動作中は推定器のワールド速度を積分する
+  // （開始直後の settle 保持と速度包絡クランプは odometry 側が担う）、
   // 待機中は車輪が動かないため IMU 専用の慣性オドメトリで追跡する
   // （検証用途。動作開始時に宣言位置へ再アンカーされる）。
   if (operating) {
     odometry::update(est_out_.velocity_world2[0], est_out_.velocity_world2[1],
-                     dt);
+                     est_out_.still, dt);
   } else if (imu_sample.valid) {
     odometry::update_inertial(est_out_.accel_world[0], est_out_.accel_world[1],
                               est_out_.still, dt);

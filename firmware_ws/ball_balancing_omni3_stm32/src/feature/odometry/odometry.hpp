@@ -17,8 +17,17 @@ class odometry {
   static void init();
   // 推定器の velocity_world2 を dt で前進 Euler 積分する（外側タスク呼出し、
   // 動作中用）。待機中慣性チャネルの速度をリセットし、再突入時に
-  // 張り残した速度を持ち込まない。
-  static void update(float vx_w, float vy_w, float dt);
+  // 張り残した速度を持ち込まない。still は推定器の静止候補で、
+  // arm_settle_hold 後の保持を早期解除する証人として使う。
+  // 入力速度ノルムが物理包絡を超えるときは同方向のままクランプして
+  // 積分する（姿勢残差の重力混入・輪速高値化等の幻影速度対策）。
+  static void update(float vx_w, float vy_w, bool still, float dt);
+  // START_OPERATION 受理の再アンカーに続けて呼び、次の update から
+  // settle 保持を開始する。保持中は速度入力を積分せず宣言位置に
+  // 張り付き、ボールへの配置トランジェント（手で車体・ボールを
+  // 動かした等）に由来する幻影速度を捨てる。still が継続すれば早期
+  // 解除し、さもなくば上限時間で解除する。
+  static void arm_settle_hold();
   // 待機中専用の IMU 慣性オドメトリ（FR-11、検証用途）。ワールド水平
   // 加速度を 2 重積分して位置を進め、静止候補の継続（ZUPT）で速度を
   // ゼロへ張り付ける。確定した静止の間は水平加速度残差をバイアスと
@@ -64,6 +73,9 @@ class odometry {
   static inline float accel_bias_x_ = 0.0F;
   static inline float accel_bias_y_ = 0.0F;
   static inline float still_time_ = 0.0F;
+  // 動作開始後の settle 保持状態（arm_settle_hold で武装）。
+  static inline float settle_left_ = 0.0F;   // 保持の残り時間 [s]
+  static inline float settle_still_ = 0.0F;  // still の連続時間 [s]
 };
 
 }  // namespace bb
