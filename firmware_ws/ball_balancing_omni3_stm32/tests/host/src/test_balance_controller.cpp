@@ -97,6 +97,60 @@ void test_yaw_bias_ready_latch() {
   CHECK_TRUE(out.yaw_bias_ready);
 }
 
+void test_reversal_guard_degrades_flip_to_stop() {
+  const auto& p = get_params();
+  balance_controller::init({&p});
+  const float rb = p.physical.ball_radius;
+  state_estimator::output e = upright_estimate();
+  // ボールが +x 0.3 m/s で転がっている状態へ -x 反転指令:
+  // 逆符号成分が 0 化されて要求は停止へ退化し、速度積分ゲートが閉じる。
+  e.ball_rate_world[1] = 0.3F / rb;
+  e.velocity_world2 = {0.3F, 0.0F};
+  const vec3 flip = {-0.3F, 0.0F, 0.0F};
+  balance_controller::output out{};
+  for (int i = 0; i < 200; ++i) {
+    out = balance_controller::step(e, flip, true, vec3{});
+  }
+  CHECK_TRUE(out.mode == 1);
+  CHECK_TRUE(fabsf(out.velocity_integral[0]) < 0.01F);
+  check_output_finite(out);
+}
+
+void test_reversal_guard_passes_below_gate() {
+  const auto& p = get_params();
+  balance_controller::init({&p});
+  const float rb = p.physical.ball_radius;
+  state_estimator::output e = upright_estimate();
+  // 残り速度がガード閾値 (0.08 m/s) 未満なら反転は新規加速として通り、
+  // 速度積分が負方向へ伸びる。
+  e.ball_rate_world[1] = 0.05F / rb;
+  e.velocity_world2 = {0.05F, 0.0F};
+  const vec3 flip = {-0.3F, 0.0F, 0.0F};
+  balance_controller::output out{};
+  for (int i = 0; i < 200; ++i) {
+    out = balance_controller::step(e, flip, true, vec3{});
+  }
+  CHECK_TRUE(out.velocity_integral[0] < -0.05F);
+}
+
+void test_reversal_guard_keeps_non_reversing_axis() {
+  const auto& p = get_params();
+  balance_controller::init({&p});
+  const float rb = p.physical.ball_radius;
+  state_estimator::output e = upright_estimate();
+  // ボール +x 転がり中に {-x, +y} の斜め指令: x 成分のみ 0 化され、
+  // 反転していない y 成分は指令として残る（軸ごとのゲート）。
+  e.ball_rate_world[1] = 0.3F / rb;
+  e.velocity_world2 = {0.3F, 0.0F};
+  const vec3 diag = {-0.3F, 0.3F, 0.0F};
+  balance_controller::output out{};
+  for (int i = 0; i < 200; ++i) {
+    out = balance_controller::step(e, diag, true, vec3{});
+  }
+  CHECK_TRUE(out.velocity_integral[0] < -0.05F);
+  CHECK_TRUE(out.velocity_integral[1] > 0.05F);
+}
+
 void test_long_run_stays_finite() {
   balance_controller::init({&get_params()});
   state_estimator::output e = upright_estimate();
@@ -120,6 +174,9 @@ void balance_controller_tests() {
   test_fallen_latches_mode0();
   test_recovery_mode_and_exit_hysteresis();
   test_yaw_bias_ready_latch();
+  test_reversal_guard_degrades_flip_to_stop();
+  test_reversal_guard_passes_below_gate();
+  test_reversal_guard_keeps_non_reversing_axis();
   test_long_run_stays_finite();
 }
 

@@ -180,6 +180,32 @@ if settleWitness
 else
     chaseBody = ballVelocityBody;
 end
+% Direction-reversal guard: a sign flip against a still-rolling ball
+% is the face-plant path -- the reversed wheel servo locks against the
+% rolling ball (the follow-through below never engages at equal
+% command magnitude) and the capped brake lean keeps driving the ball
+% forward until a wheel unloads (measured ~0.9 m/s runaway).  While
+% the ball leads the command in the opposite direction on a body axis
+% by more than reversalGuardSpeed, the opposing component is zeroed so
+% the request degrades to a stop: the chase then rolls WITH the ball
+% while the lean channel brakes at the usual cap.  Once the residual
+% roll falls inside the encoder stillness band the reversal passes
+% through as a fresh acceleration.  Per-axis gating keeps the
+% non-reversing component live (a diagonal request can still brake
+% forward while moving sideways).
+if isfield(p.controller, "torqueDrive") && ...
+        isfield(p.controller.torqueDrive, "reversalGuardSpeed") && ...
+        p.controller.torqueDrive.reversalGuardSpeed > 0
+    revGate = p.controller.torqueDrive.reversalGuardSpeed;
+    for ax = 1:2
+        if commandVelocityBodyUser(ax)*ballVelocityBody(ax) < 0 && ...
+                abs(ballVelocityBody(ax)) > revGate
+            commandVelocityBody(ax) = 0;
+            commandVelocityBodyUser(ax) = 0;
+        end
+    end
+    commandSpeed = norm(commandVelocityBody);
+end
 if torqueDrive && isfield(p.controller.torqueDrive, "stopFollowGain") ...
         && p.controller.torqueDrive.stopFollowGain > 0
     followGain = p.controller.torqueDrive.stopFollowGain;

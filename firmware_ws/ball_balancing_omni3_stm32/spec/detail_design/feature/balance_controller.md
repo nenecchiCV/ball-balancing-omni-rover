@@ -28,6 +28,7 @@ struct output {
 | `update_settle_tracking` | エレベーテッド権限・settle 輪速フィルタ |
 | `prepare_commands` | 体軸回転・連成指令リミット・最大速度クランプ |
 | `update_ball_velocity` | ボール速度・settle 切替・追従基準速度 |
+| `apply_reversal_guard` | 反転ガード（転がり中の逆符号指令成分を 0 化し停止へ退化） |
 | `apply_follow_brake` | フォロースルーブレーキ |
 | `integrate_velocity` | 速度積分（デッドゾーン・指令ゲート・アンワインド下流側） |
 | `update_filters` | ジャイロ・輪速ローパス |
@@ -48,7 +49,7 @@ struct output {
 
 ## MATLAB との対応・適応事項
 
-- モード判定・エレベーテッド権限・フォロースルー・連成指令リミット・速度積分（デッドゾーン/リーク/逆ワインド）・リーンポイント外ループ（P + accelFF + dragFF + スルーレート + フェード + エキセントリック + コースト）・静的リーン適応・ヨーゲート・傾斜ブースト・LQI 適用・傾斜積分・コモンモード除去・スリップダンパー・ボールスピンブレーキ・ヨーダンパー・mode2 回復トルク・settle 処理を全て含む。
+- モード判定・エレベーテッド権限・フォロースルー・連成指令リミット・反転ガード・速度積分（デッドゾーン/リーク/逆ワインド）・リーンポイント外ループ（P + accelFF + dragFF + スルーレート + フェード + エキセントリック + コースト）・静的リーン適応・ヨーゲート・傾斜ブースト・LQI 適用・傾斜積分・コモンモード除去・スリップダンパー・ボールスピンブレーキ・ヨーダンパー・mode2 回復トルク・settle 処理を全て含む。
 - `wheelRateObserverEnabled` は既定無効のため実装対象外（有効化時は `wheel_rate_observer_gain`/`DriveGain`/`Compliance` を定数に追加）。
 - `openLoopTorque` は実装対象外（診断用フック）。
 - `pinv(W_map)` は `inverse3` で実現。

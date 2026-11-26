@@ -175,6 +175,13 @@ struct param_set {
     float accel_rel_pos_guard_gain = 12.0F;
     float accel_rel_pos_margin = 0.0F;
     float accel_rel_pos_guard_floor = 0.1F;
+    // 反転ガード [m/s]: 転がり中のボールへ逆符号指令を入れると、逆転した
+    // 輪速サーボがボールへロックして脱輪する実測の face-plant 経路。
+    // 体軸成分ごとにボール速度が逆符号かつこの閾値超なら指令成分を 0 化し
+    // （要求は停止へ退化 = チェイスがボールへ追従する検証済み減速経路）、
+    // 残り速度がエンコーダ静止帯 (~0.03 m/s) へ落ちると反転が新規加速と
+    // して通る。0 で無効。MATLAB: reversalGuardSpeed。
+    float reversal_guard_speed = 0.08F;
     float static_lean_adapt_gain = 0.5F;
     float static_lean_adapt_limit = 0.1F;
     float static_lean_adapt_time_constant = 0.3F;

@@ -200,6 +200,10 @@ p.command.decelerationLimit = 0.03;
 % (the wheel torque pumps the ball's free z-spin), so scenarios cap the
 % rotation instead of holding a rate indefinitely.  0 disables.
 p.command.yawPulseDuration = 0;
+% Piecewise-constant velocity schedule [t vx vy; ...] for RC-style
+% instantaneous setpoint switches: each row replaces command(1:2) at its
+% time with no accel/decel ramp.  Empty keeps the profiled command.
+p.command.stepVelocitySchedule = [];
 
 % Slip-limit cruise speed: the wheel speed where the motor torque-speed
 % curve crosses the wheel-ball contact torque limit mu_d*N_nom*Rw.
@@ -588,6 +592,18 @@ p.controller.torqueDrive.holdFollowGain = 1.4;
 % the ball parks ~+0.02 m/s over the command (the measured G-02
 % residual on the cycle decel ramp); -0.003 holds ~+0.005.
 p.controller.torqueDrive.dragLeadCutoff = -0.003;
+% Direction-reversal guard [m/s]: a sign flip against a still-rolling
+% ball is the face-plant path -- the reversed wheel servo locks
+% against the rolling ball (the follow-through chase never engages at
+% equal command magnitude) and the capped brake lean keeps driving the
+% ball forward until a wheel unloads (~0.9 m/s runaway).  While the
+% ball leads the command in the opposite direction on a body axis by
+% more than this threshold, the opposing component is zeroed so the
+% request degrades to a stop -- the verified deceleration path where
+% the chase rolls WITH the ball.  Below the threshold the residual
+% roll sits inside the encoder stillness blind band (~0.03 m/s) and
+% the reversal passes through as a fresh acceleration.  0 disables.
+p.controller.torqueDrive.reversalGuardSpeed = 0.08;
 % Post-recovery settle follow gain: replaces stopFollowGain while
 % elevatedAuthority is held (mode 1 after a recovery).  The 0.75 brake
 % fraction demands torque AGAINST the residual ball roll; in the weak

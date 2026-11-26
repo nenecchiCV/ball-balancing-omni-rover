@@ -28,6 +28,8 @@ function result = ballbotBenchmark(scenario, tag, ov, sampleTime, modelName)
 %     bias   - +0.02 rad/s yaw gyro bias, 20 s hold -> G-09/10/11
 %     moveYaw- 0.15 m/s X + 0.4 rad/s yaw pulse (1 s), 10 s
 %                                       -> coupled v/yaw limiter, G-02/03
+%     reverse- +0.30 -> -0.30 m/s instant reversal at cruise, 16 s
+%                                       -> reversalGuardSpeed, G-01/02/04/05
 %
 %   All runs share the realistic plant (IMU noise + shaft friction from
 %   ballbotRev1Parameters/ballbotRev1PlantAugment).
@@ -107,6 +109,24 @@ switch scenario
         p.command.yawRate = 0.4;
         p.command.yawPulseDuration = 1.0;
         stopTime = 10;
+    case 'reverse'
+        % RC-style instantaneous +v -> -v reversal at cruise: the worst
+        % command shape this plant sees (the reversed wheel servo would
+        % lock against the rolling ball).  reversalGuardSpeed must
+        % degrade the flip to a stop until the ball drops below the
+        % stillness band.  0.30 m/s sits at the measured decel-corner
+        % failure speed of the unguarded envelope; the 6.5 s first leg
+        % covers the lean-capped run-up plus ~3 s of true cruise.
+        % Meaningful on the rev2 model: rev1 lacks the internal-limiter
+        % envelope for an instantaneous +0.30 step and tips during the
+        % run-up (~1 s) with or without the guard.
+        p.command.cyclesEnabled = false;
+        p.command.velocityWorld = [0; 0];
+        p.command.yawRate = 0;
+        p.command.stepVelocitySchedule = [ ...
+            0.5, 0.30, 0;
+            7.0, -0.30, 0];
+        stopTime = 16;
     otherwise
         error('ballbotBenchmark:unknownScenario', ...
             'unknown scenario %s', scenario);

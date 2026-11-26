@@ -96,6 +96,7 @@ balance_controller::output balance_controller::step(
   update_settle_tracking(ctx);
   prepare_commands(ctx);
   update_ball_velocity(ctx);
+  apply_reversal_guard(ctx);
   apply_follow_brake(ctx);
   integrate_velocity(ctx);
 
@@ -235,6 +236,30 @@ void balance_controller::update_ball_velocity(step_context& ctx) {
     ctx.velocity_body_used = {settle_kin_rate[0], settle_kin_rate[1]};
   }
   ctx.chase_body = ctx.ball_velocity_body;
+}
+
+void balance_controller::apply_reversal_guard(step_context& ctx) {
+  const auto& td = p_->torque_drive;
+  // 方向反転ガード: 転がり中のボールへ逆符号指令を入れると、逆転した輪速
+  // サーボがボールへロックする実測の face-plant 経路（等しい指令大きさ
+  // ではフォロースルーが発動せず、頭打ちの制動リーンがボールを前方へ
+  // 押し続けて車輪が脱輪する、~0.9 m/s 暴走の計測あり）。体軸成分ごとに
+  // ボール速度が逆符号かつ reversal_guard_speed 超なら指令成分を 0 化し、
+  // 要求を停止へ退化させる -- チェイスがボールへ追従する検証済み減速経路。
+  // 残り速度がエンコーダ静止帯へ落ちると反転は新規加速として通る。
+  // 軸ごとのゲートで非反転成分は生かす（斜め指令でも横成分は制動可能）。
+  if (td.reversal_guard_speed <= 0.0F) return;
+  for (int i = 0; i < 2; ++i) {
+    const bool opposing =
+        ctx.command_velocity_body_user[i] * ctx.ball_velocity_body[i] <
+            0.0F &&
+        fabsf(ctx.ball_velocity_body[i]) > td.reversal_guard_speed;
+    if (opposing) {
+      ctx.command_velocity_body[i] = 0.0F;
+      ctx.command_velocity_body_user[i] = 0.0F;
+    }
+  }
+  ctx.command_speed = norm(ctx.command_velocity_body);
 }
 
 void balance_controller::apply_follow_brake(step_context& ctx) {

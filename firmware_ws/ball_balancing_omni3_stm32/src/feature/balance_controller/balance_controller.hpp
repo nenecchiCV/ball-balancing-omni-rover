@@ -80,6 +80,7 @@ class balance_controller {
   static void update_settle_tracking(step_context& ctx);
   static void prepare_commands(step_context& ctx);
   static void update_ball_velocity(step_context& ctx);
+  static void apply_reversal_guard(step_context& ctx);
   static void apply_follow_brake(step_context& ctx);
   static void integrate_velocity(step_context& ctx);
   static void update_filters(step_context& ctx);
