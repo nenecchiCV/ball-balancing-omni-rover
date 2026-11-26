@@ -64,12 +64,13 @@ RUN pip install --no-cache-dir -r ${ZEPHYR_BASE}/scripts/requirements.txt \
 
 # ---------------------------------------------------------------- Zephyr SDK
 # minimal + arm-zephyr-eabi (nucleo_g474re) + riscv64-zephyr-elf (xiao_esp32c6)
+# アーティファクト名の linux-x86_64 / linux-aarch64 は uname -m と一致する。
 ARG SDK_URL=https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v${ZEPHYR_SDK_VERSION}
 ENV ZEPHYR_SDK_INSTALL_DIR=/opt/zephyr-sdk-${ZEPHYR_SDK_VERSION}
 RUN mkdir -p ${ZEPHYR_SDK_INSTALL_DIR} && cd ${ZEPHYR_SDK_INSTALL_DIR} \
- && wget -qO- ${SDK_URL}/zephyr-sdk-${ZEPHYR_SDK_VERSION}_linux-x86_64_minimal.tar.xz | tar -xJ --strip-components=1 \
- && wget -qO- ${SDK_URL}/toolchain_linux-x86_64_arm-zephyr-eabi.tar.xz | tar -xJ \
- && wget -qO- ${SDK_URL}/toolchain_linux-x86_64_riscv64-zephyr-elf.tar.xz | tar -xJ \
+ && wget -qO- ${SDK_URL}/zephyr-sdk-${ZEPHYR_SDK_VERSION}_linux-$(uname -m)_minimal.tar.xz | tar -xJ --strip-components=1 \
+ && wget -qO- ${SDK_URL}/toolchain_linux-$(uname -m)_arm-zephyr-eabi.tar.xz | tar -xJ \
+ && wget -qO- ${SDK_URL}/toolchain_linux-$(uname -m)_riscv64-zephyr-elf.tar.xz | tar -xJ \
  && ./setup.sh -y >/dev/null 2>&1 || true
 
 # ---------------------------------------------------------------- Espressif OpenOCD
@@ -78,7 +79,8 @@ RUN mkdir -p ${ZEPHYR_SDK_INSTALL_DIR} && cd ${ZEPHYR_SDK_INSTALL_DIR} \
 ARG ESP_OCD_URL=https://github.com/espressif/openocd-esp32/releases/download/v${OPENOCD_ESP_VERSION}
 ENV OPENOCD_ESP32=/opt/openocd-esp32
 RUN mkdir -p ${OPENOCD_ESP32} \
- && wget -qO- ${ESP_OCD_URL}/openocd-esp32-linux-amd64-${OPENOCD_ESP_VERSION}.tar.gz | tar -xz --strip-components=1 -C ${OPENOCD_ESP32}
+ && case $(uname -m) in x86_64) ESP_ARCH=amd64 ;; aarch64) ESP_ARCH=arm64 ;; *) echo "unsupported arch: $(uname -m)"; exit 1 ;; esac \
+ && wget -qO- ${ESP_OCD_URL}/openocd-esp32-linux-${ESP_ARCH}-${OPENOCD_ESP_VERSION}.tar.gz | tar -xz --strip-components=1 -C ${OPENOCD_ESP32}
 
 # ---------------------------------------------------------------- Tauri アプリ開発環境
 # app_ws/robot_controller_tauri のビルド・検証環境。
@@ -94,7 +96,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rpm libfuse2t64 desktop-file-utils \
  && rm -rf /var/lib/apt/lists/* \
  && mkdir -p /opt/node \
- && wget -qO- https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz \
+ && case $(uname -m) in x86_64) NODE_ARCH=x64 ;; aarch64) NODE_ARCH=arm64 ;; *) echo "unsupported arch: $(uname -m)"; exit 1 ;; esac \
+ && wget -qO- https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz \
       | tar -xJ --strip-components=1 -C /opt/node
 ENV PATH="/opt/node/bin:${PATH}"
 

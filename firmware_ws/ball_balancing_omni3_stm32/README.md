@@ -27,6 +27,34 @@
 
 `ZEPHYR_TOOLCHAIN_VARIANT=zephyr` と `ZEPHYR_SDK_INSTALL_DIR=<SDK パス>` は `west`/`cmake` 実行時に必要（VSCode タスクには同梱済み）。
 
+### macOS の場合
+
+Homebrew と Zephyr 公式の macOS aarch64 パッケージで同等の環境を構築する。
+
+```bash
+# 依存ツール（openocd は ST-LINK 書き込み用。llvm は keg-only で /opt/homebrew/opt/llvm/bin に入る）
+brew install ninja gperf dtc ccache wget open-ocd python@3.13 llvm
+
+# Zephyr ワークスペース（~/zephyr_ws。hal 3 モジュールのみ取得）
+python3.13 -m venv ~/zephyr_ws/.venv && source ~/zephyr_ws/.venv/bin/activate
+pip install -U pip west
+west init -m https://github.com/zephyrproject-rtos/zephyr --mr v4.3.0 ~/zephyr_ws
+cd ~/zephyr_ws && west update hal_stm32 hal_st cmsis_6 && west zephyr-export
+pip install -r zephyr/scripts/requirements.txt
+
+# Zephyr SDK 0.17.4（~/zephyr-sdk-0.17.4。arm のみ）
+mkdir -p ~/zephyr-sdk-0.17.4 && cd ~/zephyr-sdk-0.17.4
+curl -sL https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.17.4/zephyr-sdk-0.17.4_macos-aarch64_minimal.tar.xz | tar -xJ --strip-components=1
+curl -sL https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.17.4/toolchain_macos-aarch64_arm-zephyr-eabi.tar.xz | tar -xJ
+```
+
+ビルドは venv を有効化し、`ZEPHYR_WS_DIR=$HOME/zephyr_ws` を付けて
+下記コマンドをそのまま実行する（`.vscode/settings.json` の
+`terminal.integrated.env.osx` にも設定済み）。ホスト単体テストを
+`.zshrc` 等で `IPHONEOS_DEPLOYMENT_TARGET` を設定したシェルから実行すると
+iOS ターゲットのバイナリが生成されて起動時に kill されるため、
+`env -u IPHONEOS_DEPLOYMENT_TARGET` で外して実行する。
+
 ## ビルド・検証（ターミナル / AI エージェント共通）
 
 ```bash

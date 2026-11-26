@@ -23,5 +23,12 @@
   "terminal.integrated.env.windows": {
     "ZEPHYR_TOOLCHAIN_VARIANT": "zephyr",
     "ZEPHYR_SDK_INSTALL_DIR": "C:/tools/zephyr-sdk-0.17.4"
+  },
+  "terminal.integrated.env.osx": {
+    "PATH": "${env:HOME}/zephyr_ws/.venv/bin:${env:PATH}",
+    "ZEPHYR_TOOLCHAIN_VARIANT": "zephyr",
+    "ZEPHYR_SDK_INSTALL_DIR": "${env:HOME}/zephyr-sdk-0.17.4",
+    "ZEPHYR_WS_DIR": "${env:HOME}/zephyr_ws",
+    "IPHONEOS_DEPLOYMENT_TARGET": null
   }
 }

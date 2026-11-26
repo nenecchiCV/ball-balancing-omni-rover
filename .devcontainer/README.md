@@ -48,6 +48,11 @@ docker run -d --name bbor --privileged `
 docker exec bbor bash -lc "cd firmware_ws/ball_balancing_omni3_stm32 && cmake -S . -B build-zephyr -G Ninja -DBOARD=nucleo_g474re && cmake --build build-zephyr"
 ```
 
+Dockerfile はビルドホストのアーキテクチャ（x86_64 / aarch64）に合う外部バイナリを
+自動選択するため、Windows / Linux / Apple Silicon Mac のいずれでも同じコマンドで
+イメージを作成できる。macOS (zsh/bash) では `docker run` の継続行記号を
+バッククォート `` ` `` ではなく `\` に読み替える。
+
 初回の動作確認はコンテナ内で `bash .devcontainer/check-env.sh` を実行してください。
 
 ## コンテナ内でできること
@@ -95,11 +100,11 @@ cd .. && npm run tauri build  # Linux バンドル（deb / rpm / AppImage）
 
 ## 書き込み・デバッグ（USB デバイスの扱い）
 
-Windows + Docker Desktop は USB を直接パススルーできません。以下の 2 経路を用意しています。
+Windows / macOS + Docker Desktop は USB を直接パススルーできません。以下の 2 経路を用意しています。
 
 ### 経路 A: 書き込み・デバッグサーバはホスト側（最も確実）
 
-USB デバイスに触るプロセスだけ Windows 側で動かします。
+USB デバイスに触るプロセスだけホスト側で動かします。
 
 | 対象 | ホスト側で実行 | コンテナ側 |
 |---|---|---|
@@ -113,7 +118,14 @@ ESP32 用 Windows 版 openocd-esp32 は
 [espressif/openocd-esp32 releases](https://github.com/espressif/openocd-esp32/releases)
 の `openocd-esp32-win64-*.zip` を展開して使います。
 
-### 経路 B: usbipd で USB をコンテナへパススルー
+ホストが macOS の場合は Homebrew で同等のツールを導入します。
+
+```bash
+brew install open-ocd          # STM32 書き込み・デバッグ
+pipx install esptool           # ESP32 書き込み（または pip install --user esptool）
+```
+
+### 経路 B: usbipd で USB をコンテナへパススルー（Windows のみ）
 
 `usbipd-win` で ST-LINK / ESP32-C6 を WSL2 経由でコンテナに見せます。
 
@@ -168,6 +180,8 @@ esptool --chip esp32c6 write_flash 0x0 build-zephyr/zephyr/zephyr.bin
 - usbipd の attach は WSL2 VM 単位です。Docker Desktop 配下で見えない場合は、
   リポジトリを WSL ディストロ内に置き、その WSL 内の docker でコンテナを動かす形が確実です。
 - usbipd 中はホスト側から同じ COM ポートを開けません。モニタは detach するか別ポートで。
+- usbipd は Windows 専用です。macOS に同等の仕組みはないため、macOS では経路 A
+  （ホスト側の openocd / esptool）を使います。
 - Windows での usbipd パススルーは実機未検証です。まず経路 A で運用し、必要時に試してください。
 
 ## エージェントと MCP サーバ
