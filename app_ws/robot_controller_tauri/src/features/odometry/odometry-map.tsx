@@ -1,5 +1,3 @@
-"use client";
-
 // 俯瞰オドメトリマップ。ワールド座標（x 右、y 上、原点=ロボット起動点）を描画する。
 
 import { useEffect, useRef } from "react";

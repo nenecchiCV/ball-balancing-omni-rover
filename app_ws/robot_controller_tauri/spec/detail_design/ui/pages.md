@@ -1,6 +1,6 @@
 # ui ページ・共通部品
 
-画面実体は `src/features/<domain>/`、ルート定義は `src/app/<route>/page.tsx`（feature コンポーネントを返す薄い層）。共通部品は `src/components/`、共有状態は `src/stores/`（zustand）。
+画面実体は `src/features/<domain>/`、ルート定義は `src/app/app.tsx` の `<Routes>` テーブル（feature コンポーネントへ割り当てる薄い層）。共通部品は `src/components/`、共有状態は `src/stores/`（zustand）。
 
 ## 共通部品
 

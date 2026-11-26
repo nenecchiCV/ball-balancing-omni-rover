@@ -1,5 +1,3 @@
-"use client";
-
 // FR-03: 目標位置 (x, y) と速度上限の入力 → SET_POSE_TARGET 送信。マップに目標を描画。
 
 import { useEffect, useState } from "react";

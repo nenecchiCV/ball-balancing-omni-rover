@@ -20,7 +20,7 @@
 | `frontend/` | `src/lib/`・`src/stores/` | IPC 境界と状態管理 |
 | `ui/` | `src/components/`・`src/features/`・`src/app/` | 画面 |
 
-エントリは `src-tauri/src/main.rs` と `src/app/layout.tsx`。
+エントリは `src-tauri/src/main.rs` と `src/main.tsx`（`src/app/app.tsx` でルート定義）。
 
 ## コンポーネント一覧
 

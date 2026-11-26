@@ -1,5 +1,3 @@
-"use client";
-
 // FR-08: テストコマンド送受信。PING / GET_STATUS / TEST_ECHO の往復を検証する。
 // FR-11: EVT_SENSORS 購読で IMU・エンコーダの生データを表示する。
 

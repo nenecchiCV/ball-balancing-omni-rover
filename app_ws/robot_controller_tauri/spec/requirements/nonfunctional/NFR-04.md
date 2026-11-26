@@ -6,7 +6,7 @@
 
 ## 仕様
 
-- `npm run dev`（開発用 devUrl + `tauri dev`）、`npm run build`（Next.js 静的エクスポート）、`npm run tauri build`（アプリバンドル）を定義する。
+- `npm run dev`（開発用 devUrl + `tauri dev`）、`npm run build`（型検査 + Vite 静的ビルド `dist/`）、`npm run tauri build`（アプリバンドル）を定義する。
 - `npx tsc --noEmit` と `cargo check`（src-tauri）が通ることを変更後の最低検証とする。
 - VSCode タスク（`.vscode/tasks.json`）に同等コマンドを定義し、GUI なしでも同じコマンドを実行できる形にする。
 

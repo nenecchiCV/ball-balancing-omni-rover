@@ -1,11 +1,8 @@
-"use client";
-
 // 全画面共通シェル: ナビ・接続バッジ・緊急停止・バックエンド購読の一元起動。
 // watch_* はここで 1 回だけ張り、受信データは各 zustand store へ配る。
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useEffect, useRef, type ReactNode } from "react";
+import { Link, useLocation } from "react-router";
 
 import { ConfirmDialog } from "@/components/confirm-dialog";
 
@@ -63,7 +60,7 @@ const OP_STATE_STYLE: Record<number, string> = {
 };
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
+  const pathname = useLocation().pathname;
   const linkState = useConnectionStore((s) => s.linkState);
   const opState = useTelemetryStore((s) => s.status?.opState);
   const pushLog = useLogStore((s) => s.push);
@@ -128,7 +125,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {NAV.map((n) => (
           <Link
             key={n.href}
-            href={n.href}
+            to={n.href}
             className={`rounded-md px-2.5 py-2 text-sm text-text no-underline hover:bg-[#1f2630] ${
               pathname === n.href ? "bg-[#23314a] text-white" : ""
             }`}

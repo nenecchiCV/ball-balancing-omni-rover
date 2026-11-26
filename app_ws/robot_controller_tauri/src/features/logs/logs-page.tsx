@@ -1,5 +1,3 @@
-"use client";
-
 // FR-05: EVT_LOG 購読 → ログリスト表示。レベルフィルタ・一時停止・クリア。
 // app ソース（接続/切断/エラー）も同一リストに記録される（watchLog が一元収集）。
 
@@ -17,8 +15,9 @@ export function LogsPage() {
   const connected = useConnected();
   const { entries, push, clear } = useLogStore();
   const [minLevel, setMinLevel] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const snapshot = useRef<typeof entries>([]);
+  // 一時停止は受信保持のまま表示を固定する。停止時点の entries を退避する。
+  const [snapshot, setSnapshot] = useState<typeof entries | null>(null);
+  const paused = snapshot !== null;
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // ロボットの EVT_LOG ストリームを滞在中のみ購読する。
@@ -30,12 +29,7 @@ export function LogsPage() {
     };
   }, [connected, push]);
 
-  // 一時停止は受信保持のまま表示を固定する。
-  const shown = paused ? snapshot.current : entries;
-  useEffect(() => {
-    if (paused) snapshot.current = entries;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paused]);
+  const shown = snapshot ?? entries;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "auto" });
@@ -62,7 +56,10 @@ export function LogsPage() {
               ))}
             </select>
           </label>
-          <button className="btn-secondary" onClick={() => setPaused((p) => !p)}>
+          <button
+            className="btn-secondary"
+            onClick={() => setSnapshot(paused ? null : entries)}
+          >
             {paused ? "再開" : "一時停止"}
           </button>
           <button className="btn-secondary" onClick={clear}>

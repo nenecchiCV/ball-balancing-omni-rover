@@ -1,5 +1,3 @@
-"use client";
-
 import { useConfirmStore } from "@/stores/confirm";
 
 export function ConfirmDialog() {

@@ -4,7 +4,7 @@
 
 ## 実行基盤
 
-- **フレームワーク**: Tauri 2。フロントエンドは Next.js 15（App Router、`output: 'export'` の静的エクスポート）を `src-tauri` 内蔵 WebView で配信する。バックエンドは Rust（edition 2021）。
+- **フレームワーク**: Tauri 2。フロントエンドは React 19 SPA（Vite 8 で静的ビルド、`react-router` で画面遷移）を `src-tauri` 内蔵 WebView で配信する。バックエンドは Rust（edition 2021）。
 - **BLE**: `btleplug` クレートが OS 標準 BLE API（Windows では WinRT）を利用する。WebView 内 Web Bluetooth には依存しない。
 - **非同期**: バックエンドは `tokio` ランタイム（Tauri 付属の `tauri::async_runtime`）で動作する。BLE 受信は通知ストリームを非同期タスクで消費する。
 - **プロセス境界**: フロントエンド ↔ バックエンドは Tauri の IPC。リクエスト/レスポンスは `invoke`/`#[tauri::command]`、購読型は `tauri::ipc::Channel`（`watch_*` command）とする。
@@ -12,7 +12,7 @@
 
 ## ソフト構成
 
-Tauri は WebView（Next.js）と Rust コアの 2 プロセス構成であり、firmware のような単一の層スタックは適用しない。依存の一方向性は所有権ベースのルールとして両側で個別に定義する。
+Tauri は WebView（React SPA）と Rust コアの 2 プロセス構成であり、firmware のような単一の層スタックは適用しない。依存の一方向性は所有権ベースのルールとして両側で個別に定義する。
 
 ### バックエンド: IPC シェル + Tauri 非依存ドメイン
 
@@ -29,7 +29,7 @@ lib.rs ─→ commands.rs ─→ robot/ ─→ protocol/
 
 ### フロントエンド: feature slice
 
-- `src/app/` はルート定義のみ（`page.tsx` は feature コンポーネントを返す薄い層）。
+- `src/app/` はルート定義のみ（`app.tsx` の `<Routes>` が feature コンポーネントへ割り当てる薄い層）。
 - 画面実体は `src/features/<domain>/` に垂直分割する（connection / rc / position / odometry / logs / home）。
 - **規則（依存制約）**: `@tauri-apps/api` を直接 import できるのは `src/lib/` のみ。feature 同士の直接 import は禁止し、共有は `src/components/`・`src/stores/`・`src/lib/` 経由とする。
 - 状態管理は zustand（`src/stores/`）。高頻度テレメトリは store 側で分離し、Context による全画面再レンダを避ける。
