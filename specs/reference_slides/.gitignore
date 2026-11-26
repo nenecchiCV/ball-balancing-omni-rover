@@ -3,3 +3,4 @@ dist/
 .slidev/
 *.log
 png-export/
+slides-export.pdf
