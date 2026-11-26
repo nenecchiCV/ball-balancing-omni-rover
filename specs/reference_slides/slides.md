@@ -329,7 +329,7 @@ $$F_t=-\mu_dF_n\tanh(v_d/v_c)\,d-\mu_rF_n\tanh(v_r/v_c)\,r$$
 
 <div>
 
-- 駆動転動方向 d: $\mu_d$ = <span style="color:#d97706;font-weight:bold">0.4</span>（ここでボールを蹴る、実機ボール反映値）
+- 駆動転動方向 d: $\mu_d$ = <span style="color:#d97706;font-weight:bold">0.4</span>（ここでボールを蹴る、実機ボール想定値）
 - ローラー自由方向 r: $\mu_r$ = <span style="color:#2563eb;font-weight:bold">0.02</span>（ほぼ滑らか）
 - 輪–球接触で実に **20 倍差**
 
@@ -459,7 +459,7 @@ $$\tau=K_tI,\qquad duty=\frac{R_aI+K_e\omega_w}{V_{supply}}$$
 
 <div class="mt-4 p-3 bg-green-50 border-l-4 border-green-500 rounded text-lg">
 
-結果（シミュレーション・現行 μ=0.4 構成）: rev2 は **hold 完走・cycle 50 s 完走・定速包絡 0.20 m/s 全域完走**
+結果（シミュレーション）: rev2 は **hold 完走・cycle 50 s 完走・定速包絡 0.20 m/s 全域完走**
 
 </div>
 
@@ -523,7 +523,7 @@ $$\tau=K_tI,\qquad duty=\frac{R_aI+K_e\omega_w}{V_{supply}}$$
 
 <div class="mt-3 p-2 bg-green-50 border-l-4 border-green-500 rounded text-base">
 
-**直立保持・cycle 50 s 完走・転倒なし** まで到達（rev2・μ=0.4 現行構成、シミュレーション結果）
+**直立保持・cycle 50 s 完走・転倒なし** まで到達（rev2・シミュレーション結果）
 
 </div>
 
@@ -543,13 +543,103 @@ Simscape 可視化アニメーション / 走行軌跡プロット<br/>（後で
 
 # 「実機で一発で動く」を目指した受入テスト
 
-<div class="p-3 bg-green-50 border-l-4 border-green-500 rounded text-lg">
+<svg viewBox="0 0 940 296" style="width:100%;display:block;margin:0 auto" xmlns="http://www.w3.org/2000/svg">
+  <text x="8" y="20" style="font-size:11px" fill="#6b7280">テストマトリクス概略 — 行：受入シナリオ × 列：掃引条件（各セル＝1シミュレーション）</text>
+  <g style="font-size:10.5px" fill="#4b5563" text-anchor="middle">
+    <text x="137" y="44">公称</text>
+    <text x="197" y="28">不感帯</text><text x="197" y="44">構成×3</text>
+    <text x="347" y="28">不感帯</text><text x="347" y="44">倍率×7</text>
+    <text x="512" y="28">接触</text><text x="512" y="44">剛性×4</text>
+    <text x="617" y="28">床条件</text><text x="617" y="44">×3</text>
+    <text x="722" y="28">ペイロード</text><text x="722" y="44">0–1 kg</text>
+    <text x="812" y="28">設置</text><text x="812" y="44">誤差×2</text>
+    <text x="872" y="28">ノイズ</text><text x="872" y="44">シード×2</text>
+  </g>
+  <g stroke="#d1d5db" stroke-width="1" stroke-dasharray="3 3">
+    <line x1="152" y1="52" x2="152" y2="266"/>
+    <line x1="242" y1="52" x2="242" y2="266"/>
+    <line x1="452" y1="52" x2="452" y2="266"/>
+    <line x1="572" y1="52" x2="572" y2="266"/>
+    <line x1="662" y1="52" x2="662" y2="266"/>
+    <line x1="782" y1="52" x2="782" y2="266"/>
+    <line x1="842" y1="52" x2="842" y2="266"/>
+  </g>
+  <g fill="#f1f5f9">
+    <rect x="124" y="58" width="776" height="22" rx="3"/>
+    <rect x="124" y="84" width="776" height="22" rx="3"/>
+    <rect x="124" y="110" width="776" height="22" rx="3"/>
+    <rect x="124" y="136" width="776" height="22" rx="3"/>
+    <rect x="124" y="162" width="776" height="22" rx="3"/>
+    <rect x="124" y="188" width="776" height="22" rx="3"/>
+    <rect x="124" y="218" width="776" height="22" rx="3"/>
+    <rect x="124" y="244" width="776" height="22" rx="3"/>
+  </g>
+  <line x1="124" y1="214" x2="900" y2="214" stroke="#9ca3af" stroke-width="1" stroke-dasharray="5 4"/>
+  <g stroke-width="1.5">
+    <g fill="#bbf7d0" stroke="#16a34a">
+      <rect x="124" y="58" width="26" height="22" rx="3"/><rect x="154" y="58" width="26" height="22" rx="3"/><rect x="184" y="58" width="26" height="22" rx="3"/><rect x="214" y="58" width="26" height="22" rx="3"/>
+      <rect x="454" y="58" width="26" height="22" rx="3"/><rect x="484" y="58" width="26" height="22" rx="3"/><rect x="514" y="58" width="26" height="22" rx="3"/><rect x="544" y="58" width="26" height="22" rx="3"/>
+      <rect x="664" y="58" width="26" height="22" rx="3"/><rect x="694" y="58" width="26" height="22" rx="3"/><rect x="724" y="58" width="26" height="22" rx="3"/><rect x="754" y="58" width="26" height="22" rx="3"/>
+      <rect x="784" y="58" width="26" height="22" rx="3"/><rect x="814" y="58" width="26" height="22" rx="3"/><rect x="844" y="58" width="26" height="22" rx="3"/><rect x="874" y="58" width="26" height="22" rx="3"/>
+    </g>
+    <g fill="#fde68a" stroke="#d97706">
+      <rect x="244" y="58" width="26" height="22" rx="3"/><rect x="274" y="58" width="26" height="22" rx="3"/><rect x="394" y="58" width="26" height="22" rx="3"/><rect x="424" y="58" width="26" height="22" rx="3"/>
+    </g>
+    <g fill="#fecaca" stroke="#dc2626">
+      <rect x="304" y="58" width="26" height="22" rx="3"/><rect x="334" y="58" width="26" height="22" rx="3"/><rect x="364" y="58" width="26" height="22" rx="3"/>
+    </g>
+    <g fill="#bbf7d0" stroke="#16a34a">
+      <rect x="124" y="84" width="26" height="22" rx="3"/><rect x="154" y="84" width="26" height="22" rx="3"/><rect x="184" y="84" width="26" height="22" rx="3"/><rect x="214" y="84" width="26" height="22" rx="3"/>
+    </g>
+    <g fill="#fde68a" stroke="#d97706">
+      <rect x="244" y="84" width="26" height="22" rx="3"/><rect x="274" y="84" width="26" height="22" rx="3"/><rect x="394" y="84" width="26" height="22" rx="3"/><rect x="424" y="84" width="26" height="22" rx="3"/>
+    </g>
+    <g fill="#fecaca" stroke="#dc2626">
+      <rect x="304" y="84" width="26" height="22" rx="3"/><rect x="334" y="84" width="26" height="22" rx="3"/><rect x="364" y="84" width="26" height="22" rx="3"/>
+    </g>
+    <g fill="#bbf7d0" stroke="#16a34a">
+      <rect x="124" y="110" width="26" height="22" rx="3"/><rect x="154" y="110" width="26" height="22" rx="3"/><rect x="184" y="110" width="26" height="22" rx="3"/><rect x="214" y="110" width="26" height="22" rx="3"/>
+      <rect x="124" y="136" width="26" height="22" rx="3"/><rect x="154" y="136" width="26" height="22" rx="3"/><rect x="184" y="136" width="26" height="22" rx="3"/><rect x="214" y="136" width="26" height="22" rx="3"/>
+      <rect x="454" y="136" width="26" height="22" rx="3"/><rect x="484" y="136" width="26" height="22" rx="3"/><rect x="514" y="136" width="26" height="22" rx="3"/><rect x="544" y="136" width="26" height="22" rx="3"/>
+      <rect x="574" y="136" width="26" height="22" rx="3"/><rect x="604" y="136" width="26" height="22" rx="3"/><rect x="634" y="136" width="26" height="22" rx="3"/>
+      <rect x="844" y="136" width="26" height="22" rx="3"/><rect x="874" y="136" width="26" height="22" rx="3"/>
+      <rect x="124" y="162" width="26" height="22" rx="3"/>
+      <rect x="124" y="188" width="26" height="22" rx="3"/>
+      <rect x="124" y="218" width="26" height="22" rx="3"/>
+      <rect x="454" y="218" width="26" height="22" rx="3"/><rect x="484" y="218" width="26" height="22" rx="3"/><rect x="514" y="218" width="26" height="22" rx="3"/><rect x="544" y="218" width="26" height="22" rx="3"/>
+      <rect x="574" y="218" width="26" height="22" rx="3"/><rect x="604" y="218" width="26" height="22" rx="3"/><rect x="634" y="218" width="26" height="22" rx="3"/>
+      <rect x="124" y="244" width="26" height="22" rx="3"/><rect x="454" y="244" width="26" height="22" rx="3"/><rect x="484" y="244" width="26" height="22" rx="3"/>
+    </g>
+    <g fill="#fde68a" stroke="#d97706">
+      <rect x="514" y="244" width="26" height="22" rx="3"/><rect x="544" y="244" width="26" height="22" rx="3"/>
+    </g>
+  </g>
+  <g style="font-size:12px" fill="#374151" text-anchor="end" font-family="ui-monospace,monospace">
+    <text x="114" y="73">hold</text>
+    <text x="114" y="99">stepX</text>
+    <text x="114" y="125">yaw</text>
+    <text x="114" y="151">cycle</text>
+    <text x="114" y="177">bias</text>
+    <text x="114" y="203">moveYaw</text>
+  </g>
+  <g style="font-size:11px" fill="#374151" text-anchor="end">
+    <text x="114" y="233">定速 0.40 m/s</text>
+    <text x="114" y="259">初期傾斜 10°</text>
+  </g>
+  <g style="font-size:11px" fill="#374151">
+    <rect x="124" y="279" width="14" height="11" rx="2" fill="#bbf7d0" stroke="#16a34a" stroke-width="1.5"/>
+    <text x="144" y="288">実行・自動採点</text>
+    <rect x="246" y="279" width="14" height="11" rx="2" fill="#fde68a" stroke="#d97706" stroke-width="1.5"/>
+    <text x="266" y="288">劣化・崖を記録</text>
+    <rect x="368" y="279" width="14" height="11" rx="2" fill="#fecaca" stroke="#dc2626" stroke-width="1.5"/>
+    <text x="388" y="288">転倒検出 → 対策へ反映</text>
+    <rect x="534" y="279" width="14" height="11" rx="2" fill="#f1f5f9" stroke="#d1d5db" stroke-width="1"/>
+    <text x="554" y="288">対象外</text>
+    <text x="900" y="288" text-anchor="end" fill="#6b7280" style="font-size:10.5px">下2行はロバスト試験用の追加プロファイル</text>
+  </g>
+</svg>
 
-掃引で発見: 実機ボール（硬質プラ球）の**輪–球摩擦 μ=0.4** を反映したら牽引キャップ・速度限界（0.40→0.20 m/s）・リカバリ窓（→~5°）が縮小 → **実機に合わせてパラメータを更新済み**。シミュで潰せる不安はシミュで潰す、のが方針。
-
-</div>
-
-<div class="grid grid-cols-2 gap-6 mt-4">
+<div class="grid grid-cols-2 gap-6 mt-2">
 <div>
 
 **要求をシナリオ化して自動採点**
@@ -566,6 +656,12 @@ Simscape 可視化アニメーション / 走行軌跡プロット<br/>（後で
 - → 「想定外の条件でも倒れないか」を実機投入前に網羅
 
 </div>
+</div>
+
+<div class="mt-3 p-2 bg-green-50 border-l-4 border-green-500 rounded text-base">
+
+変更のたびにマトリクス全セルを再実行してロバスト性を担保 — シミュで潰せる不安はシミュで潰す方針
+
 </div>
 
 ---
