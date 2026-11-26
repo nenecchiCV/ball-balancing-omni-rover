@@ -1,6 +1,6 @@
 # アプリ開発の指示
 
-`app_ws/` 配下のデスクトップアプリ（Next.js × Tauri）を作成・編集する作業に適用する。firmware プロジェクトとは別の構成モデルをとる（`firmware.md` の層ルールは適用しない）。
+`app_ws/` 配下のデスクトップアプリ（Vite + React × Tauri）を作成・編集する作業に適用する。firmware プロジェクトとは別の構成モデルをとる（`firmware.md` の層ルールは適用しない）。
 
 ## 開発方針
 
@@ -36,6 +36,6 @@ Tauri の 2 プロセス構成（WebView フロント + Rust コア）に従い�
 
 ## 検証
 
-- フロント: `npx tsc --noEmit`、`npm run lint`、`npm run build`（静的エクスポートまで）。
+- フロント: `npx tsc --noEmit`、`npm run lint`、`npm run build`（`dist/` への静的ビルドまで）。
 - バックエンド: `cargo check`、`cargo test`（`src-tauri/`）。単体テストは Tauri 非依存モジュールに限定する（IPC シェルを参照するテストは Windows でマニフェスト非埋込のテストバイナリがロード失敗する）。
 - 実行確認: `npm run tauri dev`（GUI 起動）。パッケージングは `npm run tauri build`、Windows 成果物は Windows ホストでのみ生成する。

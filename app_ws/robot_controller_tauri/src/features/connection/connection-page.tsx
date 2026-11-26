@@ -1,5 +1,3 @@
-"use client";
-
 // FR-01: BLE スキャン・接続・切断・PING 照合。
 
 import { useState } from "react";

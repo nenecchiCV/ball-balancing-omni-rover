@@ -10,7 +10,7 @@
 | BLE | Bluetooth 4.0 以上の BLE セントラル機能を持つアダプタ | `btleplug` が OS 標準 BLE API（Windows: WinRT）を利用する |
 | Node.js | v20 以降 | フロントエンドビルド用 |
 | Rust | stable（edition 2021） | バックエンドビルド用 |
-| 主要 npm 依存 | next 15.5.x, react 19, `@tauri-apps/api` 2.x, zustand 5, tailwindcss 4 | `package.json` が正本 |
+| 主要 npm 依存 | vite 8.x, react 19, react-router 7, `@tauri-apps/api` 2.x, zustand 5, tailwindcss 4 | `package.json` が正本 |
 | 主要 cargo 依存 | tauri 2, btleplug 0.11, tokio, serde, thiserror, tauri-specta / specta / specta-typescript | `src-tauri/Cargo.toml` が正本。specta 系は `src/lib/bindings.ts` 生成に使用 |
 | 開発コンテナ | リポジトリ `.devcontainer` | Node.js / Rust / Tauri Linux 依存を同梱。コンテナ内ビルドは Linux 向け成果物となり、BLE 実機通信は Linux ホストの BlueZ/D-Bus 経由に限る（Windows + Docker Desktop では Bluetooth を渡せない） |
 

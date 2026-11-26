@@ -1,9 +1,7 @@
-"use client";
-
 // FR-07: 運転開始・停止と開始前準備（IMU キャリブレーション・位置設定）。
 
-import Link from "next/link";
 import { useState } from "react";
+import { Link } from "react-router";
 
 import { formatError } from "@/lib/error";
 import {
@@ -165,7 +163,7 @@ export function HomePage() {
           )
         ) : (
           <p className="muted">
-            ロボット未接続。<Link href="/connect">Connect</Link> から接続する。
+            ロボット未接続。<Link to="/connect">Connect</Link> から接続する。
           </p>
         )}
       </div>
@@ -258,7 +256,7 @@ export function HomePage() {
           { href: "/odometry", title: "Odometry", desc: "自己位置・軌跡" },
           { href: "/logs", title: "Logs", desc: "ログメッセージ" },
         ].map((c) => (
-          <Link key={c.href} href={c.href} className="card flex-1 no-underline">
+          <Link key={c.href} to={c.href} className="card flex-1 no-underline">
             <h3 className="text-text">{c.title}</h3>
             <p className="muted">{c.desc}</p>
           </Link>

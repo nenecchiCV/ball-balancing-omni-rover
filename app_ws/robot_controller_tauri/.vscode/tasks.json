@@ -16,7 +16,7 @@
       "problemMatcher": []
     },
     {
-      "label": "app: build (next build)",
+      "label": "app: build (vite build)",
       "type": "shell",
       "command": "npm run build",
       "options": { "cwd": "${workspaceFolder}" },

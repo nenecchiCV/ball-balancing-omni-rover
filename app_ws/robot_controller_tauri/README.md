@@ -1,6 +1,6 @@
 # robot_controller_tauri
 
-玉乗りオムニローバー（`ball_balancing_omni3_stm32`）を BLE 経由で操作・監視するデスクトップアプリ。Next.js（フロントエンド）× Tauri 2（Rust バックエンド）で構成し、`uart_wireless_converter_esp32` の NUS 相当 GATT 透過リンクを介してロボットと通信する。
+玉乗りオムニローバー（`ball_balancing_omni3_stm32`）を BLE 経由で操作・監視するデスクトップアプリ。Vite + React（フロントエンド）× Tauri 2（Rust バックエンド）で構成し、`uart_wireless_converter_esp32` の NUS 相当 GATT 透過リンクを介してロボットと通信する。
 
 ```
 [robot_controller_tauri] <--BLE NUS--> [XIAO ESP32-C6] <--UART 115200--> [NUCLEO-G474RE USART1]
@@ -18,8 +18,8 @@
 ## 構成
 
 - `spec/` — 仕様書（要件・基本設計・詳細設計・テスト計画）。`spec/basic_design/robot_link_protocol.md` がアプリ↔ロボット間 API の正本
-- `src/` — Next.js フロントエンド（App Router、静的エクスポート、feature slice 構成）
-  - `app/` — ルート定義のみ（薄い `page.tsx`）
+- `src/` — React SPA フロントエンド（Vite ビルド、react-router、feature slice 構成）
+  - `app/` — ルート定義のみ（`app.tsx` の `<Routes>` テーブル）
   - `features/<domain>/` — 画面実体（connection / rc / position / odometry / logs / home）
   - `components/` — 共通部品（`app-shell`）
   - `stores/` — zustand 状態管理（connection / telemetry / logs）
@@ -42,8 +42,8 @@
 
 ```bash
 npm install
-npm run tauri dev      # 開発実行（Next.js devUrl + Tauri。起動時に src/lib/bindings.ts を再生成）
-npm run build          # Next.js 静的エクスポート (out/)
+npm run tauri dev      # 開発実行（Vite devUrl + Tauri。起動時に src/lib/bindings.ts を再生成）
+npm run build          # 型検査 + Vite ビルド (dist/)
 npm run lint           # ESLint
 npm run tauri build    # 本番ビルド + バンドル
 npx tsc --noEmit       # 型検査（フロントエンド）

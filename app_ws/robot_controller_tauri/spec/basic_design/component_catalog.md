@@ -58,17 +58,23 @@
 
 | コンポーネント | ファイル | 責務 |
 |---|---|---|
-| home-page | `features/home/home-page.tsx` + `app/page.tsx` | 接続状態・動作状態サマリ・機能ナビ・開始前準備パネル（FR-07） |
-| connection-page | `features/connection/connection-page.tsx` + `app/connect/page.tsx` | スキャン・接続・切断・PING 照合（FR-01） |
-| rc-page | `features/rc/rc-page.tsx` + `app/rc/page.tsx` | 2 本ジョイスティックの速度指令（FR-02） |
+各ページのルート割当は `src/app/app.tsx` の `<Routes>` テーブルに集約する。
+
+| コンポーネント | ファイル | 責務 |
+|---|---|---|
+| home-page | `features/home/home-page.tsx`（ルート `/`） | 接続状態・動作状態サマリ・機能ナビ・開始前準備パネル（FR-07） |
+| connection-page | `features/connection/connection-page.tsx`（ルート `/connect`） | スキャン・接続・切断・PING 照合（FR-01） |
+| rc-page | `features/rc/rc-page.tsx`（ルート `/rc`） | 2 本ジョイスティックの速度指令（FR-02） |
 | joystick | `features/rc/joystick.tsx` | ポインタ操作型バーチャルジョイスティック（-1.0〜1.0 正規化出力） |
-| position-page | `features/position/position-page.tsx` + `app/position/page.tsx` | 目標位置・速度入力とマップ表示（FR-03） |
-| odometry-page | `features/odometry/odometry-page.tsx` + `app/odometry/page.tsx` | 軌跡・数値表示と原点リセット（FR-04） |
+| position-page | `features/position/position-page.tsx`（ルート `/position`） | 目標位置・速度入力とマップ表示（FR-03） |
+| odometry-page | `features/odometry/odometry-page.tsx`（ルート `/odometry`） | 軌跡・数値表示と原点リセット（FR-04） |
 | odometry-map | `features/odometry/odometry-map.tsx` | 俯瞰マップ canvas（位置・向き・軌跡・目標点描画） |
-| logs-page | `features/logs/logs-page.tsx` + `app/logs/page.tsx` | ログリスト・フィルタ・一時停止・クリア（FR-05） |
-| test-page | `features/test/test-page.tsx` + `app/test/page.tsx` | プロトコル疎通・テストコマンド送受信（FR-08） |
+| logs-page | `features/logs/logs-page.tsx`（ルート `/logs`） | ログリスト・フィルタ・一時停止・クリア（FR-05） |
+| test-page | `features/test/test-page.tsx`（ルート `/test`） | プロトコル疎通・テストコマンド送受信（FR-08） |
+| tuning-page | `features/tuning/tuning-page.tsx`（ルート `/tuning`） | パラメータ表示・編集・保存、不感帯掃引（FR-09/FR-10） |
 
 ## エントリ
 
 - `src-tauri/src/main.rs`: `app_lib::run()` の呼出のみ（Tauri 2 構成）。
-- `src/app/layout.tsx`: 全ページ共通レイアウト（`app-shell` 適用）。
+- `index.html` + `src/main.tsx`: Vite エントリ（React マウント、`BrowserRouter` 起動）。
+- `src/app/app.tsx`: ルート定義（`<Routes>` → feature ページ、`app-shell` 適用）。

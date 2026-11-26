@@ -1,5 +1,3 @@
-"use client";
-
 // FR-02: 2 本ジョイスティックによる速度指令。左=並進 (vx,vy)、右=回転 (yaw_rate)。
 
 import { useCallback, useEffect, useRef, useState } from "react";

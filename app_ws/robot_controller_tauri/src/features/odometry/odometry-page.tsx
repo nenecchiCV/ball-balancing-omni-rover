@@ -1,5 +1,3 @@
-"use client";
-
 // FR-04: EVT_POSE 購読 → 位置・向き・軌跡・数値表示。RESET_ODOMETRY で原点再設定。
 // 受信値・軌跡はグローバル store（app-shell の watchTelemetry が集約）。
 

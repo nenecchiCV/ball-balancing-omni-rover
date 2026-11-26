@@ -1,6 +1,6 @@
 # 要件仕様書
 
-`robot_controller_tauri` アプリケーションの機能要求・非機能要求を ID 付きで管理する。本アプリは Next.js（フロントエンド）× Tauri 2（Rust バックエンド）製のデスクトップアプリであり、`uart_wireless_converter_esp32` が提供する BLE NUS 透過リンク経由で `ball_balancing_omni3_stm32` の玉乗りオムニローバーを操作・監視する。
+`robot_controller_tauri` アプリケーションの機能要求・非機能要求を ID 付きで管理する。本アプリは Vite + React（フロントエンド）× Tauri 2（Rust バックエンド）製のデスクトップアプリであり、`uart_wireless_converter_esp32` が提供する BLE NUS 透過リンク経由で `ball_balancing_omni3_stm32` の玉乗りオムニローバーを操作・監視する。
 
 ```
 [robot_controller_tauri] <--BLE NUS--> [XIAO ESP32-C6] <--UART 115200--> [G474 USART1]
