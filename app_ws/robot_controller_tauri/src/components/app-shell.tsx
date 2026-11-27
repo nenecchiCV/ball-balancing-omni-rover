@@ -94,7 +94,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         )?.value;
         useParamsStore
           .getState()
-          .setLimits(ms ?? 0.4, theory ?? null);
+          .setLimits(ms ?? 0.35, theory ?? null);
       })
       .catch(() => {});
     return () => {

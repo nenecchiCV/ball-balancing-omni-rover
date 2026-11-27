@@ -53,7 +53,7 @@ void param_store::init_defaults() {
   reg(0x50, &params_.imu.gyro_bias_z, -0.2F, 0.2F);
   reg(0x51, &params_.imu.ekf_bias_x, -0.2F, 0.2F);
   reg(0x52, &params_.imu.ekf_bias_y, -0.2F, 0.2F);
-  // 速度上限は直接設定値（初期値 0.4 = シム検証値）。設定可能上限は
+  // 速度上限は直接設定値（初期値 0.35 = シム検証値）。設定可能上限は
   // 無滑り理論上限で、0x61 はその派生値の読み取り専用参照。
   reg(0x60, &params_.controller.max_speed, 0.05F, theory_max_speed_);
   reg(0x61, &theory_max_speed_, 0.0F, 0.0F, true);

@@ -359,8 +359,8 @@ pub async fn robot_save_params(state: State<'_, AppState>) -> Result<(), AppErro
 #[specta::specta]
 pub async fn robot_reset_params(state: State<'_, AppState>) -> Result<(), AppError> {
     ack_to_result(state.session.request(&Request::ResetParams).await?)?;
-    // 既定 max_speed = 0.4（シム検証値）へ戻る。
-    state.session.set_max_speed(0.4);
+    // 既定 max_speed = 0.35（シム検証値）へ戻る。
+    state.session.set_max_speed(0.35);
     Ok(())
 }
 

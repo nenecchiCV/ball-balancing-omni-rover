@@ -213,16 +213,22 @@ p.controller.slipLimitWheelSpeed = p.motor.noLoadSpeed* ...
 p.controller.slipLimitSpeed = min( ...
     p.controller.slipLimitWheelSpeed*p.wheel.radiusEffective/ ...
     sin(p.wheel.contactLatitude), p.controller.theoreticalMaxSpeed);
-% Command clamp: capped at the EKF-validated envelope.  Measured
-% matrix (stateless drag-FF + motion-model EKF): 0.40 m/s completes
-% the ramp+cruise window at every rolling friction in the 0.005-0.015
-% band (rf015 tracks 0.407 m/s, rf008 +11% hot, rf005 +45% hot but
-% survives -- the pre-EKF attitude under-read that failed this corner
-% at 15.8 s is gone).  >=0.6 m/s still tips at every friction
-% (overshoot reaches the ~0.97 m/s motor no-load ceiling during the
-% ramp).  The theoretical slip limit (~0.71 m/s) stays documented as
-% a hardware bound, not an achievable command.
-p.controller.maxSpeed = 0.40;
+% Command clamp: capped at the sustained-cruise ceiling.  Historical
+% 0.40 passed the ramp+cruise window at every rolling friction, but
+% ~25 s of sustained 0.40 m/s measured a slow runaway: the drag-FF
+% gate parks the ball ~0.005 over command, braking demand in the
+% ~0.45-0.5 m/s band cannot pull the excursion back before the
+% overspeed-coast gate strips it, and the proportional brake gets
+% weaker the closer the command sits to that cliff (measured: ball
+% creeps 0.4 -> 0.73 m/s over ~15 s, then the contact-dragged dive
+% tips the chassis).  0.35 keeps the parked ball deep enough inside
+% the band where the brake still has authority (25 s sustained
+% holds tilt ~0.99 deg, 8/8); raising the coast floor/margin or the
+% duty cap does NOT rescue 0.40 (verified -- the missing brake
+% authority is structural, not a margin setting).  The theoretical
+% slip limit (~0.71 m/s) stays documented as a hardware bound, not
+% an achievable command.
+p.controller.maxSpeed = 0.35;
 % Cruise at the slip-limit speed consumes ~20.4 rad/s of wheel speed;
 % allow the command to reach the full motor speed envelope.
 p.controller.lqi.maximumWheelSpeedCommand = ...
@@ -590,8 +596,12 @@ p.controller.torqueDrive.holdFollowGain = 1.4;
 % than this margin, and the equilibrium error chatters at the gate
 % edge -- so the margin IS the steady-state overspeed floor.  At -0.02
 % the ball parks ~+0.02 m/s over the command (the measured G-02
-% residual on the cycle decel ramp); -0.003 holds ~+0.005.
-p.controller.torqueDrive.dragLeadCutoff = -0.003;
+% residual on the cycle decel ramp); 0.0 parks ~0.007 under, the
+% deepest margin that still clears the G-02 0.01 gate (positive
+% values pin the error at ~0.012 and fail it).  Parking under the
+% command buys a little distance from the sustained-cruise brake
+% ceiling that bounds maxSpeed.
+p.controller.torqueDrive.dragLeadCutoff = 0.0;
 % Direction-reversal guard [m/s]: a sign flip against a still-rolling
 % ball is the face-plant path -- the reversed wheel servo locks
 % against the rolling ball (the follow-through chase never engages at

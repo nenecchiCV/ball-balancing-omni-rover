@@ -20,7 +20,7 @@ void inactive_returns_zero() {
 
 void proportional_command_slew_limited() {
   position_controller::init(cfg());
-  position_controller::set_target(1.0F, 0.0F, 0.4F);
+  position_controller::set_target(1.0F, 0.0F, 0.35F);
   // 1 ステップ目は accel_limit*dt = 0.5*0.005 = 0.0025 m/s まで。
   auto o = position_controller::update(0.0F, 0.0F, 0.005F);
   CHECK_TRUE(o.active);
@@ -31,7 +31,7 @@ void proportional_command_slew_limited() {
   for (int i = 0; i < 400; ++i) {
     o = position_controller::update(0.0F, 0.0F, 0.005F);
   }
-  CHECK_NEAR(o.command[0], 0.4F, 0.02F);  // speed_limit 0.4 飽和
+  CHECK_NEAR(o.command[0], 0.35F, 0.02F);  // speed_limit 0.35 飽和
 }
 
 void speed_limit_clamped_to_max() {

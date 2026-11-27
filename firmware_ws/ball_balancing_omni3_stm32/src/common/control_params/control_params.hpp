@@ -238,7 +238,11 @@ struct param_set {
   } torque_lqi;
 
   struct controller {
-    float max_speed = 0.4F;
+    // 持続巡航の天井: 0.40 では FF ゲートが指令+~0.005 にパークし、
+    // ~0.45-0.5 m/s 帯の制動権限不足（内力ブレーキの構造限界）から
+    // ~15 s で過速度暴走に至る（Simulink 実測）。0.35 はブレーキが
+    // まだ効く帯域に留める安全側キャップ。
+    float max_speed = 0.35F;
     float max_yaw_rate = 0.8F;
     float max_planar_acceleration = 0.6F;
     float recovery_tilt = 0.0872664626F;        // 5 deg

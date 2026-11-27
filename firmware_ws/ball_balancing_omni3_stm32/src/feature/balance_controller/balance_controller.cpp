@@ -441,7 +441,11 @@ void balance_controller::compute_acceleration_demand(step_context& ctx) {
         drag_dir = ctx.command_velocity_body_user *
                    (1.0F / norm(ctx.command_velocity_body_user));
       }
-      if (dot(velocity_error_body, drag_dir) > -0.02F) {
+      // ゲート縁が定常パーク位置: MATLAB dragLeadCutoff と同期。
+      // 0.0 は指令と等速にパーク（G-02 の 0.01 閾値を残す最深側）。
+      // 正値は ~0.012 下にパークして G-02 を破る、負値は指令+側に
+      // パークして持続巡航の制動天井へ近づける（Simulink 実測）。
+      if (dot(velocity_error_body, drag_dir) > 0.0F) {
         ctx.acceleration_demand =
             ctx.acceleration_demand + td.drag_lean_feedforward *
                                           p_->physical.rolling_friction * g *

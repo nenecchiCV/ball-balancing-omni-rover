@@ -21,7 +21,7 @@ uart:~$ test omni 0 0 0        # 指令ゼロ（停止）
 uart:~$ test stop              # テスト終了
 ```
 
-- 指令は `max_speed`（0.4 m/s）・`max_yaw_rate`（0.8 rad/s）にクランプされる。
+- 指令は `max_speed`（0.35 m/s）・`max_yaw_rate`（0.8 rad/s）にクランプされる。
 - 起動から 60 秒で自動停止する。
 
 ## ログ形式

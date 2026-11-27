@@ -134,7 +134,8 @@ switch scenario
             7.0, -0.30, 0];
         stopTime = 16;
     case 'reverseMax'
-        % Instant +-0.40 m/s reversals on BOTH axes at the app speed
+        % Instant +-0.40 m/s reversals on BOTH axes at/above the app
+        % speed cap (requests clamp to maxSpeed=0.35 in-controller)
         % cap -- the harshest legal command the link can send.  The
         % reversal guard degrades each flip to a stop; survival is the
         % acceptance criterion (measured 5/8, tilt 1.94 deg: G-01 over
@@ -152,14 +153,13 @@ switch scenario
         stopTime = 26;
     case 'moveMax'
         % All-direction max-speed translation: 8 heading steps around
-        % the compass at the 0.40 m/s app cap, 2.5 s per leg.  Legs
-        % stay short because sustained >=0.4 m/s cruise enters the
-        % documented overspeed-coast runaway regime in ~12-15 s on any
-        % axis (the envelope limit, not a direction-specific defect);
-        % the 45 deg step transitions are themselves RC-style command
-        % jumps.  Survival is the criterion (measured 6/8, tilt
-        % ~1.4 deg: G-01 over the gate, G-02 unsettled on the short
-        % legs).
+        % the compass requesting 0.40 m/s (clamps to the 0.35 cap),
+        % 2.5 s per leg.  Legs stay short because sustained ~0.4 m/s
+        % cruise was measured to run away in ~15 s on any axis (the
+        % envelope limit that set maxSpeed=0.35); the 45 deg step
+        % transitions are themselves RC-style command jumps.
+        % Survival is the criterion (measured 6/8, tilt ~1.4 deg:
+        % G-01 over the gate, G-02 unsettled on the short legs).
         p.command.cyclesEnabled = false;
         p.command.velocityWorld = [0; 0];
         p.command.yawRate = 0;

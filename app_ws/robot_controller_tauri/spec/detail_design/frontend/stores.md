@@ -31,7 +31,7 @@ interface TelemetryStore {
 
 ```ts
 interface ParamsStore {
-  maxSpeed: number;             // ロボット controller.max_speed（key 0x60）。指令 UI の速度クランプに使用。未取得時は既定 0.4 m/s
+  maxSpeed: number;             // ロボット controller.max_speed（key 0x60）。指令 UI の速度クランプに使用。未取得時は既定 0.35 m/s
   maxSpeedTheory: number | null; // key 0x61 の無滑り理論上限（表示用）
   setLimits(maxSpeed, theory): void;
 }

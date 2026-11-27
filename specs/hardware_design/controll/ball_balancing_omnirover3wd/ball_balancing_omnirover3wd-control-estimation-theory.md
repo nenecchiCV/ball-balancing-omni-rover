@@ -402,7 +402,7 @@ $$
 \le R_w\,\omega_{cmd,max}
 $$
 
-結合リミッタ（`coupledCommandLimitEnabled`）が並進・ヨーの合成輪速要求を輪速予算内へ同率縮退し、`maxSpeed`（0.40 m/s）で速度を制限する。さらに**フォロースルーチェイス**を適用する: 指令速度がボール速度の `stopFollowGain`（0.75）倍未満のとき、輪速サーボへ与える指令を `followGain·v_{ball}` へ書換え、ボールとの共転を維持する（速度誤差フィードバックには書換え前のユーザー指令を残す）。settle 中は `settleFollowGain`=1.0 の純粋追従とする。
+結合リミッタ（`coupledCommandLimitEnabled`）が並進・ヨーの合成輪速要求を輪速予算内へ同率縮退し、`maxSpeed`（0.35 m/s）で速度を制限する。さらに**フォロースルーチェイス**を適用する: 指令速度がボール速度の `stopFollowGain`（0.75）倍未満のとき、輪速サーボへ与える指令を `followGain·v_{ball}` へ書換え、ボールとの共転を維持する（速度誤差フィードバックには書換え前のユーザー指令を残す）。settle 中は `settleFollowGain`=1.0 の純粋追従とする。
 
 ### 6.3 速度積分（休眠経路）
 

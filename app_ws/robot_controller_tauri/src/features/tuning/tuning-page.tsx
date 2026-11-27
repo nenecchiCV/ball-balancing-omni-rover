@@ -53,7 +53,7 @@ export function TuningPage() {
       const theory = info.entries.find(
         (e) => e.key === PARAM_KEY_THEORY_MAX_SPEED,
       )?.value;
-      useParamsStore.getState().setLimits(ms ?? 0.4, theory ?? null);
+      useParamsStore.getState().setLimits(ms ?? 0.35, theory ?? null);
     } catch (e) {
       setNote(`パラメータ取得失敗: ${formatError(e)}`);
     }

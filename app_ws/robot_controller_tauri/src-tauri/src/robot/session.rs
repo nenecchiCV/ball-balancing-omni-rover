@@ -28,7 +28,7 @@ const PROTO_VER: u8 = 3;
 
 // 送信直前クランプ（NFR-02 の 2 段階目）。`control_params.controller` と同期。
 // max_speed はロボットの調整パラメータ（key 0x60）に追随する。
-const DEFAULT_MAX_SPEED: f32 = 0.4;
+const DEFAULT_MAX_SPEED: f32 = 0.35;
 const MAX_YAW_RATE: f32 = 0.8;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
@@ -516,7 +516,7 @@ mod tests {
             yaw_rate: 9.0,
         }) {
             Request::SetVelocity { vx, vy, yaw_rate } => {
-                assert_eq!((vx, vy, yaw_rate), (0.4, -0.4, 0.8));
+                assert_eq!((vx, vy, yaw_rate), (0.35, -0.35, 0.8));
             }
             _ => panic!(),
         }
