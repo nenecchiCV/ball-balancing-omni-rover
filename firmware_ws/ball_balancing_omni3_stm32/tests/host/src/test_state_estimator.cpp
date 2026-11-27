@@ -262,10 +262,10 @@ void test_velocity_world_speed_capped() {
     out = state_estimator::step(mv, vec3{}, p.estimator.sample_time);
   }
   const float v = hypotf(out.velocity_world[0], out.velocity_world[1]);
-  CHECK_TRUE(v <= 1.5F + 1e-6F);  // K_VELOCITY_WORLD_LIMIT
-  CHECK_TRUE(v > 1.0F);           // 包絡へ達している（飽和の確認）
-  CHECK_TRUE(fabsf(out.velocity_world2[0]) <= 1.5F + 1e-6F);
-  CHECK_TRUE(fabsf(out.velocity_world2[1]) <= 1.5F + 1e-6F);
+  CHECK_TRUE(v <= 1.0F + 1e-6F);  // K_VELOCITY_WORLD_LIMIT
+  CHECK_TRUE(v > 0.95F);          // 包絡へ達している（飽和の確認）
+  CHECK_TRUE(fabsf(out.velocity_world2[0]) <= 1.0F + 1e-6F);
+  CHECK_TRUE(fabsf(out.velocity_world2[1]) <= 1.0F + 1e-6F);
 }
 
 }  // namespace

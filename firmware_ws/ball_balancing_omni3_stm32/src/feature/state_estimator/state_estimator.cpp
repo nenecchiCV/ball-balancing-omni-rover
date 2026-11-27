@@ -20,12 +20,12 @@ constexpr float K_RESEED_HOLD_TIME = 2.0F;
 constexpr float K_STILL_ODOM_ACCEL_XY = 0.3F;
 
 // 推定水平速度の物理包絡 [m/s]。車輪飽和由来の理論上限 ~0.9
-// （param_store::derive の theory_max_speed 相当）を大きく超える推定値は
+// （param_store::derive の theory_max_speed 相当）を超える推定値は
 // 実運動ではなく幻影（姿勢残差の重力混入・非接触時のアンカー注入等）と
 // みなして飽和する。幻影速度が leak 減衰を待たずオドメトリ・制御器へ
-// 残り続けるのを防ぐ。制御器はこの速度をフィードバックに使うため、
-// 実運動をクリップしないよう理論上限に対し余裕を持たせる。
-constexpr float K_VELOCITY_WORLD_LIMIT = 1.5F;
+// 残り続けるのを防ぐ。オドメトリ側の積分入力クランプと同じ値に揃え、
+// 制御器がフィードバックに使う実速度帯（~0.9 まで）はクリップしない。
+constexpr float K_VELOCITY_WORLD_LIMIT = 1.0F;
 
 // 静止時の比力（≈重力の反対向き）からロール/ピッチを定めた姿勢を作る。
 // yaw は current の値を維持する（yaw は加速度から観測できない）。
